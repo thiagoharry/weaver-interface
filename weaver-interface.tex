@@ -68,8 +68,239 @@
   apresentada aqui é projetada para ser flexível, o usuário pode
   ampliá-la e mudar seu comportamento registrando novas funções.}
 
+\secao{1. Introdução}
+
+Uma interface de usuário é como um programa se comunica com o usuário
+e obtém informações dele. Em um programa típico temos menus, botões,
+janelas de pop-up e outros elementos de interface típico. Mas em jogos
+de cmputador a intrface de usuário tende a ser muito mais simples
+conveitualmente, geralmente formada por alguns menus e por elementos
+de visualização que dão informações sobre o estado do jogo. POr
+exemplo, um número no canto da tela indicando quantas vidas o jogador
+tem.
+
+O fato é que no caso de um jogo de computador, não podemos assumir
+nada sobre a aparência dos menus, sobre o que eles vã fazer e sobre o
+que é cada elemento de interface. Um jogo de estratégia poderá ter
+muuitos menus quando alguém clica com o mouse em uma unidade. Um jogo
+de plataforma pode ter apenas informações sobre itens equipados e
+número de vidas. A aparência de tais elementos pode variar enormemente
+dependendo do estilo do jogo.
+
+A única característica universal que iremos assumir para os elementos
+de interface com o usuário é que eles sempre devem aparecer sobre o
+cenário do jogo, não deve ser obscurecido por objetos que fazem parte
+do mundo do jogo. Tipicamente renderizaremos as interfaces de usuário
+depois de termos renderizado o mundo de nosso jogo. Além disso, eles
+não irão interagir com elementos do mundo do jogo. Eles não fazem
+parte diretamente do mundo que o jogo simula, eles são apenas
+elementos que dão informações adicionais para o jogador sobre coisas
+deste mundo, que de outra forma seriam difíceis de serem expressadas.
+
+O nosso objetivo aqui será criar uma API onde o usuário pode criar uma
+nova interface de usuário invocando a função:
+
+\iniciocodigo
+@<Declarações de Interface@>=
+struct interface *_Wnew_interface(char *filename, char *shader_filename,
+                                  float x, float y, float width, float height);
+@
+\fimcodigo
+
+Onde o primeiro argumento é o nome de um arquivo que será aberto e
+interpretado descrevendo a textura da interface (pode ser um arquivo
+com uma imagem, por exemplo) e o segundo argumento é um nome de
+arquivo contendo o shader. Ambos os argumentos podem ser NULL. Um
+shader nulo significa que um shader padrão será usado. Um arquivo
+vazio significa que nenhuma textura será preenchida mas usaremos o
+shader para desenhar a interface na tela. Os demais argumentos são a
+posição e tamanho inicial da interface na tela.
+
+Uma vez que tenhamos uma interface, poderemos movê-la com a função:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wmove_interface(struct interface *i, float x, float y);
+@
+\fimcodigo
+
+Assumimos que a posição de uma interface é a coordenada em pixels de
+seu centro.
+
+Podemos também rotacioná-la com a função:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wrotate_interface(struct interface *i, float rotation);
+@
+\fimcodigo
+
+A função acima recebe o quanto a imagem será rotacionada em relação à
+orientação padrão usando radianos como medida.
+
+Podemos redimencionar a interface com a função abaixo:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wresize_interface(struct interface *i, float new_width, float new_height);
+@
+\fimcodigo
+
+A função acima deverá respeitar limites ajustados pelo usuário, se
+eles existirem. Pode-se estabelecer valores mínimos para uma interface
+com o código abaixo:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wset_max_size_interface(struct interface *i, float max_width,
+                              float max_height);
+@
+\fimcodigo
+
+Um tamanho máximo de zero significa que a interface não tem um tamanho
+máximo. Pode-se também ajustar um tamanho mínimo com a função abaixo:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wset_min_size_interface(struct interface *i, float min_width,
+                              float min_height);
+@
+\fimcodigo
+
+O tamanho mínimo e máximo de uma interface tem um papel mais
+importante quando a nossa janela ou área de desenho é
+redimencionada. Quando isso acontece, a função abaixo deve ser
+chamada. Ela irá redimencionar e mover todas as interfaces para manter
+a mesma proprção em relação à janela ou área de desenho. Mas ela fará
+isso respeitando as restrições de tamanho máximo e mínimo estabelecida
+pelas duas funções anteriores.
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wupdate_size_interface(unsigned old_width, unsigned old_height,
+                             unsigned new_width unsigned new_height);
+@
+\fimcodigo
+
+A função anterior redimenciona de maneira apropriada todas as
+interfaces previamente criadas. Da mesma forma, a função abaixo
+renderiza na tela todas as interfaces disponíveis, sem precisarmos
+manualmente indicá-las:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wrender_interface(void);
+@
+\fimcodigo
+
+Mas renderizar todas as interfaces criadas pode não ser o desejado
+pelo usuário. Pode ser que queiramos renderizar somente as últimas
+interfaces criadas à partir de um ponto da história.  Para isso, a
+função abaixo cria uma marcação no nosso histórico de criação de
+interfaces. E toda vez que pedimos para renderizar, somente as
+interfaces criadas depois da marcação serão rendrizadas:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wmark_history_interface(void);
+@
+\fimcodigo
+
+Mas e se queremos renderizar somente algumas das interfaces criadas
+antes da marcação? Neste caso, podemos simplismente criar uma nova
+interface que na verdade é uma ligação para uma anterior:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+struct interface *_Wlink_interface(struct interface *i);
+@
+\fimcodigo
+
+Já para interagir com todas as interfaces criadas no passado até a
+última marcação, usamos a função abaixo. Ela irá executar as ações
+programadas quando um usuário passa o mouse sobre uma interface,
+retira o mouse sobre uma interface ou clica nela:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Winteract_interface(int mouse_x, int mouse_y, bool moving, bool left_click,
+                          bool middle_click, bool right_click);
+@
+\fimcodigo
 
 
+Mas como apagar iterfaces uma vez que não precisamos mais delas? Para
+isso fornecemos a função abaixo que apaga todas as interfaces criadas
+anteriormene até a última marcação na história. Ela também apaga a
+última marcação existente, voltando o estado de nossa biblioteca até
+como eraimediatamente antes de tal marcação ser criada. As interfaces
+qu existirem antes de tal marcação, se existirem, serão novamente
+renderizadas.
 
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wrestore_history_interface(void);
+@
+\fimcodigo
+
+Tudo isso vai requerer que gerenciemos nosso histórico de interfaces,
+suas marcações e seus shaders. E isso vai requerer que aloquemos e
+desaloquemos memória. Há dois tipos de alocações que podemos fazer:
+coisas permanentes que ficarão alocadas por possivelmente um bom tempo
+e coisas temporárias que serão rapidamente desalocadas. Vamos então
+armazenar a função de alocação e desalocação para estes dois casos:
+
+\iniciocodigo
+@<Variáveis Locais@>=
+#include <stdlib.h>
+static void *(*permanent_alloc)(size_t) = malloc;
+static void *(*temporary_alloc)(size_t) = malloc;
+static void (*permanent_free)(void *) = free;
+static void (*temporary_free)(void *) = free;
+@
+\fimcodigo
+
+Por padrão, usaremos simplesmente a função de alocação e desalocação
+da biblioteca padrão. Mas o usuário pode personalizar cada uma destas
+funções quando invoca a inicialização de nossa biblioteca:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Winit_interface(void *(*permanent_alloc)(size_t),
+                      void (*permanent_free)(void *),
+                      void *(*temporary_alloc)(size_t),
+                      void (*temporary_free)(void *), ...);
+@
+\fimcodigo
+
+
+É possível inicializar as funções de desalocação como
+\monoespaco{NULL}. Isso significa que nós não iremos desalocar o que
+foi alocado. Isso pode ser útil caso seu gerenciador de memória
+gerencie de alguma forma a coleta de lixo e não quer ter interferência
+no processo.
+
+A função acima também aceita receber um número variável de argumentos
+depois das quatro funções de alocação e desalocação. Esses argumentos
+adicionais serão uma lista terminada em NULL de uma string seguida de
+uma função geradora de interfaces. A string representa uma extensão
+(por exemplo ``gif'', ``jpg'' ou outras) e a função que a sucede
+recebe como argumento um nome de arquivo e as funções de alocação e
+desalocação. Espera-se que a função consiga abrir e interpretar o
+arquivo e gerar uma nova interface à partir dele. Se não conseguir,
+retorna \monoespaco{NULL}. Desta forma, deixamos para o usuário a
+responsabilidade de fornecer as funções que criam interfaces à partir
+de arquivos de diferentes formatos.
+
+Como apresentamos uma função de inicialização, vamos precisar também
+da função de finalização:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wfinish_interface(void);
+@
+\fimcodigo
+
+E isso termina a nossa descrição de todas as funções que suportaremos.
 
 \fim

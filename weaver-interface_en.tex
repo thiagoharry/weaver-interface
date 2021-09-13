@@ -57,5 +57,233 @@
   user can extend it and change its behavious registering new
   functions.}
 
+\secao{1. Introduction}
+
+A graphical user interface is how a program communicates and takes
+information from the user. Ina typical program we could have menus,
+buttons, window pop-ups and other typical graphical elements. In games
+the user intrface usually is conceptually simpler, made by some menus
+and some viewing elements with information about the game state. For
+example, a life counter in the corner of the screen.
+
+The fact is that in a computer game we cannot assume almost nothing
+about the appearence of the user interface. A strategy game could have
+lots of menus appearing when the user click in some unit. A platform
+game could have only information about equipped items and life
+counter. The appearence and behaviour of such elements can change a
+lot depending on the game style.
+
+The sole universal characteristic that we will assume for our
+interface elements is that they appear over the ame scenario, they are
+not obscured by objects that are part of our game world. Typically we
+will render the interfaces after rendering our game world. And
+elements from the game world cannot interact with
+interfaces. Interfaces are not part of the world that the game
+simulates, they are just elements that give to the player information
+that would be otherwise difficult to express.
+
+Our objective here will be creating an AP where the user can create a
+new interface using the function:
+
+\iniciocodigo
+@<Declarações de Interface@>=
+struct interface *_Wnew_interface(char *filename, char *shader_filename,
+                                  float x, float y, float width, float height);
+@
+\fimcodigo
+
+Where the first argument is a file that will be open and interpreted
+to get information about our interface texture (it could be an image
+filename). The second argumetn is the file containing the OpenGL
+shader. Both arguments can be NULL> A ull shader means that we will
+use some default shader. A null file means that the interface will
+have no texture. The other arguments are the initial position and size
+for our interface.
+
+When we have a interface, we can move it with the function:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wmove_interface(struct interface *i, float x, float y);
+@
+\fimcodigo
+
+We assume that the position of an interface is the coordinate of its
+center.
+
+We can also rotate it with the function:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wrotate_interface(struct interface *i, float rotation);
+@
+\fimcodigo
+
+The function above gets as argument how much the interface will be
+rotated in radians comparing with its notmal orientation.
+
+We can also resize the interface with the function below:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wresize_interface(struct interface *i, float new_width, float new_height);
+@
+\fimcodigo
+
+The function above will respect limits that can be adjusted by the
+user, if they exist. We can set the minimum width and/or height for
+some ineterface with the function below:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wset_max_size_interface(struct interface *i, float max_width,
+                              float max_height);
+@
+\fimcodigo
+
+The maximum size can be set to zero, which means that there will be no
+maximum size. We can also set the minimum size:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wset_min_size_interface(struct interface *i, float min_width,
+                              float min_height);
+@
+\fimcodigo
+
+The maximum and minimum size of some interface have a more important
+role when the window or drawing area is resized. When this happens,
+the function below should be called. It will resize all interfaces to
+keep the same proportion compared with the window or drawing area. But
+this is limited by these minimum and maximum size limits set by the
+two above functions.
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wupdate_size_interface(unsigned old_width, unsigned old_height,
+                             unsigned new_width unsigned new_height);
+@
+\fimcodigo
+
+The previous function acts over all previously created interfaces. In
+the same way, the below function renders in the screen or drawing area
+all the previously created interfaces without needing to list all
+them:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wrender_interface(void);
+@
+\fimcodigo
+
+But rendering all previous interfaces may not be what the user wants,
+Sometimes, a person want to render just the interfaces created after
+some point of the history. For this, the function below creates a
+marking in our interface history. After this, when we ask to render
+all the interfaces, only the interfaces created after this marking
+will be rendered:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wmark_history_interface(void);
+@
+\fimcodigo
+
+But what if we want to render some of the interfaces created before
+the last history marking? In this case, we can create e a new
+interface that in fact is just a link to a previously created
+interface:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+struct interface *_Wlink_interface(struct interface *i);
+@
+\fimcodigo
+
+To interact with all the previously created interfaces until the last
+marking, we use the function below. It executes the programmed
+actions, if they exist, for each interface if the user puts or removes
+the mouse over them or if the user clicks in some interface:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Winteract_interface(int mouse_x, int mouse_y, bool moving, bool left_click,
+                          bool middle_click, bool right_click);
+@
+\fimcodigo
+
+
+But how can we erase and destroy some interface when we do not need it
+anymore? For this we use the following function that erases all
+previously created interfaces after the last marking in the
+history. This also erases the last marking, returning the state to
+what it was just before the creation of that marking. The interfaces
+before that marking will be rendered again.
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wrestore_history_interface(void);
+@
+\fimcodigo
+
+All this requires that we manage our interface history, its shaders
+and the markings.  And this requires memory allocation and
+disallocation. There are two kinds of allocations that we could use:
+for permanent things that will be kept in the memory for a long time
+and for temporary things that will be disallocated soon. We will store
+functions to allocate and disallocate in the two cases:
+
+\iniciocodigo
+@<Variáveis Locais@>=
+#include <stdlib.h>
+static void *(*permanent_alloc)(size_t) = malloc;
+static void *(*temporary_alloc)(size_t) = malloc;
+static void (*permanent_free)(void *) = free;
+static void (*temporary_free)(void *) = free;
+@
+\fimcodigo
+
+By default we will use the allocation and disallocation functions from
+the standard library. But the user can choose custom functions to
+replace them when initializing this library:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Winit_interface(void *(*permanent_alloc)(size_t),
+                      void (*permanent_free)(void *),
+                      void *(*temporary_alloc)(size_t),
+                      void (*temporary_free)(void *), ...);
+@
+\fimcodigo
+
+It is possible to initializa the disallocation functions with
+\monoespaco{NULL}. This means that we will not disallocate what we
+allocate. This could be useful in some scenarios where the memory
+manager uses its own garbage collector and do not want interferences.
+
+The function above accepts a variable number of arguments. What cames
+after the four functions is a NULL-terminated list of arguments
+composed by a string followed by some function that create a new
+interface given a file. The string represents a filename extension
+(for example, ``gif'', ``jpg'' or others) and the function after this
+should get as arguments a filename and the functions for allocation
+and disallocation and returns a new interface. It is expected that
+each of these functions can interpret correctly the files with
+extensions given previously. If they fail to interpret them, they
+shuld return NULL. Otherwise, they return a new interface with correct
+texturing. This way, we pass to the user the responsability of
+provinding functions able to create interfaces from different file
+formats.
+
+As we have an initialization function, we will need also a
+finalization function:
+
+\iniciocodigo
+@<Declarações de Interface@>+=
+void _Wfinish_interface(void);
+@
+\fimcodigo
+
+And this ends the description of our API.
 
 \fim
