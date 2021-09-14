@@ -101,7 +101,7 @@ O nosso objetivo aqui será criar uma API onde o usuário pode criar uma
 nova interface de usuário invocando a função:
 
 \iniciocodigo
-@<Declarações de Interface@>=
+@<Declaração de Função (interface.h)@>=
 struct interface *_Wnew_interface(char *filename, char *shader_filename,
                                   float x, float y, float width, float height);
 @
@@ -119,7 +119,7 @@ posição e tamanho inicial da interface na tela.
 Uma vez que tenhamos uma interface, poderemos movê-la com a função:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wmove_interface(struct interface *i, float x, float y);
 @
 \fimcodigo
@@ -130,7 +130,7 @@ seu centro.
 Podemos também rotacioná-la com a função:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wrotate_interface(struct interface *i, float rotation);
 @
 \fimcodigo
@@ -141,7 +141,7 @@ orientação padrão usando radianos como medida.
 Podemos redimencionar a interface com a função abaixo:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wresize_interface(struct interface *i, float new_width, float new_height);
 @
 \fimcodigo
@@ -151,7 +151,7 @@ eles existirem. Pode-se estabelecer valores mínimos para uma interface
 com o código abaixo:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wset_max_size_interface(struct interface *i, float max_width,
                               float max_height);
 @
@@ -161,7 +161,7 @@ Um tamanho máximo de zero significa que a interface não tem um tamanho
 máximo. Pode-se também ajustar um tamanho mínimo com a função abaixo:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wset_min_size_interface(struct interface *i, float min_width,
                               float min_height);
 @
@@ -176,9 +176,9 @@ isso respeitando as restrições de tamanho máximo e mínimo estabelecida
 pelas duas funções anteriores.
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wupdate_size_interface(unsigned old_width, unsigned old_height,
-                             unsigned new_width unsigned new_height);
+                             unsigned new_width, unsigned new_height);
 @
 \fimcodigo
 
@@ -188,7 +188,7 @@ renderiza na tela todas as interfaces disponíveis, sem precisarmos
 manualmente indicá-las:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wrender_interface(void);
 @
 \fimcodigo
@@ -201,7 +201,7 @@ interfaces. E toda vez que pedimos para renderizar, somente as
 interfaces criadas depois da marcação serão rendrizadas:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wmark_history_interface(void);
 @
 \fimcodigo
@@ -211,7 +211,7 @@ antes da marcação? Neste caso, podemos simplismente criar uma nova
 interface que na verdade é uma ligação para uma anterior:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 struct interface *_Wlink_interface(struct interface *i);
 @
 \fimcodigo
@@ -222,7 +222,7 @@ programadas quando um usuário passa o mouse sobre uma interface,
 retira o mouse sobre uma interface ou clica nela:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool moving, bool left_click,
                           bool middle_click, bool right_click);
 @
@@ -238,7 +238,7 @@ qu existirem antes de tal marcação, se existirem, serão novamente
 renderizadas.
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wrestore_history_interface(void);
 @
 \fimcodigo
@@ -251,8 +251,7 @@ e coisas temporárias que serão rapidamente desalocadas. Vamos então
 armazenar a função de alocação e desalocação para estes dois casos:
 
 \iniciocodigo
-@<Variáveis Locais@>=
-#include <stdlib.h>
+@<Variáveis Locais (interface.c)@>=
 static void *(*permanent_alloc)(size_t) = malloc;
 static void *(*temporary_alloc)(size_t) = malloc;
 static void (*permanent_free)(void *) = free;
@@ -265,7 +264,8 @@ da biblioteca padrão. Mas o usuário pode personalizar cada uma destas
 funções quando invoca a inicialização de nossa biblioteca:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
+#include <stdlib.h> // Define tipo 'size_t'
 void _Winit_interface(void *(*permanent_alloc)(size_t),
                       void (*permanent_free)(void *),
                       void *(*temporary_alloc)(size_t),
@@ -296,11 +296,97 @@ Como apresentamos uma função de inicialização, vamos precisar também
 da função de finalização:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wfinish_interface(void);
 @
 \fimcodigo
 
 E isso termina a nossa descrição de todas as funções que suportaremos.
+
+\subsecao{1.1. Programação Literária}
+
+Nossa API será escrita usando a técnica de Programação Literária,
+proposta por Knuth em [KNUTH, 1984]. Ela consiste em escrever um
+programa de computador explicando didaticamente em texto o que se está
+fazendo à medida que apresenta o código. Depois, o programa é
+compilado através de programas que extraem o código diretamente do
+texto didático. O código deve assim ser apresentado da forma que for
+mais adequada para a explicação no texto, não como for mais adequado
+para o computador.
+
+Seguindo esta técnica, este documento não é uma simples documentação
+do nosso código. Ele é por si só o código. A parte que será extraída e
+compilada posteriormente pode ser identificada como sendo o código
+presente em fundo cinza. Geralmente começamos cada trecho de código
+com um título que a nomeia. Por exemplo, imediatamente antes desta
+subseção nós apresentamos uma série de declarações. E como pode-se
+deduzir pelo título delas, a maioria será posteriormente posicionada
+dentro de um arquivo chamado \monoespaco{interface.h}.
+
+Podemos apresentar aqui a estrutura do arquivo
+\monoespaco{interface.h}:
+
+\iniciocodigo
+@(src/interface.h@>=
+#ifndef __WEAVER_INTERFACE
+#define __WEAVER_INTERFACE
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <stdbool.h> // Define tipo 'bool'
+@<Declaração de Função (interface.h)@>
+#ifdef __cplusplus
+}
+#endif
+#endif
+@
+\fimcodigo
+
+O código acima mostra a burocracia padrão para definir um cabeçalho
+para nossa API em C. As duas primeiras linhas mais a última são macros
+que garantem que esse cabeçalho não será inserido mais de uma vez em
+uma mesma unidade de compilação. As linhas 3, 4, 5, assim como a
+penúltima, antepenúltima e a antes da antepenúltima tornam o cabeçalho
+adequado a ser inserido em código C++. Essas linhas apenas avisam que
+o que definirmos ali deve ser encarado como código C. Por isso o
+compilador está livre para fazer otimizações sabendo que não usaremos
+recursos da linguagem C++, como sobrecarga de operadores. Logo em
+seguida, inserimos um cabeçalho que nos permite declarar o tipo
+booleano. E tem também uma parte em vermelha. Note que uma delas é
+``Declaração de Função (interface.h)'', o mesmo nome apresentado no trecho de
+código mostrado quando descrevemos nossa API antes dessa
+subseção. Isso significa que aquele código visto antes será depois
+inserido ali. As outras partes em vermelho representam código que
+ainda iremos definir nas seções seguintes.
+
+Caso queira observar o que irá no arquivo \monoespaco{interface.c}
+associado a este cabeçaho, o código será este:
+
+\iniciocodigo
+@(src/interface.c@>=
+#include "interface.h"
+
+@<Variáveis Locais (interface.c)@>
+@
+\fimcodigo
+
+Todo o código que definiremos e explicaremos a seguir será posicionado
+nestes dois arquivos. Além deles, nenhum outro arquivo será criado.
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\secao{Referências}
+
+\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
+  Journal, Volume 27, Edição 2, Páginas 97--111.}
+
 
 \fim

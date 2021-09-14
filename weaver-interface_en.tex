@@ -86,7 +86,7 @@ Our objective here will be creating an AP where the user can create a
 new interface using the function:
 
 \iniciocodigo
-@<Declarações de Interface@>=
+@<Declaração de Função (interface.h)@>=
 struct interface *_Wnew_interface(char *filename, char *shader_filename,
                                   float x, float y, float width, float height);
 @
@@ -103,7 +103,7 @@ for our interface.
 When we have a interface, we can move it with the function:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wmove_interface(struct interface *i, float x, float y);
 @
 \fimcodigo
@@ -114,7 +114,7 @@ center.
 We can also rotate it with the function:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wrotate_interface(struct interface *i, float rotation);
 @
 \fimcodigo
@@ -125,7 +125,7 @@ rotated in radians comparing with its notmal orientation.
 We can also resize the interface with the function below:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wresize_interface(struct interface *i, float new_width, float new_height);
 @
 \fimcodigo
@@ -135,7 +135,7 @@ user, if they exist. We can set the minimum width and/or height for
 some ineterface with the function below:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wset_max_size_interface(struct interface *i, float max_width,
                               float max_height);
 @
@@ -145,7 +145,7 @@ The maximum size can be set to zero, which means that there will be no
 maximum size. We can also set the minimum size:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wset_min_size_interface(struct interface *i, float min_width,
                               float min_height);
 @
@@ -159,9 +159,9 @@ this is limited by these minimum and maximum size limits set by the
 two above functions.
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wupdate_size_interface(unsigned old_width, unsigned old_height,
-                             unsigned new_width unsigned new_height);
+                             unsigned new_width, unsigned new_height);
 @
 \fimcodigo
 
@@ -171,7 +171,7 @@ all the previously created interfaces without needing to list all
 them:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wrender_interface(void);
 @
 \fimcodigo
@@ -184,7 +184,7 @@ all the interfaces, only the interfaces created after this marking
 will be rendered:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wmark_history_interface(void);
 @
 \fimcodigo
@@ -195,7 +195,7 @@ interface that in fact is just a link to a previously created
 interface:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 struct interface *_Wlink_interface(struct interface *i);
 @
 \fimcodigo
@@ -206,7 +206,7 @@ actions, if they exist, for each interface if the user puts or removes
 the mouse over them or if the user clicks in some interface:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool moving, bool left_click,
                           bool middle_click, bool right_click);
 @
@@ -221,7 +221,7 @@ what it was just before the creation of that marking. The interfaces
 before that marking will be rendered again.
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wrestore_history_interface(void);
 @
 \fimcodigo
@@ -234,7 +234,7 @@ and for temporary things that will be disallocated soon. We will store
 functions to allocate and disallocate in the two cases:
 
 \iniciocodigo
-@<Variáveis Locais@>=
+@<Variáveis Locais (interface.c)@>=
 #include <stdlib.h>
 static void *(*permanent_alloc)(size_t) = malloc;
 static void *(*temporary_alloc)(size_t) = malloc;
@@ -248,7 +248,8 @@ the standard library. But the user can choose custom functions to
 replace them when initializing this library:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
+#include <stdlib.h> // Define  'size_t' type
 void _Winit_interface(void *(*permanent_alloc)(size_t),
                       void (*permanent_free)(void *),
                       void *(*temporary_alloc)(size_t),
@@ -279,11 +280,91 @@ As we have an initialization function, we will need also a
 finalization function:
 
 \iniciocodigo
-@<Declarações de Interface@>+=
+@<Declaração de Função (interface.h)@>+=
 void _Wfinish_interface(void);
 @
 \fimcodigo
 
 And this ends the description of our API.
+
+\subsecao{1.1. Literate Programming}
+
+Our API will be written using the literate programming technique,
+proposed by Knuth on [Knuth, 1984]. It consist in writting a computer
+program explaining didactically in a text what is being done while
+presenting the code. The program is compiled extracting the computer
+code directly from the didactical text. The code shall be presented in
+a way and order such that it is best for explaining for a human. Not
+how it would be easier to compile.
+
+Using this technique, this document is not a simple documentation for
+our code. It is the code by itself. The part that will be extracted to
+be compiled can be identified by a gray background. We begin each
+piece of code by a title that names it. For example, immediately
+before this subsection we presented a series of function
+declarations. And how one could deduct by the title, most of them will
+be positioned in the file \monoespaco{interface.h}.
+
+We can show the structure of the file \monoespaco{interface.h}:
+
+\iniciocodigo
+@(src/interface.h@>=
+#ifndef __WEAVER_INTERFACE
+#define __WEAVER_INTERFACE
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <stdbool.h> // Define  'bool' type
+@<Declaração de Função (interface.h)@>
+#ifdef __cplusplus
+}
+#endif
+#endif
+@
+\fimcodigo
+
+The cde above shows the default boureaucracy to define a header for
+our C API. The two first lines and the last one are macros that ensure
+that this header will not be inserted more than once in a single
+compiling unit. The lines 3, 4, 5 and the three lines before the last
+one make the header adequate to be used in C++ code. This tells the
+compiler that we are using C code and that therefore, the compiler is
+free to use optimizations assuming that we will not use C++ exclusive
+techniques, like operator overloading. Next we include a header that
+will let us to use boolean variables. And there are some parts in
+red. Note that one of them is called ``Declaração de Função
+(interface.h)'', the same title used in most of the code declared
+previously. This means that all the previous code with this title will
+be inserted in that position inside this file. The other parts in red
+represent code that we will define in the next sections.
+
+If you want to know how is the \monoespaco{interface.c} file related
+with this header, its structure is:
+
+\iniciocodigo
+@(src/interface.c@>=
+#include "interface.h"
+
+@<Variáveis Locais (interface.c)@>
+@
+\fimcodigo
+
+All the code presented in this document will be placed in one of these
+two files. Besides them, no other file will be created.
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\secao{References}
+
+\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
+  Journal, Volume 27, Issue 2, Pages 97--111.}
+
+
 
 \fim
