@@ -120,12 +120,14 @@ Uma vez que tenhamos uma interface, poderemos movê-la com a função:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wmove_interface(struct interface *i, float x, float y);
+void _Wmove_interface(struct interface *i, float x, float y, float z);
 @
 \fimcodigo
 
 Assumimos que a posição de uma interface é a coordenada em pixels de
-seu centro.
+seu centro. O eixo $x$ e $y$ representa a posição horizontal e
+vertical. O eixo $z$ determina quais interfaces aparecerão na frente
+se estiverem ocupando as mesmas posições no espaço.
 
 Podemos também rotacioná-la com a função:
 
@@ -334,6 +336,8 @@ Podemos apresentar aqui a estrutura do arquivo
 extern "C" {
 #endif
 #include <stdbool.h> // Define tipo 'bool'
+@<Inclur Cabeçalhos Gerais (interface.h)@>
+@<Macros Gerais (interface.h)@>
 @<Declaração de Função (interface.h)@>
 #ifdef __cplusplus
 }
@@ -366,6 +370,7 @@ associado a este cabeçaho, o código será este:
 @(src/interface.c@>=
 #include "interface.h"
 
+@<Macros Locais (interface.c)@>
 @<Variáveis Locais (interface.c)@>
 @
 \fimcodigo
@@ -373,13 +378,246 @@ associado a este cabeçaho, o código será este:
 Todo o código que definiremos e explicaremos a seguir será posicionado
 nestes dois arquivos. Além deles, nenhum outro arquivo será criado.
 
+\subsecao{1.2. Suportando Múltiplas Threads}
 
+A maior parte do código a ser definido neste documento é portável. O
+único requisito assumido é que um contexto OpenGL está ativo e
+funcionando. Contudo, há uma parte não-portável que deve ser definida
+dependendo do sistema em que estamos: o suporte a mutex.
 
+Um mutex é uma estrutura de dados abstrata usada para controlar acesso
+de múltiplos processos a um recurso em comum. Eles serão tratados de
+forma diferente dependendo do sistema operacional e ambiente. Devido à
+seu caráter não-portável, eles serão introduzidos aqui, separados do
+restante do código.
 
+No Linux e BSD, o Mutex é definido pela biblioteca
+\monoespaco{pthread} e segue a nomenclatura típica dela. No Windows um
+Mutex é chamado de ``seção critica''. No Web Assembly não usaremos
+Mutex, pois o cóigo não usará múltiplas threads.
 
+\iniciocodigo
+@<Macros Gerais (interface.h)@>=
+#if defined(__linux__) || defined(BSD)
+#define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
+#elif defined(_WIN32)
+#define _MUTEX_DECLARATION(mutex) CRITICAL_SECTION mutex
+#elif defined(__EMSCRIPTEN__)
+#define _MUTEX_DECLARATION(mutex)
+#endif
+@
+\fimcodigo
 
+Isso significa que no Linus e BSD nós precisamos inserir o cabeçalho
+da biblioteca \monoespaco{pthread}. No Windows, basta inserir o
+cabeçalho padrão do windows.
 
+\iniciocodigo
+@<Inclur Cabeçalhos Gerais (interface.h)@>=
+#if defined(__linux__) || defined(BSD)
+#include <pthread.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
+@
+\fimcodigo
 
+No nosso código vamos precisar inicializar cada Mutex que
+declararmos. Para isso, usaremos a seguinte macro:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
+#elif defined(_WIN32)
+#define MUTEX_INIT(mutex) InitializeCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_INIT(mutex)
+#endif
+@
+\fimcodigo
+
+Para finalizar um Mutex quando não precisarmos mais, usamos a seguinte
+macro:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
+#elif defined(_WIN32)
+#define MUTEX_DESTROY(mutex) DeleteCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_DESTROY(mutex)
+#endif
+@
+\fimcodigo
+
+Tendo um Mutex, há duas operações que podemos fazer com ele. A
+primeira é requerer o uso do Mutex. Neste momento, se algum outro
+processo está usando ele, iremos esperar até que o Mutex esteja livre
+novamente:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
+#elif defined(_WIN32)
+#define MUTEX_WAIT(mutex) EnterCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_WAIT(mutex)
+#endif
+@
+\fimcodigo
+
+E finalmente, depois de deixarmos de usar o recurso guardado pelo
+Mutex, podemos liberar ele com o código abaixo:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
+#elif defined(_WIN32)
+#define MUTEX_SIGNAL(mutex) LeaveCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_SIGNAL(mutex)
+#endif
+@
+\fimcodigo
+
+\secao{2. Estruturas de Dados}
+
+Nesta seção descreveremos as três principais estruturas de dados que
+gerenciaremos nesta API: as interfaces de usuário, as ligações para
+interfaces já criadas e as marcações de tempo.
+
+\subsecao{2.1. A Estrutura da Interface}
+
+A principal estrutura deste documento será a estrutura que armazena
+informações sobre a interface de usuário. A descrição dela é:
+
+\iniciocodigo
+@<Estrutura de Dados (interface.h)@>
+struct interface {
+  int type;
+  void *next; // Ponteiro de lista encadeada
+  float x, y, z;
+  float rotation;
+  GLfloat _transform_matrix[16];
+  float height, width;
+  floaf background_color[4], foreground_color[4];
+  int integer;
+  bool visible;
+  GLuint _shader;
+  _MUTEX_DECLARATION(interface_mutex);
+  /* Atributos abaixo devem ser preenchidos por função de carregamento: */
+  GLuint *_texture;
+  bool _loaded_texture;
+  bool animate;
+  unsigned number_of_frames;
+  unsigned current_frame;
+  unsigned *frame_duration;
+  unsigned long _t;
+  int max_repetition;
+};
+\fimcodigo
+@
+
+Vamos agora descrever o que significa cada elemento desta estrutura.
+
+O primeiro atributo é o tipo. Nós vamos querer armazenar as nossas
+interfaces em uma lista encadeada (e por isso abaixo do tipo já temos
+um ponteiro para montar a lista encadeada). Mas essa lista não
+necessariamente armazenará interfaces como a acima. Nós podemos
+armazenar na lista encadeada outras coisas, como marcações de tempo ou
+então ligações para interfaces que já foram criadas antes. Nós
+saberemos o quê exatamente tem em cada posição da lista encadeada
+através do valor encontrado no tipo. O tipo pode então ser de três
+tipos:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#define TYPE_INTERFACE 1 // Uma interface como a acima
+#define TYPE_LINK      2 // Ligação para interface anterior
+#define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
+@
+\fimcodigo
+
+Toda vez então que o valor do primeiro atributo for 1, isso significa
+que estamos diante de uma interface completa como a descrita acima.
+
+Depois do tipo e so ponteiro, armazenamos as informações sobre posição
+e tamanho da interface. Temos a sua posição em pixels (eixo $x$ e
+$y$), seu ``índice-z'' (eixo $z$) que determina a ordem em que as
+interfaces serão desenhadas e quais aparecerão na frente das outras, a
+rotação (em radianos) da interface e a altura e largura (em
+pixels). Todos estes valores podem ser lidos pelo usuário, mas não
+devem ser modificados diretamente sem usar as funções adequadas para
+isso e que srão definidas nas próximas seções. Isso porque para
+corretamente mudar a posição, tamanho e rotação da interface,
+precisamos atualizar a sua matriz de transfrmação (logo abaixo), que é
+como o OpenG e nossos shaders realmente interpretam tais
+informações. E com relação ao eixo $z$, se atualizamos ele, também
+temos que atualizar uma outra lista a ser definida que controla a
+ordem em que as interfaces são desenhadas na tela.
+
+O atributo de cor de frente e de fundo representa cores no formato
+RGBA onde cada valor individua é entre 0 e 1. Basicamente tais cores
+serão sempre passadas para o shader de renderização. Mas não
+necessariamente o shader irá usar tal informação.
+
+Da mesma forma, o atributo inteiro que vem logo em seguida também é um
+valor inteiro a ser passado para o shader. Não necessariamente ele
+será usado, isso irá depender do shader.
+
+O próximo atributo indica se a interface está visível ou não. Se não
+estiver, ela não será renderizada.
+
+O shader compilado a ser usado pela nossa interface aparece em
+seguida.
+
+E por fim, é inserida uma declaração de um mutex para que múltiplos
+processos possam maniplar simultaneamente nossa interface.
+
+Os atributos que vem à seguir desta parte inicialmente sempre começam
+como sendo 0, falso ou nulo. É de responsabilidade da função de
+carregamento preencher tais valores enquanto executa. A função de
+carregamento é aquela que é responsável por ler um arquivo de
+determinada extensão e gerar corretamente a textura da
+interface.Funções de carregamento são informadas na inicialização
+desta API.
+
+Primeiro temos um ponteiro para a textura OpenGL que é passada para o
+shader. Pode não ter somente uma textura, mas várias. Quando por
+exemplo temos uma interface obtida através de um GIF animado, por
+exemplo. Cada frame de animação será uma textura diferente.
+
+Caso exista mais de uma textura, a próxima variável booleana determina
+se a interface deve ser animada ou não. A variável pode ser modificada
+à vontade durante a execução do programa para fazer com que a animação
+pause ou continue.
+
+Os dois próximos atributos representam o número total de frames da
+animação (será sempre 1 quando não for uma interface animada) e qual o
+frame atual em que estamos (o primeiro frame é o 0).
+
+Em seguida encontramos um ponteiro que apontará para um vetor alocado
+que conterá a duração de cada frame em unidades de tempo. Se a
+interface possuir somente um ou nenhum frame, este ponteiro poderá
+estar apontando para NULL.
+
+A variável \monoespaco{\_t} será usada para realizar a contagem de
+tempo internamente no caso de termos uma interface animada. Deve
+iniciar como zero quando a interface é inicializada e sua textura
+termina de ser carregada. Depois seguiremos incrementando o contador
+automaticamente para assim sabermos quando o frame atual precisa ser
+modificado ou não, a depender da duração de cada frame.
+
+Por fim, o último atributo é, para o caso de termos uma interface
+animada, quantas vezes devemos repetir até o final sua animação. O
+valor de 0 significa que ela deverá ser repetida para sempre. Um valor
+positivo coloca u limite no número de repetições. Quando repetirmos a
+animação pela última vez permitida, ela ficará estacionada no último
+frame sem voltar novamente para o primeiro.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

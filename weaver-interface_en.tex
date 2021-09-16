@@ -104,12 +104,14 @@ When we have a interface, we can move it with the function:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wmove_interface(struct interface *i, float x, float y);
+void _Wmove_interface(struct interface *i, float x, float y, float z);
 @
 \fimcodigo
 
 We assume that the position of an interface is the coordinate of its
-center.
+center. The axis x$ and $y$ represents the horizontal and vertical
+position. The axis $z$ determines which interface will be in the front
+if they occupy the same place in the space.
 
 We can also rotate it with the function:
 
@@ -315,6 +317,8 @@ We can show the structure of the file \monoespaco{interface.h}:
 extern "C" {
 #endif
 #include <stdbool.h> // Define  'bool' type
+@<Inclur Cabeçalhos Gerais (interface.h)@>
+@<Macros Gerais (interface.h)@>
 @<Declaração de Função (interface.h)@>
 #ifdef __cplusplus
 }
@@ -344,7 +348,7 @@ with this header, its structure is:
 \iniciocodigo
 @(src/interface.c@>=
 #include "interface.h"
-
+@<Macros Locais (interface.c)@>
 @<Variáveis Locais (interface.c)@>
 @
 \fimcodigo
@@ -352,10 +356,229 @@ with this header, its structure is:
 All the code presented in this document will be placed in one of these
 two files. Besides them, no other file will be created.
 
+\subsecao{1.2. Supporting Multiple Threads}
 
+Most code that will be defined in this document is portable. The only
+assumed requeriment is that an OpenGL context was already created and
+is active. However, there is a single non-portable part that we should
+define differently depending on the system and environment: the mutex
+support.
 
+A mmutex is a data sctructure that controls the access for multiple
+proccesses to a single common resource. They are treated differently
+depending on the operating system and environment. Because of its
+non-portability, we will introduce them here, separated from the
+remaining of the code.
 
+On Linux and BSD a Mutex is defined using the library
+\monoespaco{pthread} and follows its naming convention. On Windows, a
+Mutex is called a ``critical section''. On Web Assembly, for now, we
+will not define them because we are not allowing multiple threads in
+this environment.
 
+\iniciocodigo
+@<Macros Gerais (interface.h)@>=
+#if defined(__linux__) || defined(BSD)
+#define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
+#elif defined(_WIN32)
+#define _MUTEX_DECLARATION(mutex) CRITICAL_SECTION mutex
+#elif defined(__EMSCRIPTEN__)
+#define _MUTEX_DECLARATION(mutex)
+#endif
+@
+\fimcodigo
+
+This means that on Linux and BSD, we need to include headers for
+\monoespaco{pthread} library. On Windows, we just include the default
+Windows header:
+
+\iniciocodigo
+@<Inclur Cabeçalhos Gerais (interface.h)@>=
+#if defined(__linux__) || defined(BSD)
+#include <pthread.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
+@
+\fimcodigo
+
+In our code we will need to initializa each declared Mutex. For this,
+we will ise the following macros:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
+#elif defined(_WIN32)
+#define MUTEX_INIT(mutex) InitializeCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_INIT(mutex)
+#endif
+@
+\fimcodigo
+
+To finalize and delete the Mutex, we use the following macros:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
+#elif defined(_WIN32)
+#define MUTEX_DESTROY(mutex) DeleteCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_DESTROY(mutex)
+#endif
+@
+\fimcodigo
+
+Once we have a Mutex, there are two operations that we can do. The
+first is ask for Mutex usage. If some other proccess is already using
+it, this means that we wait until the Mutex is available:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
+#elif defined(_WIN32)
+#define MUTEX_WAIT(mutex) EnterCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_WAIT(mutex)
+#endif
+@
+\fimcodigo
+
+And finally, if we finished to use the resource guarded by the Mutex,
+we signal that other proccesses can now use it:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#if defined(__linux__) || defined(BSD)
+#define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
+#elif defined(_WIN32)
+#define MUTEX_SIGNAL(mutex) LeaveCriticalSection(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_SIGNAL(mutex)
+#endif
+@
+\fimcodigo
+
+\secao{2. Data Structures}
+
+In this section we will describe the three main data structures
+managed by this API: the user interfaces, the links for previous user
+interfaces and the marks in the history.
+
+\subsecao{2.1. User Interface Data Structure}
+
+The main and more complex data structure in this document is the data
+structure that stores information about user interfaces. The full
+definition for this data structure is:
+
+\iniciocodigo
+@<Estrutura de Dados (interface.h)@>
+struct interface {
+  int type;
+  void *next; // Pointer for linked list
+  float x, y, z;
+  float rotation;
+  float height, width;
+  floaf background_color[4], foreground_color[4];
+  int integer;
+  bool visible;
+  GLfloat _transform_matrix[16];
+  GLuint _shader;
+  _MUTEX_DECLARATION(interface_mutex);
+  /* Attributes below should be filled by the loading function: */
+  GLuint *_texture;
+  bool _loaded_texture;
+  bool animate;
+  unsigned number_of_frames;
+  unsigned current_frame;
+  unsigned *frame_duration;
+  unsigned long _t;
+  int max_repetition;
+};
+\fimcodigo
+@
+
+Now we will describe what means each part of this structure.
+
+The first attribute is the type. We will store our structure in a
+linked list (and because of this the next attribute is a pointer that
+will form the linked list). But in this list we want to store the
+three different data structures. When we visit an element in the list,
+how should we know if we are visiting an user interface, a link or a
+mark in the history? We will differentiate between them by this type,
+that will be a different value for each of these types:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+#define TYPE_INTERFACE 1 // A user interface, like the one above
+#define TYPE_LINK      2 // A linking to a previous user interface
+#define TYPE_MARKING   3 // A marking in our history of user interface creation
+@
+\fimcodigo
+
+After the type and the pointer, we store the position in pixels (for
+axis $x$ and $y$) for our interface and its z-index (axis $z$). We
+then store the rotation (in radians) and the width and height (in
+pixels). All these values can be read, but should not be changed
+directly. To change its valies, it is necessary to use the designed
+functions that we will define in the future sections. This is
+necessary becaus to correctly change the position, rotation and size,
+we must update the transform matrix, which is how OpenGL and our
+shaders really represent these informations. And the z-index must also
+be updated in anoother list, where we will store the correct order to
+render each element.
+
+The foreground and background color are colors in RGBA format with
+individual values in the range between 0 and 1. Such values will be
+passed to the shader, but not necessarily it will use these
+informations. Likewise, the integer attribute also is data that will
+be sent to the shader, but the shader can choose to use or not the
+information.
+
+The next attribute is if the interface is visible or not. If not, it
+will not be rendered in the screen.
+
+Next we store the compiled shader for our interface and also declare
+the mutex for the structure.
+
+The attributes after this part are initialized with 0, false and
+NULL. But while the loading function is interpreting the filename, it
+should change and update the values. The loading function is one of
+the functions that should be passed to the initialization function in
+our API and that interpret files with a given extension to produce the
+textures and other information for our interfaces.
+
+In this part first we have a pointer for the OpenGL texture for our
+interface. We can have not a single texture, but several
+textures. This happens if we open a file that can store more than one
+image. Or when we open an animated GIF, for example. Each frame in the
+animation will be a different texture.
+
+If we have more than one texture, the next variable determines if the
+interface should animate or not. The value can be changed to pause or
+resume the animation.
+
+The two next attributes are the number of frames in our animation and
+in which frame we are now. The first frame is number 0.
+
+Next we have a pointer that should have allocated a vector with the
+duration for each frame. If the number of frames is 1 or 0, thes can
+point to NULL.
+
+The variable \monoespaco{_t} will count the time elapsed. It should be
+set to zero after the interface is loaded and its texture is
+ready. After this, we will increment the variable periodically and
+this will help us to know when we should change the current frame in
+an animated interface.
+
+Finally, the next attribute represents in an animated interface how
+many times we should repeat the animation. If the value is zero, then
+we will repeat forever. If it is a positive value and we repeated the
+animation the allowed number of times, then the interface will stop
+the animation and stay in the last frame.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
