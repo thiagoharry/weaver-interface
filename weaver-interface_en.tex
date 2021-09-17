@@ -269,12 +269,12 @@ after the four functions is a NULL-terminated list of arguments
 composed by a string followed by some function that create a new
 interface given a file. The string represents a filename extension
 (for example, ``gif'', ``jpg'' or others) and the function after this
-should get as arguments a filename and the functions for allocation
-and disallocation and returns a new interface. It is expected that
-each of these functions can interpret correctly the files with
-extensions given previously. If they fail to interpret them, they
-shuld return NULL. Otherwise, they return a new interface with correct
-texturing. This way, we pass to the user the responsability of
+should get as arguments a filename, the functions for allocation and
+disallocation and a pointer to the interface that should be filled
+with information from the file. It is expected that each of these
+functions can interpret correctly the files with extensions given
+previously, filling the given interface with textures extracted from
+the file. This way, we pass to the user the responsability of
 provinding functions able to create interfaces from different file
 formats.
 
@@ -349,6 +349,7 @@ with this header, its structure is:
 @(src/interface.c@>=
 #include "interface.h"
 @<Macros Locais (interface.c)@>
+@<Estrutura de Dados Locais (interface.c)@>
 @<Variáveis Locais (interface.c)@>
 @
 \fimcodigo
@@ -579,6 +580,44 @@ many times we should repeat the animation. If the value is zero, then
 we will repeat forever. If it is a positive value and we repeated the
 animation the allowed number of times, then the interface will stop
 the animation and stay in the last frame.
+
+\subsecao{2.2. Markings in History}
+
+As mentioned in the Introduction, the logic that determines which
+interfaces are accessible in a given moment uses markings done in our
+interface history. All interfaces created after the last marking
+areaccessible and the ones created before the marking are not
+accessible: they will not be rendered and the user cannot interact
+with them. Several markings can be creted. And the most recent marking
+that still exist can be destroyed, which also destroy the interfaces
+created after it.
+
+To make this pssible, each marking must store a pointer to the
+previous marking.This way, when we erase a marking, we can replace the
+deleted marking with the marking pointed by it. In fact, this is the
+only information that we need to store in a marking besides data
+related with the linked list:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (interface.c)@>=
+struct marking {
+  int type;
+  void *next; // Ponteiro de lista encadeada
+  struct marking *previous_marking;
+};
+@
+\fimcodigo
+
+
+Notice that we declared this as a local data structure in file
+\monoespaco{interface.c}. We did this because this structure will be
+useful only internally in our API. The user will not need to
+manipulate directly markings. The user will interact with this data
+structure indirectly, when using functions
+\monoespaco{\_Wmark\_history\_interface} and
+\monoespaco{\_Wrestore\_history\_interface} described in the
+Introduction.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

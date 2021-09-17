@@ -287,12 +287,13 @@ depois das quatro funções de alocação e desalocação. Esses argumentos
 adicionais serão uma lista terminada em NULL de uma string seguida de
 uma função geradora de interfaces. A string representa uma extensão
 (por exemplo ``gif'', ``jpg'' ou outras) e a função que a sucede
-recebe como argumento um nome de arquivo e as funções de alocação e
-desalocação. Espera-se que a função consiga abrir e interpretar o
-arquivo e gerar uma nova interface à partir dele. Se não conseguir,
-retorna \monoespaco{NULL}. Desta forma, deixamos para o usuário a
-responsabilidade de fornecer as funções que criam interfaces à partir
-de arquivos de diferentes formatos.
+recebe como argumento um nome de arquivo, as funções de alocação e
+desalocação e um ponteiro para a interface que deve ser atualizada e
+preenchida de acordo com o conteúdo do arquivo. Espera-se que a função
+consiga abrir e interpretar o arquivo e gerar uma nova interface à
+partir dele.  Desta forma, deixamos para o usuário a responsabilidade
+de fornecer as funções que criam interfaces à partir de arquivos de
+diferentes formatos.
 
 Como apresentamos uma função de inicialização, vamos precisar também
 da função de finalização:
@@ -369,8 +370,8 @@ associado a este cabeçaho, o código será este:
 \iniciocodigo
 @(src/interface.c@>=
 #include "interface.h"
-
 @<Macros Locais (interface.c)@>
+@<Estrutura de Dados Locais (interface.c)@>
 @<Variáveis Locais (interface.c)@>
 @
 \fimcodigo
@@ -618,6 +619,42 @@ valor de 0 significa que ela deverá ser repetida para sempre. Um valor
 positivo coloca u limite no número de repetições. Quando repetirmos a
 animação pela última vez permitida, ela ficará estacionada no último
 frame sem voltar novamente para o primeiro.
+
+\subsecao{2.2. Marcações no Histórico}
+
+Como mencionado na Introdução, a lógica de quais interfaces estarão
+acessíveis em um dado momento terá relação com as marcações feitas no
+nosso histórico de interfaces. Todas as interfaces criadas após a
+última marcação estão acessíveis, mas aquelas que forem mais antigas
+que isso não poderão ser acessadas. Elas não serão renedeerizadas e
+nem pode-se interagir com elas. Podem ser criadas várias marcações. E
+a marcação mais recente existente pode ser destruída, o que destrói
+as interfaces criadas depois dela.
+
+Para que isso seja possível, cada marcação precisa memorizar qual era
+a marcação anterior. Desta forma, quando apagamos uma marcação,
+podemos substituir a marcação memorizada colocando-a no logar daquela
+que foi removida. De fato, essa é a única coisa que precisamos
+armazenar em uma marcação além dos dados típicos necessários para a
+lista encadeada:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (interface.c)@>=
+struct marking {
+  int type;
+  void *next; // Ponteiro de lista encadeada
+  struct marking *previous_marking;
+};
+@
+\fimcodigo
+
+Note que declaramos essa estrutura de dados internamente no arquivo
+\monoespaco{interface.c}. Isso porque essa é uma estrutura que será
+útil somente internamente à nossa API. Não haverá motivos para que o
+usuário da API precise obter uma marcação destas. Ele irá interagir
+com a existência delas somente por meio das funções
+\monoespaco{\_Wmark\_history\_interface} e
+\monoespaco{\_Wrestore\_history\_interface} descritas na Introdução.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

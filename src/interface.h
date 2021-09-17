@@ -1,5 +1,5 @@
 /*16:*/
-#line 332 "weaver-interface.tex"
+#line 333 "weaver-interface.tex"
 
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
@@ -8,7 +8,7 @@ extern"C"{
 #endif
 #include <stdbool.h>  
 /*19:*/
-#line 416 "weaver-interface.tex"
+#line 417 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h> 
@@ -16,10 +16,10 @@ extern"C"{
 #include <windows.h> 
 #endif
 /*:19*/
-#line 339 "weaver-interface.tex"
+#line 340 "weaver-interface.tex"
 
 /*18:*/
-#line 400 "weaver-interface.tex"
+#line 401 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
@@ -29,7 +29,7 @@ extern"C"{
 #define _MUTEX_DECLARATION(mutex)
 #endif
 /*:18*/
-#line 340 "weaver-interface.tex"
+#line 341 "weaver-interface.tex"
 
 /*1:*/
 #line 104 "weaver-interface.tex"
@@ -93,11 +93,11 @@ void(*permanent_free)(void*),
 void*(*temporary_alloc)(size_t),
 void(*temporary_free)(void*),...);
 /*:14*//*15:*/
-#line 301 "weaver-interface.tex"
+#line 302 "weaver-interface.tex"
 
 void _Wfinish_interface(void);
 /*:15*/
-#line 341 "weaver-interface.tex"
+#line 342 "weaver-interface.tex"
 
 #ifdef __cplusplus
 }
