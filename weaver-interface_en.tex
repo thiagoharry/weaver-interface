@@ -109,7 +109,7 @@ void _Wmove_interface(struct interface *i, float x, float y, float z);
 \fimcodigo
 
 We assume that the position of an interface is the coordinate of its
-center. The axis x$ and $y$ represents the horizontal and vertical
+center. The axis $x$ and $y$ represents the horizontal and vertical
 position. The axis $z$ determines which interface will be in the front
 if they occupy the same place in the space.
 
@@ -569,7 +569,7 @@ Next we have a pointer that should have allocated a vector with the
 duration for each frame. If the number of frames is 1 or 0, thes can
 point to NULL.
 
-The variable \monoespaco{_t} will count the time elapsed. It should be
+The variable \monoespaco{\_t} will count the time elapsed. It should be
 set to zero after the interface is loaded and its texture is
 ready. After this, we will increment the variable periodically and
 this will help us to know when we should change the current frame in
@@ -602,12 +602,11 @@ related with the linked list:
 @<Estrutura de Dados Locais (interface.c)@>=
 struct marking {
   int type;
-  void *next; // Ponteiro de lista encadeada
+  void *next; // Ponter to linked list
   struct marking *previous_marking;
 };
 @
 \fimcodigo
-
 
 Notice that we declared this as a local data structure in file
 \monoespaco{interface.c}. We did this because this structure will be
@@ -618,7 +617,28 @@ structure indirectly, when using functions
 \monoespaco{\_Wrestore\_history\_interface} described in the
 Introduction.
 
+\subsecao{2.3. Link to Other Interfaces}
 
+If some interface is inaccessible because is older than the last
+marking in the history, it is possible to create a link to it usinf
+function \monoespaco{\_Wlink\_interface}. The linking to the older
+interface acts as a recently created interface and then the older
+interface becames accessible again. Creating a link means create and
+store in the linked list the following struct:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (interface.c)@>=
+struct link {
+  int type;
+  void *next; // Pointer to linked list
+  struct interface *linked_interface;
+};
+@
+\fimcodigo
+
+Besides the information necessary to the linked list, like the type
+and the pointer to the next element, the only information that we need
+to store in a link is a pointer to the older linked interface.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

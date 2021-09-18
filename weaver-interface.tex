@@ -656,6 +656,30 @@ com a existência delas somente por meio das funções
 \monoespaco{\_Wmark\_history\_interface} e
 \monoespaco{\_Wrestore\_history\_interface} descritas na Introdução.
 
+\subsecao{2.3. Ligações para Outras Interfaces}
+
+Caso uma interface esteja inacessível por ser mais antiga que a última
+marcação, é possível criar uma ligação para ela com a função
+\monoespaco{\_Wlink\_interface}. A ligação para a interface antiga
+conta como se fosse uma nova interfae recém-criada e desta forma a
+interface antiga volta a estar acessível. Criar uma nova ligação
+significa criar e colocar na lista encadeada a seguinte estrutura:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (interface.c)@>=
+struct link {
+  int type;
+  void *next; // Ponteiro de lista encadeada
+  struct interface *linked_interface;
+};
+@
+\fimcodigo
+
+Além das informações necessárias para a lista encadeada como o tipo
+que identifica a estrutura e o ponteiro que apontará para o elemento
+da próxima posiçao, a única informação que precisamos armazenar nesta
+estrutura é um ponteiro para a interface apontada.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \secao{Referências}

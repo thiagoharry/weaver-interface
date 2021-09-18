@@ -59,7 +59,15 @@ int type;
 void*next;
 struct marking*previous_marking;
 };
-/*:26*/
+/*:26*//*27:*/
+#line 669 "weaver-interface.tex"
+
+struct link{
+int type;
+void*next;
+struct interface*linked_interface;
+};
+/*:27*/
 #line 374 "weaver-interface.tex"
 
 /*13:*/
