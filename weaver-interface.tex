@@ -263,7 +263,20 @@ static void (*temporary_free)(void *) = free;
 
 Por padrão, usaremos simplesmente a função de alocação e desalocação
 da biblioteca padrão. Mas o usuário pode personalizar cada uma destas
-funções quando invoca a inicialização de nossa biblioteca:
+funções. Além delas, vamos também estabelecer funções personalizáveis
+que serão executadas imediatamente antes e depois que formos carregar
+uma nova interface. Inicialmente tais funções serão nulas, mas elas
+podem ser depois ajustadas pelo usuário:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>=
+static void *(*before_loading_interface)(void) = NULL;
+static void *(*after_loading_interface)(void) = NULL;
+@
+\fimcodigo
+
+A ideia é que todas as funções persnalizáveis serão definidas durante
+a inicialização da nossa API:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
@@ -271,7 +284,10 @@ funções quando invoca a inicialização de nossa biblioteca:
 void _Winit_interface(void *(*permanent_alloc)(size_t),
                       void (*permanent_free)(void *),
                       void *(*temporary_alloc)(size_t),
-                      void (*temporary_free)(void *), ...);
+                      void (*temporary_free)(void *),
+                      void *(*before_loading_interface)(void),
+                      void *(*after_loading_interface)(void),
+                      ...);
 @
 \fimcodigo
 
@@ -283,17 +299,17 @@ gerencie de alguma forma a coleta de lixo e não quer ter interferência
 no processo.
 
 A função acima também aceita receber um número variável de argumentos
-depois das quatro funções de alocação e desalocação. Esses argumentos
-adicionais serão uma lista terminada em NULL de uma string seguida de
-uma função geradora de interfaces. A string representa uma extensão
-(por exemplo ``gif'', ``jpg'' ou outras) e a função que a sucede
-recebe como argumento um nome de arquivo, as funções de alocação e
-desalocação e um ponteiro para a interface que deve ser atualizada e
-preenchida de acordo com o conteúdo do arquivo. Espera-se que a função
-consiga abrir e interpretar o arquivo e gerar uma nova interface à
-partir dele.  Desta forma, deixamos para o usuário a responsabilidade
-de fornecer as funções que criam interfaces à partir de arquivos de
-diferentes formatos.
+depois das seis funções iniciais. Esses argumentos adicionais serão
+uma lista terminada em NULL de uma string seguida de uma função
+geradora de interfaces. A string representa uma extensão (por exemplo
+``gif'', ``jpg'' ou outras) e a função que a sucede recebe como
+argumento um nome de arquivo, as funções de alocação e desalocação e
+um ponteiro para a interface que deve ser atualizada e preenchida de
+acordo com o conteúdo do arquivo. Espera-se que a função consiga abrir
+e interpretar o arquivo e gerar uma nova interface à partir dele.
+Desta forma, deixamos para o usuário a responsabilidade de fornecer as
+funções que criam interfaces à partir de arquivos de diferentes
+formatos.
 
 Como apresentamos uma função de inicialização, vamos precisar também
 da função de finalização:
@@ -370,9 +386,11 @@ associado a este cabeçaho, o código será este:
 \iniciocodigo
 @(src/interface.c@>=
 #include "interface.h"
+@<Cabeçalhos Locais (interface.c)@>
 @<Macros Locais (interface.c)@>
 @<Estrutura de Dados Locais (interface.c)@>
 @<Variáveis Locais (interface.c)@>
+@<Definição de Funções da API (interface.c)@>
 @
 \fimcodigo
 
@@ -679,6 +697,121 @@ Além das informações necessárias para a lista encadeada como o tipo
 que identifica a estrutura e o ponteiro que apontará para o elemento
 da próxima posiçao, a única informação que precisamos armazenar nesta
 estrutura é um ponteiro para a interface apontada.
+
+\secao{3. Inicialização e Finalização da API}
+
+O objetivo da inicialização desta API é ajustar todas as funções
+personalizadas que serão usadas. Já a finalização desaloca as
+estruturas alocadas necessárias para armazenar algumas destas funções
+e também ajusta tais funções para valores padrão.
+
+\subsecao{3.1. Inicialização}
+
+Aqui nosso objetivo é ajustar as seis funções personalizáveis
+discutidas na Introdução e também receber uma lista de tamanho
+variável de funções que irão interpretar arquivos com uma dada
+extensão.
+
+Para armazenar cada uma destas funções que vai na lista de tamanho
+variável, precisamos da seguinte estrutura:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (interface.c)@>=
+struct file_function {
+  char *extension;
+  void (*load_texture)(void *(*permanent_alloc)(size_t),
+                      void (*permanent_free)(void *),
+                      void *(*temporary_alloc)(size_t),
+                      void (*temporary_free)(void *),
+                      void *(*before_loading_interface)(void),
+                      void *(*after_loading_interface)(void),
+                      char *source_filename, struct interface *target);
+};
+static unsigned number_of_file_functions_in_the_list = 0;
+static struct file_function *list_of_file_functions = NULL;
+@
+\fimcodigo
+
+A estrutura basicamente é um par formado por uma função que extrai
+texturas de um arquivo (e é informada sobre todas as funções
+personalizadas que devem ser usadas) e por uma extensão de arquivo que
+ela interpreta. Depois de definir a estrutura, criamos um ponteiro
+para ela que irá conter uma lista de funções deste tipo conhecidas. O
+ponteiro começa como uma lista vazia.
+
+Podemos agora definir a função de inicialização. O que esta função
+fará será preencher as seis funções personalizáveis básicas, contar
+quantas outras funções temos que irão interpretar arquivos, alocar o
+espaço necessário em nossa lista acima (usando as funções de alocação
+informadas) e preencher a lista recém-alocada:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>=
+void _Winit_interface(void *(*new_permanent_alloc)(size_t),
+                      void (*new_permanent_free)(void *),
+                      void *(*new_temporary_alloc)(size_t),
+                      void (*new_temporary_free)(void *),
+                      void *(*new_before_loading_interface)(void),
+                      void *(*new_after_loading_interface)(void), ...){
+  if(new_permanent_alloc != NULL) /* Parte 1: Preencher as 6 Funções */
+    permanent_alloc = new_permanent_alloc;
+  if(new_temporary_alloc != NULL)
+    temporary_alloc = new_temporary_alloc;
+  permanent_free = new_permanent_free;
+  temporary_free = new_temporary_free;
+  before_loading_interface = new_before_loading_interface;
+  after_loading_interface = new_after_loading_interface;
+  {
+    int count = -1, i; /* Parte 2: Contar quantas mais funções existem */
+    va_list args;
+    char *ext;
+    void (*func)(void *(*permanent_alloc)(size_t),
+                 void (*permanent_free)(void *), void *(*temporary_alloc)(size_t),
+                 void (*temporary_free)(void *),
+                 void *(*before_loading_interface)(void),
+                 void *(*after_loading_interface)(void),
+                 char *source_filename, struct interface *target);
+    va_start(args, new_after_loading_interface);
+    do{
+      count ++;
+      ext = va_arg(args, char *);
+      func = va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
+                                   void *(*)(size_t), void (*)(void *),
+                                   void *(*)(void), void *(*)(void),
+                                   char *, struct interface *)); 
+    } while(ext != NULL);
+    number_of_file_functions_in_the_list = count;
+    list_of_file_functions = (struct file_function *)
+                               permanent_alloc(sizeof(struct file_function) * 
+                                               count); // Parte 3: Alocar o resto
+    va_start(args, new_after_loading_interface);
+    for(i = 0; i < count; i ++){
+      list_of_file_functions[i].extension = va_arg(args, char *);
+      list_of_file_functions[i].load_texture =
+             va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
+                                   void *(*)(size_t), void (*)(void *),
+                                   void *(*)(void), void *(*)(void),
+                                   char *, struct interface *));
+    }
+  }
+}
+@
+\fimcodigo
+
+A função acima ficou verbosa graças ao fato de termos um número
+variável de argumentos contendo ponteiros para funções com mais
+argumentos. Infelizmente C se torna uma linguagem verbosa nestes
+casos. O que infelizmente encobre o quão simples foi o que fizemos na
+inicialização acima.
+
+O uso de alguns recursos como o acesso aos argumentos por meio da
+\monoespaco{va\_list} requer a inclusão do cabeçalho abaixo:
+
+\iniciocodigo
+@<Cabeçalhos Locais (interface.c)@>=
+#include <stdarg.h>
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
