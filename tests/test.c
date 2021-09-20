@@ -45,10 +45,20 @@ void *custom_permanent_alloc(size_t n){
   counter_permanent_alloc ++;
   return malloc(n);
 }
+static int counter_permanent_free = 0;
+void custom_permanent_free(void *p){
+  counter_permanent_free ++;
+  free(p);
+  return;
+}
+
 
 void test_custom_functions(void){
-  _Winit_interface(custom_permanent_alloc, NULL, NULL, NULL, NULL, NULL, NULL);
+  _Winit_interface(custom_permanent_alloc, custom_permanent_free,
+		   NULL, NULL, NULL, NULL, NULL);
   assert("Using custom permanent allocation", counter_permanent_alloc == 1);
+  _Wfinish_interface();
+  assert("Using custom permanent free function", counter_permanent_free == 1);
 }
 
 int main(int argc, char **argv){

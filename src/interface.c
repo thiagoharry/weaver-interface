@@ -1,16 +1,16 @@
 /*18:*/
-#line 365 "weaver-interface_en.tex"
+#line 387 "weaver-interface.tex"
 
 #include "interface.h"
 /*31:*/
-#line 770 "weaver-interface_en.tex"
+#line 811 "weaver-interface.tex"
 
 #include <stdarg.h> 
 /*:31*/
-#line 367 "weaver-interface_en.tex"
+#line 389 "weaver-interface.tex"
 
 /*21:*/
-#line 428 "weaver-interface_en.tex"
+#line 448 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
@@ -20,7 +20,7 @@
 #define MUTEX_INIT(mutex)
 #endif
 /*:21*//*22:*/
-#line 442 "weaver-interface_en.tex"
+#line 463 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
@@ -30,7 +30,7 @@
 #define MUTEX_DESTROY(mutex)
 #endif
 /*:22*//*23:*/
-#line 458 "weaver-interface_en.tex"
+#line 480 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
@@ -40,7 +40,7 @@
 #define MUTEX_WAIT(mutex)
 #endif
 /*:23*//*24:*/
-#line 473 "weaver-interface_en.tex"
+#line 495 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
@@ -50,16 +50,16 @@
 #define MUTEX_SIGNAL(mutex)
 #endif
 /*:24*//*26:*/
-#line 534 "weaver-interface_en.tex"
+#line 557 "weaver-interface.tex"
 
 #define TYPE_INTERFACE 1 
 #define TYPE_LINK      2 
 #define TYPE_MARKING   3 
 /*:26*/
-#line 368 "weaver-interface_en.tex"
+#line 390 "weaver-interface.tex"
 
 /*27:*/
-#line 620 "weaver-interface_en.tex"
+#line 660 "weaver-interface.tex"
 
 struct marking{
 int type;
@@ -67,7 +67,7 @@ void*next;
 struct marking*previous_marking;
 };
 /*:27*//*28:*/
-#line 648 "weaver-interface_en.tex"
+#line 687 "weaver-interface.tex"
 
 struct link{
 int type;
@@ -75,7 +75,7 @@ void*next;
 struct interface*linked_interface;
 };
 /*:28*//*29:*/
-#line 680 "weaver-interface_en.tex"
+#line 719 "weaver-interface.tex"
 
 struct file_function{
 char*extension;
@@ -90,26 +90,25 @@ char*source_filename,struct interface*target);
 static unsigned number_of_file_functions_in_the_list= 0;
 static struct file_function*list_of_file_functions= NULL;
 /*:29*/
-#line 369 "weaver-interface_en.tex"
+#line 391 "weaver-interface.tex"
 
 /*13:*/
-#line 239 "weaver-interface_en.tex"
+#line 256 "weaver-interface.tex"
 
-#include <stdlib.h> 
 static void*(*permanent_alloc)(size_t)= malloc;
 static void*(*temporary_alloc)(size_t)= malloc;
 static void(*permanent_free)(void*)= free;
 static void(*temporary_free)(void*)= free;
 /*:13*//*14:*/
-#line 256 "weaver-interface_en.tex"
+#line 272 "weaver-interface.tex"
 
 static void*(*before_loading_interface)(void)= NULL;
 static void*(*after_loading_interface)(void)= NULL;
 /*:14*/
-#line 370 "weaver-interface_en.tex"
+#line 392 "weaver-interface.tex"
 
 /*30:*/
-#line 709 "weaver-interface_en.tex"
+#line 749 "weaver-interface.tex"
 
 void _Winit_interface(void*(*new_permanent_alloc)(size_t),
 void(*new_permanent_free)(void*),
@@ -159,7 +158,20 @@ char*,struct interface*));
 }
 }
 }
-/*:30*/
-#line 371 "weaver-interface_en.tex"
+/*:30*//*32:*/
+#line 827 "weaver-interface.tex"
+
+void _Wfinish_interface(void){
+permanent_free(list_of_file_functions);
+number_of_file_functions_in_the_list= 0;
+permanent_alloc= malloc;
+temporary_alloc= malloc;
+permanent_free= free;
+temporary_free= free;
+before_loading_interface= NULL;
+after_loading_interface= NULL;
+}
+/*:32*/
+#line 393 "weaver-interface.tex"
 
 /*:18*/

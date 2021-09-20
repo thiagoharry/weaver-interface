@@ -813,6 +813,35 @@ O uso de alguns recursos como o acesso aos argumentos por meio da
 @
 \fimcodigo
 
+\subsecao{3.2. Finalização}
+
+A função complementar à nossa inicialização é a função de
+finalização. Se na inicialização terminamos alocando memória para
+armazenar as funções que interpretam arquivos, na finaliação
+terminaremos desalocando essa mesma memória. Se na inicialização
+começamos ajustanto as seis funções personalizadas básicas, na
+finalização terminaremos retornando tais funções para seus valores
+padrão:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wfinish_interface(void){
+  permanent_free(list_of_file_functions);
+  number_of_file_functions_in_the_list = 0;
+  permanent_alloc = malloc;
+  temporary_alloc = malloc;
+  permanent_free = free;
+  temporary_free = free;
+  before_loading_interface = NULL;
+  after_loading_interface = NULL;
+}
+@
+\fimcodigo
+
+E isso desfaz tudo o que foi feito na inicialização. É possível
+inicializar e finalizar a API várias vezes sem que isso cause qualquer
+problema.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \secao{Referências}
