@@ -100,6 +100,18 @@ use some default shader. A null file means that the interface will
 have no texture. The other arguments are the initial position and size
 for our interface.
 
+We could define shaders more easily for them if we pass some
+additional library with GLSL functions. This can be done passing to
+this function a string with source code for function definitions in
+GLSL:
+
+\iniciocodigo
+@<Declaração de Função (interface.h)@>+=
+void _Wset_interface_shader_library(char *source);
+@
+\fimcodigo
+
+
 When we have a interface, we can move it with the function:
 
 \iniciocodigo
@@ -784,6 +796,7 @@ these functions to the default initial values:
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
 void _Wfinish_interface(void){
+  @<Finalização da API de Interface@>
   permanent_free(list_of_file_functions);
   number_of_file_functions_in_the_list = 0;
   permanent_alloc = malloc;
@@ -796,8 +809,108 @@ void _Wfinish_interface(void){
 @
 \fimcodigo
 
+Notice that we let additional space in red for additional code that we
+will eventually need in the finalization when we increase the API
+complexity defining new functions in the next sections.
+
 And this undoes everything done in the initialization. It is possible
 to initialize and finalize the API without problems.
+
+\secao{4. Shaders}
+
+One of the things that we need to define is our default shader to be
+used if the user do not pass a custom shader when creating an
+interface. Defining the custom shader gives us a great opportunity to
+present the requisites for shaders supported by this API. We will
+require a specific format for shaders.
+
+First, all shader source files must specify in the first line the
+version for the shading language used. We will use the GLSL language,
+but this language have different versions. We will not require that
+the user put this information in all shader sources, we will write
+this automatically.
+
+To choose the correct version for the GLSL language that will be used
+in all the shaders, we will check the value in macro
+\monoespaco{W\_GLSL\_VERSION}. This macro is what will be written in
+the first line of each shader source code. The macro can be defined by
+the user passing adequate compilation flags, or including the macro
+definition in the code, but if this is not done, then we will use the
+standard string ``\monoespaco{#version 100\\n}''. This standard value
+means that we will use the shading language OpenGL ES v1.00. We eill
+define the macro, if it does not exist, in the beginning of the file
+that defines our functions:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>
+#if !defined(W_GLSL_VERSION)
+#define W_GLSL_VERSION "#version 100\n"
+#endif
+@
+\fimcodigo
+
+There is at least two different shaders that we need to define for
+each interface. The first is the vertex shader, that will be processed
+for each vertex in our interface. The other is the fragment shader,
+that will process each individual pixel. Each of them have a different
+source code. But as we defined in the Introduction, when we specify a
+shader to each interface passing a single filename with its source
+code. We do not pass two fileames. How can we represent two source
+codes in the same file?
+
+Well, as the GLSL language support C-like macros, we can do this in
+the same way that we can create a program in C that will run in both
+Windows and Linux. We use conditional macros to include conditionally
+custom source code for each environment. For this, we must have two
+different GLSL macros. One that will be defined when we need a vertex
+shader and the other when we need a fragment shader:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static char vertex_shader_macro[] = "#define VERTER_SHADER\n";
+static char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
+@
+\fimcodigo
+
+In the shader source code, we just need to check which macro is
+defined and we can include code conditionally depending on this.
+
+The next thing that we must define is how to support libraries in our
+GLSL code. They can make shader definition easier. The user can
+defineadditional GLSL functions that will be available in akll
+interface shaders storing its source code in the following variable:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static char *shader_library = NULL;
+@
+\fimcodigo
+
+The variable will be changed by the function seen in the Introduction
+to increment GLSL with new functions. Such function is extremely
+simple, it justs assign a string with function source code to the
+variable above:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wset_interface_shader_library(char *source){
+  shader_library = source;
+}
+@
+\fimcodigo
+
+But we should not forget that when finalizing our API, we need to undo
+the assignment. Otherwise, when a user finalize and initialize again
+the API, the second initialization would get the same function
+definitions assigned in the first initialization:
+
+\iniciocodigo
+@<Finalização da API de Interface@>=
+shader_library = NULL;
+@
+\fimcodigo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
