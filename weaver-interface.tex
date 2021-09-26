@@ -364,6 +364,9 @@ Podemos apresentar aqui a estrutura do arquivo
 extern "C" {
 #endif
 #include <stdbool.h> // Define tipo 'bool'
+#if !defined(_WIN32)
+#include <sys/param.h> // Necessário no BSD, mas causa problema no Windows
+#endif
 @<Inclur Cabeçalhos Gerais (interface.h)@>
 @<Macros Gerais (interface.h)@>
 @<Declaração de Função (interface.h)@>
@@ -401,6 +404,7 @@ associado a este cabeçaho, o código será este:
 @<Macros Locais (interface.c)@>
 @<Estrutura de Dados Locais (interface.c)@>
 @<Variáveis Locais (interface.c)@>
+@<Funções Auxiliares Locais (interface.c)@>
 @<Definição de Funções da API (interface.c)@>
 @
 \fimcodigo
@@ -877,13 +881,13 @@ iremos consultar se existe uma macro definida com o nome
 \monoespaco{W\_GLSL\_VERSION}. Essa macro será usada para preencher a
 primeira linha de todo arquivo GLSL. Caso ela não tenha sido definida
 e fornecida pelo usuário, então iremos defini-la vom o valor padrão
-``\monoespaco{#version 100\\n}''. Este valor padrão significa que o
+``\monoespaco{\#version 100\\n}''. Este valor padrão significa que o
 shader usará a linguagem de shader OpenGL ES v1.00. Faremos esse
 ajuste de macros bem no início de nosso arquivo com a definição das
 funções:
 
 \iniciocodigo
-@<Macros Locais (interface.c)@>
+@<Macros Locais (interface.c)@>=
 #if !defined(W_GLSL_VERSION)
 #define W_GLSL_VERSION "#version 100\n"
 #endif
@@ -920,11 +924,11 @@ arquivo com código C.
 A próxima coisa que será de nosso interesse será inserir bibliotecas
 GLSL. O usuário poderá definir funções adicionais para facilitar o
 código GLSL de seus shaders. As bibliotecas ficarão armazenadas na
-seguinte variável que iniciará vazia:
+seguinte variável que iniciará como sendo uma string vazia:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static char *shader_library = NULL;
+static char *shader_library = "";
 @
 \fimcodigo
 
@@ -948,9 +952,148 @@ primeira:
 
 \iniciocodigo
 @<Finalização da API de Interface@>=
-shader_library = NULL;
+shader_library = "";
 @
 \fimcodigo
+
+Agora vejamos como compilar um shader completo por meio
+disso. Primeiro vamos inserir os cabeçalhos OpenGL. Por padrão
+assumiremos o Open GL ES 2.0. Mas em ambientes como o Windows onde ele
+não necessariamente estará disponível, podemos usar a versão OpenGL
+que existir, desde que suporte shaders. Dependendo do caso, o usuário
+terá que incluir cabeçalhos adicionais por meio de flags de
+compilação. Também vamos pedir a biblioteca de entrada e saída para
+podermos imprimir mensagens de erro caso hajam erros no código do
+shader.
+
+\iniciocodigo
+@<Cabeçalhos Locais (interface.c)@>+=
+#if defined(__linux__) || defined(BSD)
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+#endif
+#if defined(_WIN32)
+#pragma comment(lib, "Opengl32.lib")
+#include <windows.h>
+#include <GL/gl.h>
+#endif
+#include <stdio.h>
+@
+\fimcodigo
+
+Uma vez que tenhamos o cabeçalho adequado, vamos definir a função, que
+dado um código-fonte de um shader OpenGL, a compila para um programa
+de shader completo. Compilar um shader significa criar no OpenGL os
+dois tipos de shaders (vértice e fragmento), compilar ambos, e ligá-os
+em um único programa.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>=
+@<Funções para Checar Erros de Compilação@>
+static GLuint new_shader(const char *source_code){
+  GLuint vertex_shader, fragment_shader, program;
+  const char *list_of_source_code[4];
+  vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+  fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+  list_of_source_code[0] = W_GLSL_VERSION;
+  list_of_source_code[1] = vertex_shader_macro;
+  list_of_source_code[2] = shader_library;
+  list_of_source_code[3] = source_code;
+  glShaderSource(vertex_shader, 4, list_of_source_code, NULL);
+  list_of_source_code[1] = fragment_shader_macro;
+  glShaderSource(fragment_shader, 4, list_of_source_code, NULL);
+  glCompileShader(vertex_shader);
+  if(check_compiling_error(vertex_shader))
+    return 0;
+  glCompileShader(fragment_shader);
+  if(check_compiling_error(fragment_shader))
+    return 0;
+  program = glCreateProgram();
+  glAttachShader(program, vertex_shader);
+  glAttachShader(program, fragment_shader);
+  glLinkProgram(program);
+  if(check_linking_error(program))
+    return 0;
+  glDeleteShader(vertex_shader);
+  glDeleteShader(fragment_shader);
+  return program;
+}
+@
+\fimcodigo
+
+A parte que não é mostrada acima é como fazemos a verificação de que
+um shader foi compilado com sucesso. Para isso usamos a função
+abaixo. Ela funciona para os dois tipos de shader. E consiste em
+consultar se ocorreu um erro de compilação. Em caso afirmativo, ela lê
+dos logs do OpenGL o que aconteceu de errado e imprime. Note que
+usamos as funções temporárias de alocação e desalocação para termos
+espaço para a mensagem de erro. E a função retorna se achou ou não um
+erro.
+
+\iniciocodigo
+@<Funções para Checar Erros de Compilação@>=
+static bool check_compiling_error(GLuint shader){
+  GLint status;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    int info_log_length;
+    char *error_msg;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_log_length);
+    error_msg = (char *) temporary_alloc(info_log_length);
+    glGetShaderInfoLog(shader, info_log_length, &info_log_length, error_msg);
+    fprintf(stderr, "Shader Error: %s\n", error_msg);
+    if(temporary_free != NULL)
+      temporary_free(error_msg);
+    return true;
+  }
+  return false;
+}
+@
+\fimcodigo
+
+Checar se houve um erro quando ligamos os dois shaders funciona de
+maneira semehante. Entretanto, podemos fazer ainda melhor. Podemos
+tentar validar o shader simulando o seu uso e assim detectar erros
+adicionais. Contudo, como isso é uma operação demorada e cara, faremos
+isso só se a macro \monoespaco{W\_DEBUG\_INTERFACE} esteja
+definida. Neste caso, assumiremos estar em modo de depuração:
+
+\iniciocodigo
+@<Funções para Checar Erros de Compilação@>+=
+static bool check_linking_error(GLuint program){
+  GLint status;
+  GLsizei info_log_length;
+  char *error_msg;
+  glGetProgramiv(program, GL_LINK_STATUS, &status);
+  if(status == GL_FALSE){
+    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_log_length);
+    error_msg = (char *) temporary_alloc(info_log_length);
+    glGetProgramInfoLog(program, info_log_length, &info_log_length, error_msg);
+    fprintf(stderr, "Shader Error: %s\n", error_msg);
+    if(temporary_free != NULL)
+      temporary_free(error_msg);
+    return true;
+  }
+#if defined(W_DEBUG_INTERFACE)
+  glValidateProgram(program);
+  glGetProgramiv(program, GL_VALIDATE_STATUS, &status);
+  if(status == GL_FALSE){
+    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_log_length);
+    error_message = (char *) temporary_alloc(info_log_length);
+    glGetProgramInfoLog(program, info_log_length, &info_log_length, error_msg);
+    fprintf(stderr, "Shader Error: %s\n", error_msg);
+    if(temporary_free != NULL)
+      temporary_free(error_msg);
+    return true;
+  }
+#endif
+  return false;  
+}
+@
+\fimcodigo
+
+E isso termina a descrição de como compilamos um novo shader e
+imprimimos erros caso hajam problemas no código-fonte.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
