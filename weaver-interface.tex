@@ -809,6 +809,7 @@ void _Winit_interface(void *(*new_permanent_alloc)(size_t),
                                    char *, struct interface *));
     }
   }
+  @<Inicialização da API de Interface@>
 }
 @
 \fimcodigo
@@ -818,6 +819,9 @@ variável de argumentos contendo ponteiros para funções com mais
 argumentos. Infelizmente C se torna uma linguagem verbosa nestes
 casos. O que infelizmente encobre o quão simples foi o que fizemos na
 inicialização acima.
+
+No fim da função deixamos em vermelho espaço para que operações
+adicionais que ainda serão definidas sejam feitas.
 
 O uso de alguns recursos como o acesso aos argumentos por meio da
 \monoespaco{va\_list} requer a inclusão do cabeçalho abaixo:
@@ -910,8 +914,8 @@ feito definindo em cada um dos casos as seguintes macros:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static char vertex_shader_macro[] = "#define VERTER_SHADER\n";
-static char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
+static const char vertex_shader_macro[] = "#define VERTEX_SHADER\n";
+static const char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
 @
 \fimcodigo
 
@@ -1079,7 +1083,7 @@ static bool check_linking_error(GLuint program){
   glGetProgramiv(program, GL_VALIDATE_STATUS, &status);
   if(status == GL_FALSE){
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_log_length);
-    error_message = (char *) temporary_alloc(info_log_length);
+    error_msg = (char *) temporary_alloc(info_log_length);
     glGetProgramInfoLog(program, info_log_length, &info_log_length, error_msg);
     fprintf(stderr, "Shader Error: %s\n", error_msg);
     if(temporary_free != NULL)
@@ -1094,6 +1098,146 @@ static bool check_linking_error(GLuint program){
 
 E isso termina a descrição de como compilamos um novo shader e
 imprimimos erros caso hajam problemas no código-fonte.
+
+Podemos agora apresentar o código do shader padrão a ser usado caso o
+usuário não passe um shader personalizado. O objetivo do shader padrão
+deve ser apenas mostrar a textura associada à interface caso exista
+uma textura.
+
+O código-fonte do shader padrão será armazendado em uma constante:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const char default_shader_source[] = ""
+@<Atributos, Uniformes e Variantes de Shader@>
+"#if defined(VERTEX_SHADER)\n"
+@<Shader de Vértice Padrão@>
+"#else\n"
+@<Shader de Fragmento Padrão@>
+"#endif\n"
+                                           "";
+@
+\fimcodigo
+
+O código-fonte serão literais strings aramazenadas na variável
+constante acima. No caso do shader de vértice, tudo o que faremos por
+padrão com cada vértice será multiplicar sua posição pela matriz de
+modelo e visualização que armazenará coisas como seu tamanho, posição
+e rotação. Além disso, especificamos a posição em nossa textura
+associada a cada vértice.
+
+Para entender o código, considere que iremos representar toda
+interface usando sempre a mesma sequência de vértices: $(0, 0, 0), (1,
+0, 0), (1, 1, 0), (0, 1, 0)$. Eles são declarados abaixo:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const float interface_vertices[12] = {0.0, 0.0, 0.0,
+  1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 };
+@
+\fimcodigo
+
+Ou seja, a interface originalmente será sempre um quadrado posicionado
+no anto da tela e cujo tamanho ocupa praticamente a tela inteira.
+Para transformar esse quadrado fixo em coisas de diferentes tamanhos,
+posições e rotações nós usamos diferentes matrizes de modelo e
+visualização e multiplicamos a posição fixa pela matriz que será
+diferente para cada interface.
+
+\iniciocodigo
+@<Shader de Vértice Padrão@>=
+"void main(){\n"
+"  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
+"  texture_coordinate = vec2(vertex_position.x, vertex_position.y);\n"
+"}\n"
+@
+\fimcodigo
+
+No shader de fragmento, o que faremos para cada pixel é desenhar o
+pixel da textura associado à esta posição.
+
+\iniciocodigo
+@<Shader de Fragmento Padrão@>=
+"void main(){\n"
+"  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+"  gl_FragData[0] = texture;\n"
+"}\n"
+@
+\fimcodigo
+
+Agora temos que definir para os shaders seus atributos, uniformes e
+variantes. Os atributos são variáveis somente-leitura especificados
+para cada vértice. O shader de fragmento também pode lê-los, obtendo
+os valores associados a cada vértice ao redor do píxel em que está e
+interpolando o valor para obter o associado ao píxel atual. O único
+atributo que teremos é a posição do vértice, em coordenada $(x, y,
+z)$. A coordenada $x$ e $y$ irá variar entre 0 e 1 enquanto $z=0$ como
+descrito antes:
+
+\iniciocodigo
+@<Atributos, Uniformes e Variantes de Shader@>=
+"attribute vec3 vertex_position;\n"
+@
+\fimcodigo
+
+Uniformes são variáveis que também são passadas para vértices, mas
+eles não irão nunca mudar entre um vértice e outro e nunca precisarão
+também ser interpolados. Iremos manter como uniformes a cor de frente
+e de fundo, ma matriz de modelo e visualização, o tamanho do objeto em
+pixels, o tempo atual em segundos e o inteiro associado a cada
+interface que poderá ser personalizado pelo usuário:
+
+\iniciocodigo
+@<Atributos, Uniformes e Variantes de Shader@>+=
+"uniform vec4 foreground_color, background_color;\n"
+"uniform mat4 model_view_matrix;\n"
+"uniform vec2 interface_size;\n"
+"uniform float time;\n"
+"uniform int integer;\n"
+@
+\fimcodigo
+
+Por fim, temos as variantes. Estas variáveis podem ser modificadas e
+preenchidas pelo shader de vértice. Seu valor interpolado será passado
+parao shader de fragmento. É aqui que declaramos a coordenada em
+textura que iremos usar.
+
+\iniciocodigo
+@<Atributos, Uniformes e Variantes de Shader@>+=
+"varying mediump vec2 texture_coordinate;\n"
+@
+\fimcodigo
+
+Vamos compilar este shader padrão na inicialização da nossa API. Após
+compilado, ele será representado pela seguinte variável:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static GLuint default_shader_program;
+@
+\fimcodigo
+
+Vamos compilá-lo durante a inicialização:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>=
+default_shader_program = new_shader(default_shader_source);
+@
+\fimcodigo
+
+E na finalização iremos destruir o programa:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+glDeleteProgram(default_shader_program);
+@
+\fimcodigo
+
+Note que nós não usamos todas as variáveis definidas no shader
+padrão. Durante a compilação muitas delas serão simplesmente ignoradas
+e descartadas como otimização. Mas declaramos mesmo as que não usamos
+apenas para informar quais são as variáveis que shaders personalizados
+definidos pelo usuário pode usar.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -6,11 +6,11 @@ doc_en:
 	dvipdf weaver-interface_en.dvi
 test:
 	ctangle weaver-interface.tex
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -O2 tests/test.c src/interface.c  -o test_interface
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -DW_DEBUG_INTERFACE -Wall -O2 tests/test.c tests/window.c src/interface.c  -o test_interface -lX11 -lEGL -lGLESv2
 	./test_interface
 test_en:
 	ctangle weaver-interface_en.tex
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -Wall -O2 tests/test.c src/interface.c  -o test_interface
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -DW_DEBUG_INTERFACE -Wall -O2 tests/test.c tests/window.c src/interface.c  -o test_interface -lX11 -lEGL -lGLESv2
 	./test_interface
 clean:
 	rm -f *~ *.core *.scn *.dvi *.idx *.log 

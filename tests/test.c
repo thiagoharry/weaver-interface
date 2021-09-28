@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "../src/interface.h"
-
+#include "window.h"
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
@@ -62,7 +62,9 @@ void test_custom_functions(void){
 }
 
 int main(int argc, char **argv){
+  _Wcreate_window();
   test_custom_functions();
   imprime_resultado();
+  _Wdestroy_window();
   return 0;
 }

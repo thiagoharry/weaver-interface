@@ -770,6 +770,7 @@ void _Winit_interface(void *(*new_permanent_alloc)(size_t),
                                    char *, struct interface *));
     }
   }
+  @<Inicialização da API de Interface@>
 }
 @
 \fimcodigo
@@ -778,6 +779,9 @@ The above function is very verbose because C is verbose when we have
 functions with variable number of parameters and these parameters can
 be pointers to functions with lots of parameters. Despite the
 verbosity, the initialization above is very simple.
+
+In the end, in red, we marked a place where we will put additional
+initialization code that we will define in the next sections.
 
 The use of some resources, like accessing arguments by
 \monoespaco{va\_list} requires the following header:
@@ -871,8 +875,8 @@ shader and the other when we need a fragment shader:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static char vertex_shader_macro[] = "#define VERTER_SHADER\n";
-static char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
+static const char vertex_shader_macro[] = "#define VERTEX_SHADER\n";
+static const char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
 @
 \fimcodigo
 
@@ -1038,7 +1042,7 @@ static bool check_linking_error(GLuint program){
   glGetProgramiv(program, GL_VALIDATE_STATUS, &status);
   if(status == GL_FALSE){
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_log_length);
-    error_message = (char *) temporary_alloc(info_log_length);
+    error_msg = (char *) temporary_alloc(info_log_length);
     glGetProgramInfoLog(program, info_log_length, &info_log_length, error_msg);
     fprintf(stderr, "Shader Error: %s\n", error_msg);
     if(temporary_free != NULL)
@@ -1053,6 +1057,145 @@ static bool check_linking_error(GLuint program){
 
 And this ends the description of how we compile a new shader and print
 messages in case of errors in the source code.
+
+Now we can define the default shader source code that will be used if
+the user do not use a custom shader. The shader objective will be
+showing the texture associated with the interface.
+
+The source code for the default shader will be stored in the following
+constant:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const char default_shader_source[] = ""
+@<Atributos, Uniformes e Variantes de Shader@>
+"#if defined(VERTEX_SHADER)\n"
+@<Shader de Vértice Padrão@>
+"#else\n"
+@<Shader de Fragmento Padrão@>
+"#endif\n"
+                                           "";
+@
+\fimcodigo
+
+The source code will be composed by string literals stored in the
+constant variable above. In the case of the vertex shader, it will
+multiply each vertex by the model-view matrix that stores information
+about its size, position and rotation. It will also set which texture
+coordinate is associated with each vertex.
+
+To understand the code, you need to consider that all interfaces will
+have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
+0)$. They are declared below:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const float interface_vertices[12] = {0.0, 0.0, 0.0,
+  1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 };
+@
+\fimcodigo
+
+All interfaces will begin as a square positioned in the corner of the
+screen and it will occupy possibly all the screeen, or most of it. To
+transform this fix square in different sizes, positions and rotations,
+we will use different model-view matrices. Each interface will have
+its own model-view matrix.
+
+\iniciocodigo
+@<Shader de Vértice Padrão@>=
+"void main(){\n"
+"  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
+"  texture_coordinate = vec2(vertex_position.x, vertex_position.y);\n"
+"}\n"
+@
+\fimcodigo
+
+
+In the fragment shader, for each pixel we will draw the color
+associated with the texture in a given position:
+
+\iniciocodigo
+@<Shader de Fragmento Padrão@>=
+"void main(){\n"
+"  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+"  gl_FragData[0] = texture;\n"
+"}\n"
+@
+\fimcodigo
+
+Now we need to define in the shaders its attributes, uniforms and
+varyings. The attributes are read-only data specified for each
+vertex. The fragment shader deduces its value for each pixel
+interpolating data from neighbor vertices. The sole attribute that we
+will define is the vertex position, in coordinates $(x, y, z)$. The
+coordinates $x$ and $y$ will be between 0 and 1 and $z=0$, as
+described previously:
+
+\iniciocodigo
+@<Atributos, Uniformes e Variantes de Shader@>=
+"attribute vec3 vertex_position;\n"
+@
+\fimcodigo
+
+Uniforms are variables that also will be passed to vertices, but they
+will not change between them. Therefore, the fragment shader do not
+need to interpolate its value. We will store as uniforms the
+foreground color, the background color, the model-view matrix, the
+object size in pixels, the current time in seconds and the integer
+associated with each interface that can be customized by the user:
+
+\iniciocodigo
+@<Atributos, Uniformes e Variantes de Shader@>+=
+"uniform vec4 foreground_color, background_color;\n"
+"uniform mat4 model_view_matrix;\n"
+"uniform vec2 interface_size;\n"
+"uniform float time;\n"
+"uniform int integer;\n"
+@
+\fimcodigo
+
+Finally, varyings are variables that can be changed by the vertex
+shader and will be given to the fragment vertice, that interpolates
+using values from neighbor vertices. It is as a varying that we
+declare the texture coordinate:
+
+\iniciocodigo
+@<Atributos, Uniformes e Variantes de Shader@>+=
+"varying mediump vec2 texture_coordinate;\n"
+@
+\fimcodigo
+
+We will compile thes default shader during the initialization and
+store it after compiled in the following variable:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static GLuint default_shader_program;
+@
+\fimcodigo
+
+We compile the default shader here:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>=
+default_shader_program = new_shader(default_shader_source);
+@
+\fimcodigo
+
+And in the finalization we destroy this default program:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+glDeleteProgram(default_shader_program);
+@
+\fimcodigo
+
+Notice that we did not use all the variables defined in the default
+shader. The unused variables will be discarded during the compilation
+as an optimization. But we declared them anyway just to list the
+supported variables that can be used by custom shaders defined by the
+user.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
