@@ -6,8 +6,8 @@
 #line 830 "weaver-interface.tex"
 
 #include <stdarg.h> 
-/*:32*//*39:*/
-#line 974 "weaver-interface.tex"
+/*:32*//*40:*/
+#line 990 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #include <EGL/egl.h> 
@@ -19,7 +19,7 @@
 #include <GL/gl.h> 
 #endif
 #include <stdio.h> 
-/*:39*/
+/*:40*/
 #line 403 "weaver-interface.tex"
 
 /*22:*/
@@ -129,73 +129,81 @@ static void*(*after_loading_interface)(void)= NULL;
 static const char vertex_shader_macro[]= "#define VERTEX_SHADER\n";
 static const char fragment_shader_macro[]= "#define FRAGMENT_SHADER\n";
 /*:35*//*36:*/
-#line 934 "weaver-interface.tex"
+#line 938 "weaver-interface.tex"
+
+static const char precision_qualifier[]= "precision highp float;\n"
+"precision highp int;\n";
+/*:36*//*37:*/
+#line 950 "weaver-interface.tex"
 
 static char*shader_library= "";
-/*:36*//*43:*/
-#line 1110 "weaver-interface.tex"
+/*:37*//*44:*/
+#line 1127 "weaver-interface.tex"
 
 static const char default_shader_source[]= ""
-/*47:*/
-#line 1178 "weaver-interface.tex"
+/*48:*/
+#line 1193 "weaver-interface.tex"
 
+"#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
-/*:47*//*48:*/
-#line 1191 "weaver-interface.tex"
+"#endif\n"
+/*:48*//*49:*/
+#line 1208 "weaver-interface.tex"
 
 "uniform vec4 foreground_color, background_color;\n"
 "uniform mat4 model_view_matrix;\n"
 "uniform vec2 interface_size;\n"
 "uniform float time;\n"
 "uniform int integer;\n"
-/*:48*//*49:*/
-#line 1206 "weaver-interface.tex"
+"uniform sampler2D texture1;\n"
+/*:49*//*50:*/
+#line 1224 "weaver-interface.tex"
 
 "varying mediump vec2 texture_coordinate;\n"
-/*:49*/
-#line 1112 "weaver-interface.tex"
+/*:50*/
+#line 1129 "weaver-interface.tex"
 
 "#if defined(VERTEX_SHADER)\n"
-/*45:*/
-#line 1148 "weaver-interface.tex"
+/*46:*/
+#line 1165 "weaver-interface.tex"
 
 "void main(){\n"
 "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
 "  texture_coordinate = vec2(vertex_position.x, vertex_position.y);\n"
 "}\n"
-/*:45*/
-#line 1114 "weaver-interface.tex"
+/*:46*/
+#line 1131 "weaver-interface.tex"
 
 "#else\n"
-/*46:*/
-#line 1160 "weaver-interface.tex"
+/*47:*/
+#line 1177 "weaver-interface.tex"
 
 "void main(){\n"
 "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
 "  gl_FragData[0] = texture;\n"
 "}\n"
-/*:46*/
-#line 1116 "weaver-interface.tex"
+/*:47*/
+#line 1133 "weaver-interface.tex"
 
 "#endif\n"
 "";
-/*:43*//*44:*/
-#line 1134 "weaver-interface.tex"
+/*:44*//*45:*/
+#line 1151 "weaver-interface.tex"
 
 static const float interface_vertices[12]= {0.0,0.0,0.0,
 1.0,0.0,0.0,1.0,1.0,0.0,0.0,1.0,0.0};
-/*:44*//*50:*/
-#line 1215 "weaver-interface.tex"
+/*:45*//*51:*/
+#line 1233 "weaver-interface.tex"
 
 static GLuint default_shader_program;
-/*:50*/
+/*:51*/
 #line 406 "weaver-interface.tex"
 
-/*40:*/
-#line 995 "weaver-interface.tex"
-
 /*41:*/
-#line 1038 "weaver-interface.tex"
+#line 1011 "weaver-interface.tex"
+
+/*42:*/
+#line 1055 "weaver-interface.tex"
 
 static bool check_compiling_error(GLuint shader){
 GLint status;
@@ -213,8 +221,8 @@ return true;
 }
 return false;
 }
-/*:41*//*42:*/
-#line 1066 "weaver-interface.tex"
+/*:42*//*43:*/
+#line 1083 "weaver-interface.tex"
 
 static bool check_linking_error(GLuint program){
 GLint status;
@@ -245,21 +253,22 @@ return true;
 #endif
 return false;
 }
-/*:42*/
-#line 996 "weaver-interface.tex"
+/*:43*/
+#line 1012 "weaver-interface.tex"
 
 static GLuint new_shader(const char*source_code){
 GLuint vertex_shader,fragment_shader,program;
-const char*list_of_source_code[4];
+const char*list_of_source_code[5];
 vertex_shader= glCreateShader(GL_VERTEX_SHADER);
 fragment_shader= glCreateShader(GL_FRAGMENT_SHADER);
 list_of_source_code[0]= W_GLSL_VERSION;
 list_of_source_code[1]= vertex_shader_macro;
-list_of_source_code[2]= shader_library;
-list_of_source_code[3]= source_code;
-glShaderSource(vertex_shader,4,list_of_source_code,NULL);
+list_of_source_code[2]= precision_qualifier;
+list_of_source_code[3]= shader_library;
+list_of_source_code[4]= source_code;
+glShaderSource(vertex_shader,5,list_of_source_code,NULL);
 list_of_source_code[1]= fragment_shader_macro;
-glShaderSource(fragment_shader,4,list_of_source_code,NULL);
+glShaderSource(fragment_shader,5,list_of_source_code,NULL);
 glCompileShader(vertex_shader);
 if(check_compiling_error(vertex_shader))
 return 0;
@@ -276,7 +285,7 @@ glDeleteShader(vertex_shader);
 glDeleteShader(fragment_shader);
 return program;
 }
-/*:40*/
+/*:41*/
 #line 407 "weaver-interface.tex"
 
 /*31:*/
@@ -329,11 +338,11 @@ void*(*)(void),void*(*)(void),
 char*,struct interface*));
 }
 }
-/*51:*/
-#line 1223 "weaver-interface.tex"
+/*52:*/
+#line 1241 "weaver-interface.tex"
 
 default_shader_program= new_shader(default_shader_source);
-/*:51*/
+/*:52*/
 #line 812 "weaver-interface.tex"
 
 }
@@ -341,15 +350,15 @@ default_shader_program= new_shader(default_shader_source);
 #line 846 "weaver-interface.tex"
 
 void _Wfinish_interface(void){
-/*38:*/
-#line 958 "weaver-interface.tex"
+/*39:*/
+#line 974 "weaver-interface.tex"
 
 shader_library= "";
-/*:38*//*52:*/
-#line 1231 "weaver-interface.tex"
+/*:39*//*53:*/
+#line 1249 "weaver-interface.tex"
 
 glDeleteProgram(default_shader_program);
-/*:52*/
+/*:53*/
 #line 848 "weaver-interface.tex"
 
 permanent_free(list_of_file_functions);
@@ -361,13 +370,13 @@ temporary_free= free;
 before_loading_interface= NULL;
 after_loading_interface= NULL;
 }
-/*:33*//*37:*/
-#line 944 "weaver-interface.tex"
+/*:33*//*38:*/
+#line 960 "weaver-interface.tex"
 
 void _Wset_interface_shader_library(char*source){
 shader_library= source;
 }
-/*:37*/
+/*:38*/
 #line 408 "weaver-interface.tex"
 
 /*:19*/

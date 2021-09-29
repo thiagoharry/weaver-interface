@@ -925,6 +925,22 @@ compilaremos código diferente, da mesma forma como podemos compilar
 código diferente em um mesmo arquivo para Linux ou Windows em um mesmo
 arquivo com código C.
 
+Em seguida, precisamos definir a precisão padrão para cada tipo de
+dados do shader GLSL caso isso não seja declarado explicitamente pelo
+usuário ao declarar uma variável. Isso é feito usando a palavra-chave
+\monoespaco{precision}, seguida por um qualificador de precisão
+(\monoespaco{lowp}, \monoespaco{mediump}, \monoespaco{highp}) e por um
+tipo e variável. Na dúvida vamos deixar tudo na precisão mais
+alta. Nas variáveis menos importantes, podemos modificar a precisão
+para valores menores para obter mais performance.
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const char precision_qualifier[] = "precision highp float;\n"
+                                          "precision highp int;\n";
+@
+\fimcodigo
+
 A próxima coisa que será de nosso interesse será inserir bibliotecas
 GLSL. O usuário poderá definir funções adicionais para facilitar o
 código GLSL de seus shaders. As bibliotecas ficarão armazenadas na
@@ -996,16 +1012,17 @@ em um único programa.
 @<Funções para Checar Erros de Compilação@>
 static GLuint new_shader(const char *source_code){
   GLuint vertex_shader, fragment_shader, program;
-  const char *list_of_source_code[4];
+  const char *list_of_source_code[5];
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   list_of_source_code[0] = W_GLSL_VERSION;
   list_of_source_code[1] = vertex_shader_macro;
-  list_of_source_code[2] = shader_library;
-  list_of_source_code[3] = source_code;
-  glShaderSource(vertex_shader, 4, list_of_source_code, NULL);
+  list_of_source_code[2] = precision_qualifier;
+  list_of_source_code[3] = shader_library;
+  list_of_source_code[4] = source_code;
+  glShaderSource(vertex_shader, 5, list_of_source_code, NULL);
   list_of_source_code[1] = fragment_shader_macro;
-  glShaderSource(fragment_shader, 4, list_of_source_code, NULL);
+  glShaderSource(fragment_shader, 5, list_of_source_code, NULL);
   glCompileShader(vertex_shader);
   if(check_compiling_error(vertex_shader))
     return 0;
@@ -1167,16 +1184,16 @@ pixel da textura associado à esta posição.
 
 Agora temos que definir para os shaders seus atributos, uniformes e
 variantes. Os atributos são variáveis somente-leitura especificados
-para cada vértice. O shader de fragmento também pode lê-los, obtendo
-os valores associados a cada vértice ao redor do píxel em que está e
-interpolando o valor para obter o associado ao píxel atual. O único
-atributo que teremos é a posição do vértice, em coordenada $(x, y,
-z)$. A coordenada $x$ e $y$ irá variar entre 0 e 1 enquanto $z=0$ como
-descrito antes:
+para cada vértice. O único atributo que teremos é a posição do
+vértice, em coordenada $(x, y, z)$. A coordenada $x$ e $y$ irá variar
+entre 0 e 1 enquanto $z=0$ como descrito antes. Atributos só podem ser
+declarados no shader de vértice.
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>=
+"#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
+"#endif\n"
 @
 \fimcodigo
 
@@ -1184,8 +1201,8 @@ Uniformes são variáveis que também são passadas para vértices, mas
 eles não irão nunca mudar entre um vértice e outro e nunca precisarão
 também ser interpolados. Iremos manter como uniformes a cor de frente
 e de fundo, ma matriz de modelo e visualização, o tamanho do objeto em
-pixels, o tempo atual em segundos e o inteiro associado a cada
-interface que poderá ser personalizado pelo usuário:
+pixels, o tempo atual em segundos, o inteiro associado a cada
+interface e também sua textura:
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>+=
@@ -1194,6 +1211,7 @@ interface que poderá ser personalizado pelo usuário:
 "uniform vec2 interface_size;\n"
 "uniform float time;\n"
 "uniform int integer;\n"
+"uniform sampler2D texture1;\n"
 @
 \fimcodigo
 

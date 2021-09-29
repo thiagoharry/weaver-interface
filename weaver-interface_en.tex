@@ -883,6 +883,22 @@ static const char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
 In the shader source code, we just need to check which macro is
 defined and we can include code conditionally depending on this.
 
+Next we need to specify the default precision for each variable type
+if the user do not specify one in variable declaration. This is done
+using the keyword \monoespaco{precision} followed by the precision
+qualifier (\monoespaco{lowp}, \monoespaco{mediump},
+\monoespaco{highp}) and by a variable type. Here we will define as
+default the highest possible precision. For less important variables,
+the user always can lower the precision trying to make the shader more
+efficient.
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const char precision_qualifier[] = "precision highp float;\n"
+                                          "precision highp int;\n";
+@
+\fimcodigo
+
 The next thing that we must define is how to support libraries in our
 GLSL code. They can make shader definition easier. The user can
 define additional GLSL functions that will be available in all
@@ -955,16 +971,17 @@ single program.
 @<Funções para Checar Erros de Compilação@>
 static GLuint new_shader(const char *source_code){
   GLuint vertex_shader, fragment_shader, program;
-  const char *list_of_source_code[4];
+  const char *list_of_source_code[5];
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   list_of_source_code[0] = W_GLSL_VERSION;
   list_of_source_code[1] = vertex_shader_macro;
-  list_of_source_code[2] = shader_library;
-  list_of_source_code[3] = source_code;
-  glShaderSource(vertex_shader, 4, list_of_source_code, NULL);
+  list_of_source_code[2] = precision_qualifier;
+  list_of_source_code[3] = shader_library;
+  list_of_source_code[4] = source_code;
+  glShaderSource(vertex_shader, 5, list_of_source_code, NULL);
   list_of_source_code[1] = fragment_shader_macro;
-  glShaderSource(fragment_shader, 4, list_of_source_code, NULL);
+  glShaderSource(fragment_shader, 5, list_of_source_code, NULL);
   glCompileShader(vertex_shader);
   if(check_compiling_error(vertex_shader))
     return 0;
@@ -1124,16 +1141,17 @@ associated with the texture in a given position:
 \fimcodigo
 
 Now we need to define in the shaders its attributes, uniforms and
-varyings. The attributes are read-only data specified for each
-vertex. The fragment shader deduces its value for each pixel
-interpolating data from neighbor vertices. The sole attribute that we
-will define is the vertex position, in coordinates $(x, y, z)$. The
-coordinates $x$ and $y$ will be between 0 and 1 and $z=0$, as
-described previously:
+varyings. The attributes are read-only data specified for each vertex.
+The sole attribute that we will define is the vertex position, in
+coordinates $(x, y, z)$. The coordinates $x$ and $y$ will be between 0
+and 1 and $z=0$, as described previously. Attributes are declared only
+in vertex shaders.
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>=
+"#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
+"#endif\n"
 @
 \fimcodigo
 
@@ -1141,8 +1159,8 @@ Uniforms are variables that also will be passed to vertices, but they
 will not change between them. Therefore, the fragment shader do not
 need to interpolate its value. We will store as uniforms the
 foreground color, the background color, the model-view matrix, the
-object size in pixels, the current time in seconds and the integer
-associated with each interface that can be customized by the user:
+object size in pixels, the current time in seconds, the integer
+associated with each interface and its texture:
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>+=
@@ -1151,6 +1169,7 @@ associated with each interface that can be customized by the user:
 "uniform vec2 interface_size;\n"
 "uniform float time;\n"
 "uniform int integer;\n"
+"uniform sampler2D texture1;\n"
 @
 \fimcodigo
 
