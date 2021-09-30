@@ -544,7 +544,7 @@ struct interface {
   GLuint _shader;
   _MUTEX_DECLARATION(interface_mutex);
   /* Atributos abaixo devem ser preenchidos por função de carregamento: */
-  GLuint *_texture;
+  GLuint *_texture1;
   bool _loaded_texture;
   bool animate;
   unsigned number_of_frames;
@@ -1256,6 +1256,79 @@ padrão. Durante a compilação muitas delas serão simplesmente ignoradas
 e descartadas como otimização. Mas declaramos mesmo as que não usamos
 apenas para informar quais são as variáveis que shaders personalizados
 definidos pelo usuário pode usar.
+
+Falando em shaders personalizados pelo usuário, eles serão fornecidos
+pela função \monoespaco{\_Wnew\_interface} na forma de uma string com
+o nome do arquivo em que ela estará. Para tal caso, vamos também
+fornecer uma função que cria um novo shader à partir do conteúdo de um
+arquivo cujo caminho é passado como argumento:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>=
+static GLuint new_shader_from_file(const char *filename){
+  char *buffer;
+  size_t source_size;
+  FILE *fp;
+  GLuint shader_program;
+  fp = fopen(filename, "r");
+  if(fp == NULL)  return 0;
+  // Vai pro fim do arquivo para ler o tamanho e volta pro começo:
+  fseek(fp, 0, SEEK_END);
+  source_size = ftell(fp);
+  rewind(fp);
+  // Aloca e lê buffer
+  buffer = (char *) temporary_alloc(sizeof(char) * (source_size + 1));
+  if(buffer == NULL) return 0;
+  fread(buffer, sizeof(char), source_size, fp);
+  buffer[source_size] = '\0';
+  shader_program = new_shader(buffer);
+  if(temporary_free != NULL) temporary_free(buffer);
+  return shader_program;
+}
+@
+\fimcodigo
+
+
+Uma última preocupação que teremos aqui é o que renderizar como textura
+padrão quando um shader não tem textura alguma. Para isso, vamos criar
+uma textura de apenas 1 pixel branco:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static GLuint default_texture;
+@
+\fimcodigo
+
+Criamos tal textura branca na inicialização. Isso é feito gerando a
+textura no OpenGL, a associando à textura bidimensional atual,
+especificando seu único pixel branco e configurando o OpenGL sobre
+como interpolar valores dos pixels da textura. Optamos por pedir uma
+interpolação linear para ter um anti-aliasing básico, mas isso pode
+ser mudado depois pelo usuário:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+{
+  GLubyte pixels[3] = {255, 255, 255};
+  glGenTextures(1, &default_texture);
+  glBindTexture(GL_TEXTURE_2D, default_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
+               pixels);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+@
+\fimcodigo
+
+E na finalização descartamos a textura:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+glDeleteTextures(1, &default_texture);
+@
+\fimcodigo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

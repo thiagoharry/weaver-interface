@@ -196,7 +196,11 @@ static const float interface_vertices[12]= {0.0,0.0,0.0,
 #line 1233 "weaver-interface.tex"
 
 static GLuint default_shader_program;
-/*:51*/
+/*:51*//*55:*/
+#line 1297 "weaver-interface.tex"
+
+static GLuint default_texture;
+/*:55*/
 #line 406 "weaver-interface.tex"
 
 /*41:*/
@@ -285,7 +289,30 @@ glDeleteShader(vertex_shader);
 glDeleteShader(fragment_shader);
 return program;
 }
-/*:41*/
+/*:41*//*54:*/
+#line 1267 "weaver-interface.tex"
+
+static GLuint new_shader_from_file(const char*filename){
+char*buffer;
+size_t source_size;
+FILE*fp;
+GLuint shader_program;
+fp= fopen(filename,"r");
+if(fp==NULL)return 0;
+
+fseek(fp,0,SEEK_END);
+source_size= ftell(fp);
+rewind(fp);
+
+buffer= (char*)temporary_alloc(sizeof(char)*(source_size+1));
+if(buffer==NULL)return 0;
+fread(buffer,sizeof(char),source_size,fp);
+buffer[source_size]= '\0';
+shader_program= new_shader(buffer);
+if(temporary_free!=NULL)temporary_free(buffer);
+return shader_program;
+}
+/*:54*/
 #line 407 "weaver-interface.tex"
 
 /*31:*/
@@ -342,7 +369,19 @@ char*,struct interface*));
 #line 1241 "weaver-interface.tex"
 
 default_shader_program= new_shader(default_shader_source);
-/*:52*/
+/*:52*//*56:*/
+#line 1310 "weaver-interface.tex"
+
+{
+GLubyte pixels[3]= {255,255,255};
+glGenTextures(1,&default_texture);
+glBindTexture(GL_TEXTURE_2D,default_texture);
+glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,1,1,0,GL_RGB,GL_UNSIGNED_BYTE,
+pixels);
+glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+}
+/*:56*/
 #line 812 "weaver-interface.tex"
 
 }
@@ -358,7 +397,11 @@ shader_library= "";
 #line 1249 "weaver-interface.tex"
 
 glDeleteProgram(default_shader_program);
-/*:53*/
+/*:53*//*57:*/
+#line 1326 "weaver-interface.tex"
+
+glDeleteTextures(1,&default_texture);
+/*:57*/
 #line 848 "weaver-interface.tex"
 
 permanent_free(list_of_file_functions);

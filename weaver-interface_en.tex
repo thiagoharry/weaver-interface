@@ -1215,6 +1215,80 @@ as an optimization. But we declared them anyway just to list the
 supported variables that can be used by custom shaders defined by the
 user.
 
+By the way, talking about custom shaders, they will be sent by the
+user using the function \monoespaco{\_Wnew\_interface} and will be
+specified as a path to a file where the source code is. For this case,
+we will define a function that creates a new shader program from a
+filename given as argument:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>=
+static GLuint new_shader_from_file(const char *filename){
+  char *buffer;
+  size_t source_size;
+  FILE *fp;
+  GLuint shader_program;
+  fp = fopen(filename, "r");
+  if(fp == NULL)  return 0;
+  // Vai pro fim do arquivo para ler o tamanho e volta pro começo:
+  fseek(fp, 0, SEEK_END);
+  source_size = ftell(fp);
+  rewind(fp);
+  // Aloca e lê buffer
+  buffer = (char *) temporary_alloc(sizeof(char) * (source_size + 1));
+  if(buffer == NULL) return 0;
+  fread(buffer, sizeof(char), source_size, fp);
+  buffer[source_size] = '\0';
+  shader_program = new_shader(buffer);
+  if(temporary_free != NULL) temporary_free(buffer);
+  return shader_program;
+}
+@
+\fimcodigo
+
+
+The last problem that we will solve in this section is what should we
+render as default texture when the user supplies no texture for a
+given interface. For these cases, We will create a texture composed by
+a single white pixel:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static GLuint default_texture;
+@
+\fimcodigo
+
+We will create this texture during the initialization. This is done in
+the following code, where we generate the texture in OpenGL, associate
+it as the current 2D-texture and specify the white pixel explaining
+how it is represented. In the end, the last two lines of code below
+sets how the texture pixels should be interpolated. This is a global
+configuration for all the next textures. We ask to use a linear
+interpolation, what gives us a basic anti-aliasing. If needed, the
+user can later change this default configuration.
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+{
+  GLubyte pixels[3] = {255, 255, 255};
+  glGenTextures(1, &default_texture);
+  glBindTexture(GL_TEXTURE_2D, default_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
+               pixels);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+@
+\fimcodigo
+
+And in the finalization we discard the created texture:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+glDeleteTextures(1, &default_texture);
+@
+\fimcodigo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
