@@ -103,7 +103,8 @@ nova interface de usuário invocando a função:
 \iniciocodigo
 @<Declaração de Função (interface.h)@>=
 struct interface *_Wnew_interface(char *filename, char *shader_filename,
-                                  float x, float y, float width, float height);
+                                  float x, float y, float z, float width,
+                                  float height);
 @
 \fimcodigo
 
@@ -292,7 +293,8 @@ a inicialização da nossa API:
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
 #include <stdlib.h> // Define tipo 'size_t'
-void _Winit_interface(void *(*permanent_alloc)(size_t),
+void _Winit_interface(int *window_width, int *window_height,
+                      void *(*permanent_alloc)(size_t),
                       void (*permanent_free)(void *),
                       void *(*temporary_alloc)(size_t),
                       void (*temporary_free)(void *),
@@ -309,16 +311,27 @@ foi alocado. Isso pode ser útil caso seu gerenciador de memória
 gerencie de alguma forma a coleta de lixo e não quer ter interferência
 no processo.
 
-A função acima também aceita receber um número variável de argumentos
-depois das seis funções iniciais. Esses argumentos adicionais serão
-uma lista terminada em NULL de uma string seguida de uma função
-geradora de interfaces. A string representa uma extensão (por exemplo
-``gif'', ``jpg'' ou outras) e a função que a sucede recebe como
-argumento um nome de arquivo, as funções de alocação e desalocação e
-um ponteiro para a interface que deve ser atualizada e preenchida de
-acordo com o conteúdo do arquivo. Espera-se que a função consiga abrir
-e interpretar o arquivo e gerar uma nova interface à partir dele.
-Desta forma, deixamos para o usuário a responsabilidade de fornecer as
+A função acima também aceita receber um número variável de
+argumentos. Primeiro dois ponteiros indicando onde podemos consultar
+de forma atualizada a largura e altura de nossa janela. Eles serão
+armazenados aqui:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>=
+static int *window_width = NULL, *window_height = NULL;
+@
+\fimcodigo
+
+Depois, as seis funções personalizáveis vistas
+acima. Depois delas, os argumentos adicionais serão uma lista
+terminada em NULL de uma string seguida de uma função geradora de
+interfaces. A string representa uma extensão (por exemplo ``gif'',
+``jpg'' ou outras) e a função que a sucede recebe como argumento um
+nome de arquivo, as funções de alocação e desalocação e um ponteiro
+para a interface que deve ser atualizada e preenchida de acordo com o
+conteúdo do arquivo. Espera-se que a função consiga abrir e
+interpretar o arquivo e gerar uma nova interface à partir dele.  Desta
+forma, deixamos para o usuário a responsabilidade de fornecer as
 funções que criam interfaces à partir de arquivos de diferentes
 formatos.
 
@@ -367,8 +380,9 @@ extern "C" {
 #if !defined(_WIN32)
 #include <sys/param.h> // Necessário no BSD, mas causa problema no Windows
 #endif
-@<Inclur Cabeçalhos Gerais (interface.h)@>
+@<Inclui Cabeçalhos Gerais (interface.h)@>
 @<Macros Gerais (interface.h)@>
+@<Estrutura de Dados (interface.h)@>
 @<Declaração de Função (interface.h)@>
 #ifdef __cplusplus
 }
@@ -442,12 +456,12 @@ Mutex, pois o cóigo não usará múltiplas threads.
 @
 \fimcodigo
 
-Isso significa que no Linus e BSD nós precisamos inserir o cabeçalho
+Isso significa que no Linux e BSD nós precisamos inserir o cabeçalho
 da biblioteca \monoespaco{pthread}. No Windows, basta inserir o
 cabeçalho padrão do windows.
 
 \iniciocodigo
-@<Inclur Cabeçalhos Gerais (interface.h)@>=
+@<Inclui Cabeçalhos Gerais (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h>
 #elif defined(_WIN32)
@@ -530,7 +544,7 @@ A principal estrutura deste documento será a estrutura que armazena
 informações sobre a interface de usuário. A descrição dela é:
 
 \iniciocodigo
-@<Estrutura de Dados (interface.h)@>
+@<Estrutura de Dados (interface.h)@>=
 struct interface {
   int type;
   void *next; // Ponteiro de lista encadeada
@@ -538,7 +552,7 @@ struct interface {
   float rotation;
   GLfloat _transform_matrix[16];
   float height, width;
-  floaf background_color[4], foreground_color[4];
+  float background_color[4], foreground_color[4];
   int integer;
   bool visible;
   GLuint _shader;
@@ -553,8 +567,26 @@ struct interface {
   unsigned long _t;
   int max_repetition;
 };
-\fimcodigo
 @
+\fimcodigo
+
+
+Como usamos declarações do OpenGL, como \monoespaco{GLuint}, vamos
+inserir o cabeçalho OpenGL:
+
+\iniciocodigo
+@<Inclui Cabeçalhos Gerais (interface.h)@>+=
+#if defined(__linux__) || defined(BSD)
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+#endif
+#if defined(_WIN32)
+#pragma comment(lib, "Opengl32.lib")
+#include <windows.h>
+#include <GL/gl.h>
+#endif
+@
+\fimcodigo
 
 Vamos agora descrever o que significa cada elemento desta estrutura.
 
@@ -762,13 +794,14 @@ informadas) e preencher a lista recém-alocada:
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>=
-void _Winit_interface(void *(*new_permanent_alloc)(size_t),
+void _Winit_interface(int *window_width_p, int *window_height_p,
+                      void *(*new_permanent_alloc)(size_t),
                       void (*new_permanent_free)(void *),
                       void *(*new_temporary_alloc)(size_t),
                       void (*new_temporary_free)(void *),
                       void *(*new_before_loading_interface)(void),
                       void *(*new_after_loading_interface)(void), ...){
-  if(new_permanent_alloc != NULL) /* Parte 1: Preencher as 6 Funções */
+  if(new_permanent_alloc != NULL) /* Parte 1: Pegar 6 Funções + tamanho janela*/
     permanent_alloc = new_permanent_alloc;
   if(new_temporary_alloc != NULL)
     temporary_alloc = new_temporary_alloc;
@@ -776,6 +809,8 @@ void _Winit_interface(void *(*new_permanent_alloc)(size_t),
   temporary_free = new_temporary_free;
   before_loading_interface = new_before_loading_interface;
   after_loading_interface = new_after_loading_interface;
+  window_width = window_width_p;
+  window_height = window_height_p;
   {
     int count = -1, i; /* Parte 2: Contar quantas mais funções existem */
     va_list args;
@@ -977,26 +1012,12 @@ shader_library = "";
 \fimcodigo
 
 Agora vejamos como compilar um shader completo por meio
-disso. Primeiro vamos inserir os cabeçalhos OpenGL. Por padrão
-assumiremos o Open GL ES 2.0. Mas em ambientes como o Windows onde ele
-não necessariamente estará disponível, podemos usar a versão OpenGL
-que existir, desde que suporte shaders. Dependendo do caso, o usuário
-terá que incluir cabeçalhos adicionais por meio de flags de
-compilação. Também vamos pedir a biblioteca de entrada e saída para
-podermos imprimir mensagens de erro caso hajam erros no código do
-shader.
+disso. Primeiro vamos inserir o cabeçalho de entrada e saída padrão
+para podermos imprimir mensagens de erro na tela. Os cabeçalhos OpenGL
+já foram inseridos em \monoespaco{interface.h}.
 
 \iniciocodigo
 @<Cabeçalhos Locais (interface.c)@>+=
-#if defined(__linux__) || defined(BSD)
-#include <EGL/egl.h>
-#include <GLES2/gl2.h>
-#endif
-#if defined(_WIN32)
-#pragma comment(lib, "Opengl32.lib")
-#include <windows.h>
-#include <GL/gl.h>
-#endif
 #include <stdio.h>
 @
 \fimcodigo
@@ -1325,6 +1346,265 @@ E na finalização descartamos a textura:
 \iniciocodigo
 @<Finalização da API de Interface@>+=
 glDeleteTextures(1, &default_texture);
+@
+\fimcodigo
+
+\secao{5. A Matriz de Modelo-Visualização}
+
+Como vimos, toda interface será representada por quatro vértices fixos
+de tamanho 1. O que modificará na prática o tamanho, posição e rotação
+de nossos vértices será a matriz de modelo-visualização que usaremos
+para cada interface.
+
+Para entender a matriz, primeiro lembre-se que quando lidamos com ela
+no nosso shader de vértice padrão, cujo código mostramos
+anteriormente, nós convertemos cada vértice como um vértice em 4
+dimensões ao invés de duas ou três. O trecho de código
+\monoespaco{vec4{vertex\_position, 1.0)}} basicamente pega uma
+coordenada em três dimensões e adiciona uma quarta dimensão sempre
+igual a 1.
+
+Nós fazemos isso porque somente em quatro dimensões é possível
+representar todas as operações necessárias como a rotação, translação
+e escala de nossa interface somente por meio de multiplicação de
+matrizes. Ou seja, somente se usarmos quatro dimensões, tais operações
+são operações lineares. E placas de vídeo são bastante rápidas quando
+estão fazendo esse tipo de operação. Fazer outras coisas que não são
+multiplicação de matriz gera impacto na performance.
+
+Antes de chegar ao formato final da matriz modelo-visualização, vamos
+primeiro observar as suas diferentes partes. Primeiro, vamos assumir
+que temos um vetor de 4 dimensões que multiplicará nossa matriz. Se
+estamos apenas interessados na translação de seus pontos, movendo eles
+sem modificar o tamanho, podemos multiplicá-lo por uma matriz com a
+forma abaixo:
+
+$$ \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{x \atop y}\atop{0\atop
+      1}}\right]\left[{{x_0\atop y_0}\atop {z_0\atop
+      1}}\right]=\left[{{1x_0+0y_0+0z_0+x\atop 0x_0+1y_0+0z_0+y}\atop
+    {0x_0+0y_0+1z_0+0\atop
+      0x_0+0y_0+0z_0+1}}\right]=\left[{{x_0+x\atop y_0+y}\atop
+    {z_0\atop 1}}\right]
+$$
+
+Já para mudar o tamanho de uma interface, tanto a largura como a
+altura, assumindo que ela está centralizada na origem $(0, 0, 0, 1)$,
+podemos multiplicar o vetor pela seguinte matriz de escala::
+
+$$ \left[{{w \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]\left[{{x_0\atop y_0}\atop {z_0\atop
+      1}}\right]=\left[{{wx_0+0y_0+0z_0+0\atop 0x_0+hy_0+0z_0+0}\atop
+    {0x_0+0y_0+1z_0+0\atop 0x_0+0y_0+0z_0+1}}\right]=\left[{{wx_0\atop
+      hy_0}\atop {z_0\atop 1}}\right]
+$$
+
+E finalmente, no caso da rotação, para rotacionar $\theta$ radianos,
+nós podemos usar a seguinte matriz que produzirá o resultado correto
+de acordo com a fórmula trigonométrica da rotação:
+
+$$ \left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
+      0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}{{0\atop
+      0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]\left[{{x_0\atop y_0}\atop {z_0\atop
+      1}}\right]=\left[{{x_0 cos(\theta)-y_0 sin(\theta)+0z_0+0\atop
+      x_0 sin(\theta)+y_0 cos(\theta)+0z_0+0}\atop
+    {0x_0+0y_0+1z_0+0\atop 0x_0+0y_0+0z_0+1}}\right]=\left[{{x_0
+      cos(theta) - y_0 sin(\theta) \atop x_0 sin(\theta) + y_0
+      cos(\theta)}\atop {z_0\atop 1}}\right]
+$$
+
+Para formar a matriz de modelo-visualização nós iremos multiplicar
+essas três matrizes dependendo dos valores exator que precisamos
+ajustar o tamanho, posição e rotação de cada interface. Contudo, a
+ordem em que a multiplicação de matrizes ocorre faz diferença no
+resultado. A ordem correta na qual devemos fazer as operações é:
+
+1. Devemos centralizar o quadrado da interface no ponto $(0, 0, 0,
+1)$, que trataremos como origem. (Matriz A)
+
+2. Aumentamos ou diminuimos o tamanho da interface. (Matriz B)
+
+3. Rotacionamos ela o ângulo necessário. (Matriz C)
+
+4. Fazemos a translação dela para a posição desejada. (Matrix D)
+
+Para que essas operações ocorram com sucesso, cada vetor $v$
+deve ser multiplicado na seguinte ordem:
+
+$$
+D(C(B(A v))) = (((DC)B)A)v
+$$
+
+Se usarmos outra ordem, coisas podem dar errado. Por exemplo, ao invés
+de rotacionar a interface usando o seu centro como eixo, usaríamos o
+seu canto inferior direito ou alguma outra posição como eixo.
+
+Ao invés de toda vez termos que multiplicar toda vez essas quatro
+matrizes, podemos calcular agora qual vai ser o formato da matriz que
+resulta de toda essa multiplicação. Essa matriz será a matriz de
+modelo-visualização final. Por exemplo, multiplicar as matrizes $D$ e
+$C$ resulta em:
+
+$$ DC=\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{x \atop y}\atop{0\atop
+      1}}\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
+      0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}{{0\atop
+      0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
+\left[{{cos(\theta) \atop sin(\theta)}\atop {0\atop 0}}
+  {{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}
+  {{0\atop 0}\atop{1 \atop 0}}
+  {{x \atop y}\atop{0\atop 1}}\right]
+$$
+
+Agora se multiplicarmos este resultado pela matriz $B$, obtemos:
+
+$$ DCB = \left[{{cos(\theta) \atop sin(\theta)}\atop {0\atop 0}}
+  {{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}} {{0\atop
+      0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop 1}}\right]\left[{{w
+      \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop 0}}{{0\atop
+      0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
+\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
+  {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
+  {{0\atop 0}\atop{1 \atop 0}}
+  {{a \atop b}\atop{0\atop 1}}\right]
+$$
+
+E finalmente, multiplicamos este resultado pela matriz $A$, que
+centraliza em $(0, 0, 0, 1)$ toda interface. Note que originalmente a
+interface não-multiplicada pela matriz de modelo-visuzlização está
+centralizada em $(1/2, 1/2, 0, 1)$. Então a matriz $A$ é simplesmente
+uma matriz de translação com valores constantes:
+
+$$
+DCBA=\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
+  {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
+  {{0\atop 0}\atop{1 \atop 0}}
+  {{x \atop y}\atop{0\atop 1}}\right]
+\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{-1/2 \atop -1/2}\atop{0\atop
+      1}}\right]=
+\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
+  {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
+  {{0\atop 0}\atop{1 \atop 0}}
+  {{-w/2\cdot cos(\theta) + h/2\cdot sin(\theta)+x \atop -w/2\cdot sin(\theta)-h/2\cdot cos(\theta)+y}\atop{0\atop 1}}\right]
+$$
+
+O formato acima então é a forma final da matriz de modelo-visualização
+de toda interface que iremos armazenar. Se nós temos uma interface com
+valores corretos armazenados em suas variáveis \monoespaco{x},
+\monoespaco{y}, \monoespaco{width}, \monoespaco{height} e
+\monoespaco{rotation}, nós podemos com base nestes valores preencher
+a matriz de modelo-visualização com a função auxiliar abaixo:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>=
+static void set_model_view_matrix(struct interface *in){
+  GLfloat width = ((GLfloat) in -> width) / ((GLfloat) *window_width);
+  GLfloat height = ((GLfloat) in -> height) / ((GLfloat) *window_height);
+  GLfloat x = ((GLfloat) in -> x) / ((GLfloat) *window_width);
+  GLfloat y = ((GLfloat) in -> y) / ((GLfloat) *window_height);
+  GLfloat cos_theta = cos(in -> rotation);
+  GLfloat sin_theta = sin(in -> rotation);
+  /* Primeira Coluna */
+  in -> _transform_matrix[0] = width * cos_theta;
+  in -> _transform_matrix[1] = width * sin_theta;
+  in -> _transform_matrix[2] = 0.0;
+  in -> _transform_matrix[3] = 0.0;
+  /* Segunda Coluna */
+  in -> _transform_matrix[4] = -height * sin_theta;
+  in -> _transform_matrix[5] = height * cos_theta;
+  in -> _transform_matrix[6] = 0.0;
+  in -> _transform_matrix[7] = 0.0;
+  /* Terceira Coluna */
+  in -> _transform_matrix[8] = 0.0;
+  in -> _transform_matrix[9] = 0.0;
+  in -> _transform_matrix[10] = 1.0;
+  in -> _transform_matrix[11] = 0.0;
+  /* Quarta Coluna */
+  in -> _transform_matrix[12] = -width/2 * cos_theta + height/2 * sin_theta + x;
+  in -> _transform_matrix[13] = -width/2 * sin_theta - height/2 * cos_theta + y;
+  in -> _transform_matrix[14] = 0.0;
+  in -> _transform_matrix[15] = 1.0;
+}
+@
+\fimcodigo
+
+O uso das funções de seno e cosseno requer que coloquemos o cabeçalho
+de funções matemáticas:
+
+\iniciocodigo
+@<Cabeçalhos Locais (interface.c)@>+=
+#include <math.h>
+@
+\fimcodigo
+
+
+
+
+
+
+
+
+
+XXX
+
+
+
+
+
+
+
+\secao{6. Gerenciando as Estruturas de Dados}
+
+Vimos que as estruturas de dados que nossa API irá gerenciar é uma
+estrutura para interfaces, outra para ligação para interface
+existente, uma terceira para fazer marcação no histórico e por fim,
+uma lista encadeada que manterá a sequência e o histórico de criação
+para os três tipos de interface anteriores.
+
+A nossa lista encadeada pode ser acessada e percorrida através destes
+dois ponteiros. O primeiro apontará para a última estrutura criada e o
+segundo apontará para a última marcação no hstórico criada:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static void *last_structure = NULL, *last_marking = NULL;
+@
+\fimcodigo
+
+\subsecao{5.1. Criando Interface}
+
+
+Vimos que a criação de novas interfaces se dará pela função
+\monoespaco{\_Wnew\_interface}. Esta função deverá alocar a nova
+interface, executar as funções adequadas para inicializá-la e
+incluí-la na lista encadeada atualizando os ponteiros de maneira
+adequada. A função será definida como:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+struct interface *_Wnew_interface(char *filename, char *shader_filename,
+                                  float x, float y, float z, float width,
+                                  float height){
+  struct interface *new_interface;
+  if(before_loading_interface != NULL)
+    before_loading_interface();
+  new_interface = permanent_alloc(sizeof(struct interface));
+  if(new_interface != NULL){
+    new_interface -> type = TYPE_INTERFACE;
+    new_interface -> next = NULL;
+    new_interface-> x = x;
+    new_interface -> y = y;
+    new_interface -> z = z;
+    new_interface -> rotation = 0;
+    // ...
+  }
+  if(after_loading_interface != NULL)
+    after_loading_interface();
+  return new_interface;
+}
 @
 \fimcodigo
 
