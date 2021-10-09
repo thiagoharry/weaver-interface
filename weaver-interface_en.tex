@@ -428,10 +428,13 @@ this environment.
 @<Macros Gerais (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
+#define _STATIC_MUTEX_DECLARATION(mutex) static pthread_mutex_t mutex
 #elif defined(_WIN32)
 #define _MUTEX_DECLARATION(mutex) CRITICAL_SECTION mutex
+#define _STATIC_MUTEX_DECLARATION(mutex) static CRITICAL_SECTION mutex
 #elif defined(__EMSCRIPTEN__)
 #define _MUTEX_DECLARATION(mutex)
+#define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
 @
 \fimcodigo
@@ -524,7 +527,7 @@ definition for this data structure is:
 
 \iniciocodigo
 @<Estrutura de Dados (interface.h)@>=
-struct interface {
+struct interface{
   int type;
   void *next; // Pointer for linked list
   float x, y, z;
@@ -537,7 +540,7 @@ struct interface {
   GLuint _shader;
   _MUTEX_DECLARATION(interface_mutex);
   /* Attributes below should be filled by the loading function: */
-  GLuint *_texture;
+  GLuint *_texture1;
   bool _loaded_texture;
   bool animate;
   unsigned number_of_frames;
@@ -694,7 +697,7 @@ store in the linked list the following struct:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (interface.c)@>=
-struct link {
+struct link{
   int type;
   void *next; // Pointer to linked list
   struct interface *linked_interface;
@@ -746,6 +749,45 @@ textures from a given file (and gets all the custom functions that
 should be used) and by a file extension string. After defining the
 structure, we create a pointer to a list of such structures. Initially
 the pointer represents an empty list.
+
+After, when this list is not empty anymore, in other words, after the
+initialization, we will be able to check each element in this list and
+extract the correct loading function using this auxiliary function:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>=
+static inline void (*get_loading_function(char *ext))
+                          (void *(*permanent_alloc)(size_t),
+                           void (*permanent_free)(void *),
+                           void *(*temporary_alloc)(size_t),
+                           void (*temporary_free)(void *),
+                           void *(*before_loading_interface)(void),
+                           void *(*after_loading_interface)(void),
+                           char *source_filename, struct interface *target){
+  unsigned i;
+  for(i = 0; i < number_of_file_functions_in_the_list; i ++){
+    if(!strcmp(list_of_file_functions[i].extension, ext))
+      return list_of_file_functions[i].load_texture;
+  }
+  return NULL;
+}
+@
+\fimcodigo
+
+The code above is verbose because it is a function that returns a
+function pointer to a function with lots of parameters. But the
+function above gets only a single argument: an extension to be
+searched in the list.
+
+As we used a function to compare strings, we should include the
+standard header involving strings:
+
+\iniciocodigo
+@<Cabeçalhos Locais (interface.c)@>=
+#include <string.h>
+@
+\fimcodigo
+
 
 Now we can define the initialization function. What this function will
 do os set the six basic custom functions, count how many additional
@@ -1469,7 +1511,7 @@ matrix as shown in the auxiliary function below:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
-static void set_model_view_matrix(struct interface *in){
+static void initialize_model_view_matrix(struct interface *in){
   GLfloat width = ((GLfloat) in -> width) / ((GLfloat) *window_width);
   GLfloat height = ((GLfloat) in -> height) / ((GLfloat) *window_height);
   GLfloat x = ((GLfloat) in -> x) / ((GLfloat) *window_width);
@@ -1506,6 +1548,181 @@ operations:
 \iniciocodigo
 @<Cabeçalhos Locais (interface.c)@>+=
 #include <math.h>
+@
+\fimcodigo
+
+\secao{6. Managing Data Structures}
+
+As was explained and defined before, the data structures that our API
+will manage will be a struct for interfaces, another to create linking
+to interfaces, a third one to create markings in the history and
+finally, a linked list to store the previous structures.
+
+Our liked list will be accessed using two different pointers. The
+first one will point to the last structure created and inserted in the
+list. The second will point to the last history marking inserted in
+the list. We also will define a mutex to ensure that only one thread
+can update the linked list at a given moment:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static void *last_structure = NULL;
+static struct marking *last_marking = NULL;
+_STATIC_MUTEX_DECLARATION(linked_list_mutex);
+@
+\fimcodigo
+
+The mutex that wil control access to the linked list needs to be
+created during the initialization:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+MUTEX_INIT(&linked_list_mutex);
+@
+\fimcodigo
+
+And needs to be destroyed in the finalization:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+MUTEX_DESTROY(&linked_list_mutex);
+@
+\fimcodigo
+
+\subsecao{6.1. Creating Interfaces}
+
+As was described in the Introduction, all new interfaces will be
+created using function \monoespaco{\_Wnew\_interface}. This function
+will allocate the new interface, execute the adequate functions to
+initialize it and will include it in the linked list. The function
+definition is:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+struct interface *_Wnew_interface(char *filename, char *shader_filename,
+                                  float x, float y, float z, float width,
+                                  float height){
+  struct interface *new_interface;
+  void (*loading_function)(void *(*permanent_alloc)(size_t),
+                           void (*permanent_free)(void *),
+                           void *(*temporary_alloc)(size_t),
+                           void (*temporary_free)(void *),
+                           void *(*before_loading_interface)(void),
+                           void *(*after_loading_interface)(void),
+                           char *source_filename, struct interface *target);
+  int i;
+  new_interface = permanent_alloc(sizeof(struct interface));
+  if(new_interface != NULL){
+    new_interface -> type = TYPE_INTERFACE;
+    new_interface -> next = NULL;
+    new_interface-> x = x;
+    new_interface -> y = y;
+    new_interface -> z = z;
+    new_interface -> rotation = 0;
+    new_interface -> width = width;
+    new_interface -> height = height;
+    for(i = 0; i < 4; i ++){
+      new_interface -> background_color[i] = 0.0;
+      new_interface -> foreground_color[i] = 0.0;
+    }
+    new_interface -> integer = 0;
+    new_interface -> visible = true;
+    initialize_model_view_matrix(new_interface);
+    if(shader_filename != NULL)
+      new_interface -> _shader = new_shader_from_file(shader_filename);
+    else
+      new_interface -> _shader = default_shader_program;
+    new_interface -> _texture1 = NULL;
+    new_interface -> _loaded_texture = false;
+    new_interface -> animate = false;
+    new_interface -> number_of_frames = 0;
+    new_interface -> current_frame = 0;
+    new_interface -> frame_duration = NULL;
+    new_interface -> _t = 0;
+    new_interface -> max_repetition = 0;
+    MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
+    if(last_structure != NULL)
+      ((struct interface *) last_structure)-> next = (void *) new_interface;
+    else
+      last_structure = (void *) new_interface;
+    MUTEX_SIGNAL(&linked_list_mutex);
+    if(filename != NULL){ // Get and run loading function:
+      char *ext;
+      for(ext = filename; ext != '\0'; ext ++);
+      for(; *ext != '.' && ext != filename; ext --);
+      if(*ext == '.'){
+        ext ++;
+        loading_function = get_loading_function(ext);
+        if(loading_function != NULL)
+          loading_function(permanent_alloc, permanent_free, temporary_alloc,
+                           temporary_free, before_loading_interface,
+                           after_loading_interface, filename, new_interface);
+      }
+    }
+  }
+  return new_interface;
+}
+@
+\fimcodigo
+
+Despite being a long function, what it does is just allocate the
+interface with the function set as our permanent allocator, initialize
+the variables in the interface, insert it in the linked list and run
+the correct function to load the texture, depending on the filename
+extension.
+
+\subsecao{6.2. Creating a Link to an Existing Interface}
+
+As was explained, instead of creating a new interface, we can create a
+link to an existing interface. This makes that interface acts as a
+newly created interface regarding functions that interact with it. A
+linking will be just a pointer to another interface in the linked
+list, created using \monoespaco{\_Wlink\_interface}. The function that
+creates it is defined below:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+struct interface *_Wlink_interface(struct interface *i){
+  struct link *new_link = permanent_alloc(sizeof(struct link));
+  if(new_link == NULL)
+    return NULL;
+  new_link -> type = TYPE_LINK;
+  new_link -> next = NULL;
+  new_link -> linked_interface = i;
+  MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
+  if(last_structure != NULL)
+    ((struct interface *) last_structure)-> next = (void *) new_link;
+  else
+    last_structure = (void *) new_link;
+  MUTEX_SIGNAL(&linked_list_mutex);
+  return i;
+}
+@
+\fimcodigo
+
+\subsecao{6.3. Creating Markings in the Interface History}
+
+To create a new marking in our interface history, the user should call
+the function \monoespaco{\_Wmark\_history\_interface}. After this
+marking, all interfaces created before it will became inaccessible
+until the marking is removed.
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wmark_history_interface(void){
+  struct marking *new_marking = permanent_alloc(sizeof(struct marking));
+  if(new_marking != NULL){
+    new_marking -> type = TYPE_MARKING;
+    new_marking -> next = NULL;
+    new_marking -> previous_marking = last_marking;
+    MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
+    if(last_structure != NULL)
+      ((struct interface *) last_structure)-> next = (void *) new_marking;
+    else
+      last_structure = (void *) new_marking;
+    MUTEX_SIGNAL(&linked_list_mutex);
+  }
+}
 @
 \fimcodigo
 

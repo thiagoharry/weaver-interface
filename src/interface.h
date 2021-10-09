@@ -1,5 +1,5 @@
 /*19:*/
-#line 373 "weaver-interface.tex"
+#line 353 "weaver-interface_en.tex"
 
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
@@ -11,7 +11,7 @@ extern"C"{
 #include <sys/param.h>  
 #endif
 /*22:*/
-#line 464 "weaver-interface.tex"
+#line 447 "weaver-interface_en.tex"
 
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h> 
@@ -19,7 +19,7 @@ extern"C"{
 #include <windows.h> 
 #endif
 /*:22*//*28:*/
-#line 578 "weaver-interface.tex"
+#line 560 "weaver-interface_en.tex"
 
 #if defined(__linux__) || defined(BSD)
 #include <EGL/egl.h> 
@@ -31,34 +31,37 @@ extern"C"{
 #include <GL/gl.h> 
 #endif
 /*:28*/
-#line 383 "weaver-interface.tex"
+#line 363 "weaver-interface_en.tex"
 
 /*21:*/
-#line 448 "weaver-interface.tex"
+#line 428 "weaver-interface_en.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
+#define _STATIC_MUTEX_DECLARATION(mutex) static pthread_mutex_t mutex
 #elif defined(_WIN32)
 #define _MUTEX_DECLARATION(mutex) CRITICAL_SECTION mutex
+#define _STATIC_MUTEX_DECLARATION(mutex) static CRITICAL_SECTION mutex
 #elif defined(__EMSCRIPTEN__)
 #define _MUTEX_DECLARATION(mutex)
+#define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
 /*:21*/
-#line 384 "weaver-interface.tex"
+#line 364 "weaver-interface_en.tex"
 
 /*27:*/
-#line 547 "weaver-interface.tex"
+#line 529 "weaver-interface_en.tex"
 
 struct interface{
 int type;
 void*next;
 float x,y,z;
 float rotation;
-GLfloat _transform_matrix[16];
 float height,width;
 float background_color[4],foreground_color[4];
 int integer;
 bool visible;
+GLfloat _transform_matrix[16];
 GLuint _shader;
 _MUTEX_DECLARATION(interface_mutex);
 
@@ -72,68 +75,68 @@ unsigned long _t;
 int max_repetition;
 };
 /*:27*/
-#line 385 "weaver-interface.tex"
+#line 365 "weaver-interface_en.tex"
 
 /*1:*/
-#line 104 "weaver-interface.tex"
+#line 89 "weaver-interface_en.tex"
 
 struct interface*_Wnew_interface(char*filename,char*shader_filename,
 float x,float y,float z,float width,
 float height);
 /*:1*//*2:*/
-#line 126 "weaver-interface.tex"
+#line 110 "weaver-interface_en.tex"
 
 void _Wset_interface_shader_library(char*source);
 /*:2*//*3:*/
-#line 134 "weaver-interface.tex"
+#line 119 "weaver-interface_en.tex"
 
 void _Wmove_interface(struct interface*i,float x,float y,float z);
 /*:3*//*4:*/
-#line 147 "weaver-interface.tex"
+#line 132 "weaver-interface_en.tex"
 
 void _Wrotate_interface(struct interface*i,float rotation);
 /*:4*//*5:*/
-#line 158 "weaver-interface.tex"
+#line 143 "weaver-interface_en.tex"
 
 void _Wresize_interface(struct interface*i,float new_width,float new_height);
 /*:5*//*6:*/
-#line 168 "weaver-interface.tex"
+#line 153 "weaver-interface_en.tex"
 
 void _Wset_max_size_interface(struct interface*i,float max_width,
 float max_height);
 /*:6*//*7:*/
-#line 178 "weaver-interface.tex"
+#line 163 "weaver-interface_en.tex"
 
 void _Wset_min_size_interface(struct interface*i,float min_width,
 float min_height);
 /*:7*//*8:*/
-#line 193 "weaver-interface.tex"
+#line 177 "weaver-interface_en.tex"
 
 void _Wupdate_size_interface(unsigned old_width,unsigned old_height,
 unsigned new_width,unsigned new_height);
 /*:8*//*9:*/
-#line 205 "weaver-interface.tex"
+#line 189 "weaver-interface_en.tex"
 
 void _Wrender_interface(void);
 /*:9*//*10:*/
-#line 218 "weaver-interface.tex"
+#line 202 "weaver-interface_en.tex"
 
 void _Wmark_history_interface(void);
 /*:10*//*11:*/
-#line 228 "weaver-interface.tex"
+#line 213 "weaver-interface_en.tex"
 
 struct interface*_Wlink_interface(struct interface*i);
 /*:11*//*12:*/
-#line 239 "weaver-interface.tex"
+#line 224 "weaver-interface_en.tex"
 
 void _Winteract_interface(int mouse_x,int mouse_y,bool moving,bool left_click,
 bool middle_click,bool right_click);
 /*:12*//*13:*/
-#line 255 "weaver-interface.tex"
+#line 239 "weaver-interface_en.tex"
 
 void _Wrestore_history_interface(void);
 /*:13*//*16:*/
-#line 294 "weaver-interface.tex"
+#line 279 "weaver-interface_en.tex"
 
 #include <stdlib.h>  
 void _Winit_interface(int*window_width,int*window_height,
@@ -145,11 +148,11 @@ void*(*before_loading_interface)(void),
 void*(*after_loading_interface)(void),
 ...);
 /*:16*//*18:*/
-#line 342 "weaver-interface.tex"
+#line 325 "weaver-interface_en.tex"
 
 void _Wfinish_interface(void);
 /*:18*/
-#line 386 "weaver-interface.tex"
+#line 366 "weaver-interface_en.tex"
 
 #ifdef __cplusplus
 }
