@@ -282,8 +282,8 @@ podem ser depois ajustadas pelo usuário:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>=
-static void *(*before_loading_interface)(void) = NULL;
-static void *(*after_loading_interface)(void) = NULL;
+static void (*before_loading_interface)(void) = NULL;
+static void (*after_loading_interface)(void) = NULL;
 @
 \fimcodigo
 
@@ -298,8 +298,8 @@ void _Winit_interface(int *window_width, int *window_height,
                       void (*permanent_free)(void *),
                       void *(*temporary_alloc)(size_t),
                       void (*temporary_free)(void *),
-                      void *(*before_loading_interface)(void),
-                      void *(*after_loading_interface)(void),
+                      void (*before_loading_interface)(void),
+                      void (*after_loading_interface)(void),
                       ...);
 @
 \fimcodigo
@@ -700,18 +700,22 @@ a marcação mais recente existente pode ser destruída, o que destrói
 as interfaces criadas depois dela.
 
 Para que isso seja possível, cada marcação precisa memorizar qual era
-a marcação anterior. Desta forma, quando apagamos uma marcação,
-podemos substituir a marcação memorizada colocando-a no logar daquela
-que foi removida. De fato, essa é a única coisa que precisamos
-armazenar em uma marcação além dos dados típicos necessários para a
-lista encadeada:
+a marcação anterior a também umponteiro para o elemento anterior na
+lista encadeada. Desta forma, quando apagamos uma marcação, podemos
+substituir a marcação memorizada colocando-a no logar daquela que foi
+removida e fazer as atualizações devidas de modo mais fácil. Além
+disso, faremos cada marcação saber também a quantidade de interfaces
+que foi criada depois dela. É o número de interfaces que estão ativas
+e existirão enquanto a marcação existir.
 
 \iniciocodigo
 @<Estrutura de Dados Locais (interface.c)@>=
 struct marking {
   int type;
-  void *next; // Ponteiro de lista encadeada
+  void *next; // Ponteiro para próximo na lista encadeada
+  void *prev; // Ponteiro para anterior na lista encadeada
   struct marking *previous_marking;
+  unsigned number_of_interfaces;
 };
 @
 \fimcodigo
@@ -773,8 +777,8 @@ struct file_function {
                       void (*permanent_free)(void *),
                       void *(*temporary_alloc)(size_t),
                       void (*temporary_free)(void *),
-                      void *(*before_loading_interface)(void),
-                      void *(*after_loading_interface)(void),
+                      void (*before_loading_interface)(void),
+                      void (*after_loading_interface)(void),
                       char *source_filename, struct interface *target);
 };
 static unsigned number_of_file_functions_in_the_list = 0;
@@ -800,13 +804,14 @@ static inline void (*get_loading_function(char *ext))
                            void (*permanent_free)(void *),
                            void *(*temporary_alloc)(size_t),
                            void (*temporary_free)(void *),
-                           void *(*before_loading_interface)(void),
-                           void *(*after_loading_interface)(void),
+                           void (*before_loading_interface)(void),
+                           void (*after_loading_interface)(void),
                            char *source_filename, struct interface *target){
   unsigned i;
   for(i = 0; i < number_of_file_functions_in_the_list; i ++){
-    if(!strcmp(list_of_file_functions[i].extension, ext))
+    if(!strcmp(list_of_file_functions[i].extension, ext)){
       return list_of_file_functions[i].load_texture;
+    }
   }
   return NULL;
 }
@@ -840,8 +845,8 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
                       void (*new_permanent_free)(void *),
                       void *(*new_temporary_alloc)(size_t),
                       void (*new_temporary_free)(void *),
-                      void *(*new_before_loading_interface)(void),
-                      void *(*new_after_loading_interface)(void), ...){
+                      void (*new_before_loading_interface)(void),
+                      void (*new_after_loading_interface)(void), ...){
   if(new_permanent_alloc != NULL) /* Parte 1: Pegar 6 Funções + tamanho janela*/
     permanent_alloc = new_permanent_alloc;
   if(new_temporary_alloc != NULL)
@@ -859,8 +864,8 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
     void (*func)(void *(*permanent_alloc)(size_t),
                  void (*permanent_free)(void *), void *(*temporary_alloc)(size_t),
                  void (*temporary_free)(void *),
-                 void *(*before_loading_interface)(void),
-                 void *(*after_loading_interface)(void),
+                 void (*before_loading_interface)(void),
+                 void (*after_loading_interface)(void),
                  char *source_filename, struct interface *target);
     va_start(args, new_after_loading_interface);
     do{
@@ -868,7 +873,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
       ext = va_arg(args, char *);
       func = va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
                                    void *(*)(size_t), void (*)(void *),
-                                   void *(*)(void), void *(*)(void),
+                                   void (*)(void), void (*)(void),
                                    char *, struct interface *)); 
     } while(ext != NULL);
     number_of_file_functions_in_the_list = count;
@@ -881,7 +886,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
       list_of_file_functions[i].load_texture =
              va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
                                    void *(*)(size_t), void (*)(void *),
-                                   void *(*)(void), void *(*)(void),
+                                   void (*)(void), void (*)(void),
                                    char *, struct interface *));
     }
   }
@@ -922,7 +927,8 @@ padrão.
 @<Definição de Funções da API (interface.c)@>+=
 void _Wfinish_interface(void){
   @<Finalização da API de Interface@>
-  permanent_free(list_of_file_functions);
+  if(permanent_free != NULL)
+    permanent_free(list_of_file_functions);
   number_of_file_functions_in_the_list = 0;
   permanent_alloc = malloc;
   temporary_alloc = malloc;
@@ -1638,8 +1644,8 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
                            void (*permanent_free)(void *),
                            void *(*temporary_alloc)(size_t),
                            void (*temporary_free)(void *),
-                           void *(*before_loading_interface)(void),
-                           void *(*after_loading_interface)(void),
+                           void (*before_loading_interface)(void),
+                           void (*after_loading_interface)(void),
                            char *source_filename, struct interface *target);
   int i;
   new_interface = permanent_alloc(sizeof(struct interface));
@@ -1671,15 +1677,17 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> frame_duration = NULL;
     new_interface -> _t = 0;
     new_interface -> max_repetition = 0;
+    MUTEX_INIT(&(new_interface -> interface_mutex));
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
       ((struct interface *) last_structure)-> next = (void *) new_interface;
     else
       last_structure = (void *) new_interface;
+    last_marking -> number_of_interfaces ++;
     MUTEX_SIGNAL(&linked_list_mutex);
     if(filename != NULL){ // Get and run loading function:
       char *ext;
-      for(ext = filename; ext != '\0'; ext ++);
+      for(ext = filename; *ext != '\0'; ext ++);
       for(; *ext != '.' && ext != filename; ext --);
       if(*ext == '.'){
         ext ++;
@@ -1724,6 +1732,7 @@ struct interface *_Wlink_interface(struct interface *i){
     ((struct interface *) last_structure)-> next = (void *) new_link;
   else
     last_structure = (void *) new_link;
+  last_marking -> number_of_interfaces ++;
   MUTEX_SIGNAL(&linked_list_mutex);
   return i;
 }
@@ -1745,16 +1754,116 @@ void _Wmark_history_interface(void){
     new_marking -> type = TYPE_MARKING;
     new_marking -> next = NULL;
     new_marking -> previous_marking = last_marking;
+    new_marking -> number_of_interfaces = 0;
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
+    new_marking -> prev = last_structure;
     if(last_structure != NULL)
       ((struct interface *) last_structure)-> next = (void *) new_marking;
     else
       last_structure = (void *) new_marking;
+    last_marking = new_marking;
     MUTEX_SIGNAL(&linked_list_mutex);
   }
 }
 @
 \fimcodigo
+
+Como é importante existir uma última marcação no hstórico para termos
+uma contagem de quantas interfaces estão ativas em um dado momento,
+vamos criar a primeira marcação durante a inicialização da API. Esta
+primeira marcação nunca será apagada, exceto na finalização da
+API. Mesmo que o usuário tente removê-la antes por meio de funções.
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+_Wmark_history_interface();
+@
+\fimcodigo
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+// Apaga todas as marcações, menos a primeira:
+while(last_marking -> previous_marking != NULL){
+  _Wrestore_history_interface();
+}
+// Apaga as interfaces após a primeira marcação:
+_Wrestore_history_interface();
+// Apaga a primeira marcação:
+if(permanent_free != NULL)
+  permanent_free(last_marking);
+last_marking = NULL;
+last_structure = NULL;
+@
+\fimcodigo
+
+\subsecao{6.4. Removendo Marcações e Interfaces}
+
+A forma de remover e desalocar interfaces é através da restauração do
+histórico, removendo a última marcação e voltando ao estado que
+estávamos quando ela foi criada. Isso remove toda e qualquer interface
+que tenha sido criada após a marcação removida. Esta restauração do
+histórico é feita usando a função
+\monoespaco{\_Wrestore\_history\_interface}.
+
+O que esta função faz é remover a última marcação de histórico em
+nossa lista encadeada, fazendo com que a última marcação volte a ser
+aquela que existia antes. Se não existir nenhuma outra marcação além
+da que existe, nós não a removemos. Mas independente disso, nós de
+qualquer forma percorremos a lista encadeada e removemos todas as
+interfaces (e ligações) que estiverem depois dela na lista.
+
+A implementação da função é:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wrestore_history_interface(void){
+  int i;
+  struct marking *to_be_removed;
+  struct interface *current, *next;
+  MUTEX_WAIT(&linked_list_mutex);
+  last_structure = last_marking -> prev;
+  to_be_removed = last_marking;
+  current = (struct interface *) to_be_removed -> next;
+  // Removendo interfaces após última marcação:
+  while(current != NULL){
+    next = (struct interface *) (current -> next);
+    if(current -> type == TYPE_INTERFACE){
+      if(current -> _shader != default_shader_program)
+        glDeleteProgram(current -> _shader);
+      if(current -> number_of_frames > 0)
+        glDeleteTextures(current -> number_of_frames, current -> _texture1);
+      if(current -> _texture1 != NULL && permanent_free != NULL)
+        permanent_free(current -> _texture1);
+      MUTEX_DESTROY(&(current -> interface_mutex));
+    }
+    if(permanent_free != NULL)
+      permanent_free(current);
+    current = next;
+  }
+  // Removendo última marcação se não for a primeira
+  if(to_be_removed -> previous_marking != NULL){
+    last_marking = to_be_removed -> previous_marking;
+    if(temporary_free != NULL)
+      temporary_free(to_be_removed);
+  }
+  else
+    to_be_removed -> number_of_interfaces = 0;
+  MUTEX_SIGNAL(&linked_list_mutex);
+}
+@
+\fimcodigo
+
+Basicamente a função acima primeiro remove todas as interfaces criadas
+após a última marcação. Quando ela é uma interface completa, e não uma
+ligação para outra interface, é preciso fazer coisas como eliminar o
+programa de shader comilado associado à ela, remover todas as texturas
+e finalizar o mudex da interface. Só depois de fazer isso que a
+marcação é então removida. Exceto se não houver nenhuma marcação
+antes, o que significa que devemos mantê-la. O ponteiro para o último
+elemento da nossa lista encadeada é atualizado logo no começo da
+função, pois a última marcação armazena qual era o último elemento
+antes dela ser criada por meio de seu ponteiro para o elemento
+anterior.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
