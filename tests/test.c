@@ -100,16 +100,16 @@ void test_custom_functions(void){
 		   before_loading_interface, after_loading_interface,
 		   "test", empty_loading_function,
 		   NULL);
-  // Permanent alloc: interface + run empty_loading_function
+  // Permanent alloc: interface + run empty_loading_function + default shader
   _Wnew_interface("filename.test", NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
   _Wfinish_interface();
   assert("Using loading initialization function", counter_before == 1);
   assert("Using loading finalization function", counter_after == 1);
   // Permanent allocation: list of loading functions + history marking + interface
-  assert("Using custom permanent allocation", counter_permanent_alloc == 3);
+  assert("Using custom permanent allocation", counter_permanent_alloc == 4);
   assert("Using custom temporary allocation function",
 	 counter_temporary_alloc == 1);
-  assert("Using custom permanent free function", counter_permanent_free == 3);
+  assert("Using custom permanent free function", counter_permanent_free == 4);
   assert("Using custom temporary free function", counter_temporary_free == 1);
   counter_permanent_free = 0;
   counter_temporary_free = 0;

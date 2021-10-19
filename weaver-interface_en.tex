@@ -515,43 +515,45 @@ we signal that other proccesses can now use it:
 
 \secao{2. Data Structures}
 
-In this section we will describe the three main data structures
-managed by this API: the user interfaces, the links for previous user
-interfaces and the marks in the history.
+In this section we will describe the four main data structures managed
+by this API: the shaders, user interfaces, links for previous user
+interfaces and marks in the history.
 
-\subsecao{2.1. User Interface Data Structure}
+\subsecao{2.1. Shader Data Structure}
 
-The main and more complex data structure in this document is the data
-structure that stores information about user interfaces. The full
-definition for this data structure is:
+To render any object in the video card, we need to specify the
+rendering rules. In what position should we render the object? What is
+its color? And what about the texture? The rendering should change
+depending on time or the viewing angle? To answer these questions, we
+use special computer programs that are executed in the video
+card. Such programs are the shaders.
+
+But besides the program, we need to store for each shader additional
+variables. Shader programs check a list of variables while executing
+and we can change the value of such variables before each execution of
+the shader program. For each modifiable variable, we need to store the
+address of such variable in the shader program. Only knowing this
+information we can change their values.
+
+A shader data structure has the following structure:
 
 \iniciocodigo
-@<Estrutura de Dados (interface.h)@>=
-struct interface{
+@<Estrutura de Dados Locais (interface.c)@>=
+struct shader {
   int type;
-  void *next; // Pointer for linked list
-  float x, y, z;
-  float rotation;
-  float height, width;
-  float background_color[4], foreground_color[4];
-  int integer;
-  bool visible;
-  GLfloat _transform_matrix[16];
-  GLuint _shader;
-  _MUTEX_DECLARATION(interface_mutex);
-  /* Attributes below should be filled by the loading function: */
-  GLuint *_texture1;
-  bool _loaded_texture;
-  bool animate;
-  unsigned number_of_frames;
-  unsigned current_frame;
-  unsigned *frame_duration;
-  unsigned long _t;
-  int max_repetition;
+  void *next; // Ponteiro de lista encadeada
+  GLuint program; // O programa em si
+  /* Aqui começam as variáveis modificáveis de shader */
+  GLint attribute_vertex_position; // Posição de cada vértice
+  GLint uniform_foreground_color, uniform_background_color; // Cor de frente/fundo
+  GLint uniform_model_view_matrix; // Matriz com tamanho, rotação e translação
+  GLint uniform_interface_size; // Tamanho em píxels do objeto renderizado
+  GLint uniform_time; // Contador de tempo para texturas animadas
+  GLint uniform_integer; // Inteiro arbitrário que pode ser passado
+  GLint uniform_texture1; // A textura do objeto a ser renderizado
 };
 @
 \fimcodigo
-
 
 As we are using OpenGL data types, like \monoespaco{GLuint}, we should
 include the OpenGL headers:
@@ -570,24 +572,69 @@ include the OpenGL headers:
 @
 \fimcodigo
 
+The two first variables in the data structure exist because we will
+store each shader data structure in a linked list that also can store
+other types of data structure. The type stores what type of data
+structure we have in the list and thepointer for the next element is
+what creates the linked list, linking each element to the next one.
 
-Now we will describe what means each part of this structure.
-
-The first attribute is the type. We will store our structure in a
-linked list (and because of this the next attribute is a pointer that
-will form the linked list). But in this list we want to store the
-three different data structures. When we visit an element in the list,
-how should we know if we are visiting an user interface, a link or a
-mark in the history? We will differentiate between them by this type,
-that will be a different value for each of these types:
+In a shader data structure, the type variable always will
+be \monoespaco{TYPE\_SHADER}. All possible values, fo all different
+types of data structures, are:
 
 \iniciocodigo
 @<Macros Locais (interface.c)@>=
-#define TYPE_INTERFACE 1 // A user interface, like the one above
-#define TYPE_LINK      2 // A linking to a previous user interface
-#define TYPE_MARKING   3 // A marking in our history of user interface creation
+#define TYPE_INTERFACE 1 // Uma interface, ou seja, objeto a ser renderizado
+#define TYPE_LINK      2 // Ligação para interface anterior
+#define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
+#define TYPE_SHADER    4 // Shader para renderizar interface
 @
 \fimcodigo
+
+The variable \monoespaco{program} in the shader data structure is
+where we will store the compiled shader. And all variables after it
+are there to indicate where each configurable variable inside the
+shader program ca be found. Not all these variables necessarily will
+exist in all shaders, but these are the variables supported by our
+API. We have variables that store vertices to be rendered, size,
+position, color, textures and some other things.
+
+\subsecao{2.2. User Interface Data Structure}
+
+The most complex data structure in this document is the one that
+stores information about user interfaces. The full definition for this
+data structure is:
+
+\iniciocodigo
+@<Estrutura de Dados (interface.h)@>=
+struct interface{
+  int type;
+  void *next; // Pointer for linked list
+  float x, y, z;
+  float rotation;
+  float height, width;
+  float background_color[4], foreground_color[4];
+  int integer;
+  bool visible;
+  GLfloat _transform_matrix[16];
+  struct shader *shader_program;
+  _MUTEX_DECLARATION(interface_mutex);
+  /* Attributes below should be filled by the loading function: */
+  GLuint *_texture1;
+  bool _loaded_texture;
+  bool animate;
+  unsigned number_of_frames;
+  unsigned current_frame;
+  unsigned *frame_duration;
+  unsigned long _t;
+  int max_repetition;
+};
+@
+\fimcodigo
+
+Now we will describe what means each part of this structure. The type
+and ponter for next element already were described and are the same
+than what was presented in the shader data structure.
 
 After the type and the pointer, we store the position in pixels (for
 axis $x$ and $y$) for our interface and its z-index (axis $z$). We
@@ -595,7 +642,7 @@ then store the rotation (in radians) and the width and height (in
 pixels). All these values can be read, but should not be changed
 directly. To change its valies, it is necessary to use the designed
 functions that we will define in the future sections. This is
-necessary becaus to correctly change the position, rotation and size,
+necessary because to correctly change the position, rotation and size,
 we must update the transform matrix, which is how OpenGL and our
 shaders really represent these informations. And the z-index must also
 be updated in anoother list, where we will store the correct order to
@@ -611,8 +658,8 @@ information.
 The next attribute is if the interface is visible or not. If not, it
 will not be rendered in the screen.
 
-Next we store the compiled shader for our interface and also declare
-the mutex for the structure.
+Next we put a pointer to the shader data structure associated with
+this interface. It has the rules about how to render this interface.
 
 The attributes after this part are initialized with 0, false and
 NULL. But while the loading function is interpreting the filename, it
@@ -650,7 +697,7 @@ we will repeat forever. If it is a positive value and we repeated the
 animation the allowed number of times, then the interface will stop
 the animation and stay in the last frame.
 
-\subsecao{2.2. Markings in History}
+\subsecao{2.3. Markings in History}
 
 As mentioned in the Introduction, the logic that determines which
 interfaces are accessible in a given moment uses markings done in our
@@ -690,7 +737,7 @@ structure indirectly, when using functions
 \monoespaco{\_Wrestore\_history\_interface} described in the
 Introduction.
 
-\subsecao{2.3. Link to Other Interfaces}
+\subsecao{2.4. Link to Other Interfaces}
 
 If some interface is inaccessible because is older than the last
 marking in the history, it is possible to create a link to it usinf
@@ -911,8 +958,8 @@ to initialize and finalize the API without problems.
 One of the things that we need to define is our default shader to be
 used if the user do not pass a custom shader when creating an
 interface. Defining the custom shader gives us a great opportunity to
-present the requisites for shaders supported by this API. We will
-require a specific format for shaders.
+present in more details the requisites for shaders supported by this
+API. We will require a specific format for shaders.
 
 First, all shader source files must specify in the first line the
 version for the shading language used. We will use the GLSL language,
@@ -1046,7 +1093,7 @@ single program.
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
 @<Funções para Checar Erros de Compilação@>
-static GLuint new_shader(const char *source_code){
+static GLuint compile_shader(const char *source_code){
   GLuint vertex_shader, fragment_shader, program;
   const char *list_of_source_code[5];
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -1186,14 +1233,39 @@ have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
 @<Variáveis Locais (interface.c)@>+=
 static const float interface_vertices[12] = {0.0, 0.0, 0.0,
   1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 };
+static GLuint interface_vbo;
 @
 \fimcodigo
 
-All interfaces will begin as a square positioned in the corner of the
-screen and it will occupy possibly all the screeen, or most of it. To
-transform this fix square in different sizes, positions and rotations,
-we will use different model-view matrices. Each interface will have
-its own model-view matrix.
+These vertices will be loaded in the video card and after this we
+could render them asking to render the corresponding VBO (``vertex
+buffer object''). LOading the vertices in the VBO is done in the
+Initialization:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+glGenBuffers(1, &interface_vbo);
+glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
+// Enviando os vértices para a placa de vídeo:
+glBufferData(GL_ARRAY_BUFFER, sizeof(interface_vertices), interface_vertices,
+             GL_STATIC_DRAW);
+@
+\fimcodigo
+
+In the Finalization we need to destroy the VBO:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+glDeleteBuffers(1, &interface_vbo);
+@
+\fimcodigo
+
+Anyway, all interfaces will begin as a rectangle centered in the
+screen which will occupy all the screeen size, as OpenGL defines ``1''
+as the rendering area width and height. To transform this fix square
+in different sizes, positions and rotations, we will use different
+model-view matrices. Each interface will have its own model-view
+matrix.
 
 \iniciocodigo
 @<Shader de Vértice Padrão@>=
@@ -1261,31 +1333,6 @@ declare the texture coordinate:
 @
 \fimcodigo
 
-We will compile thes default shader during the initialization and
-store it after compiled in the following variable:
-
-\iniciocodigo
-@<Variáveis Locais (interface.c)@>+=
-static GLuint default_shader_program;
-@
-\fimcodigo
-
-We compile the default shader here:
-
-\iniciocodigo
-@<Inicialização da API de Interface@>=
-default_shader_program = new_shader(default_shader_source);
-@
-\fimcodigo
-
-And in the finalization we destroy this default program:
-
-\iniciocodigo
-@<Finalização da API de Interface@>+=
-glDeleteProgram(default_shader_program);
-@
-\fimcodigo
-
 Notice that we did not use all the variables defined in the default
 shader. The unused variables will be discarded during the compilation
 as an optimization. But we declared them anyway just to list the
@@ -1300,7 +1347,7 @@ filename given as argument:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
-static GLuint new_shader_from_file(const char *filename){
+static GLuint compile_shader_from_file(const char *filename){
   char *buffer;
   size_t source_size;
   FILE *fp;
@@ -1316,7 +1363,7 @@ static GLuint new_shader_from_file(const char *filename){
   if(buffer == NULL) return 0;
   fread(buffer, sizeof(char), source_size, fp);
   buffer[source_size] = '\0';
-  shader_program = new_shader(buffer);
+  shader_program = compile_shader(buffer);
   if(temporary_free != NULL) temporary_free(buffer);
   return shader_program;
 }
@@ -1594,7 +1641,115 @@ MUTEX_DESTROY(&linked_list_mutex);
 @
 \fimcodigo
 
-\subsecao{6.1. Creating Interfaces}
+\subsecao{6.1. Creating and Destroying Shader Data Structures}
+
+In Section 4 we presented the default shader source code and how to
+compile shaders. But we did not integrate that functions and data
+structures with the shader data structure. We will do it here in this
+Section.
+
+Our API have no exorted function to create new shaders. Instead of
+this, it will create new shaders when the user creates a new interface
+and associate it with a custom shader passing a filename with shader
+source code. That is, when the user uses the API
+function \monoespaco{\_Wnew\_interface} with the second parameter,
+that specifies a filename with shader source code, different
+than \monoespaco{NULL}.
+
+We also need to create an structure for our default shader, whose
+source code is in Section 4. The default shader structure address will
+be stored in this pointer:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+struct shader *default_shader;
+@
+\fimcodigo
+
+Now we will define the internal function that generates new shader
+structures. This function will get as argument a string with the
+filename that stores the shader source code. The function returns a
+pointer for the new shader structure and also insert such data
+structure in the linked list. Except if we pass \monoespaco{NULL} as
+the filename. In this case, we create a new shader structure using the
+default shader source code defined in Section 4. And we do not insert
+it in the linked list.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>+=
+static struct shader *new_shader(char *shader_source){
+  struct shader *new = (struct shader *) permanent_alloc(sizeof(struct shader));
+  if(new != NULL){
+    new -> type = TYPE_SHADER;
+    new -> next = NULL;
+    if(shader_source == NULL)
+      new -> program = compile_shader(default_shader_source);
+    else
+      new -> program = compile_shader_from_file(shader_source);
+    new -> attribute_vertex_position = glGetAttribLocation(new -> program,
+                                                           "vertex_position");
+    new -> uniform_foreground_color =  glGetUniformLocation(new -> program,
+                                                            "foreground_color");
+    new -> uniform_background_color =  glGetUniformLocation(new -> program,
+                                                            "background_color");
+    new -> uniform_model_view_matrix = glGetUniformLocation(new -> program,
+                                                            "model_view_matrix");
+    new -> uniform_interface_size = glGetUniformLocation(new -> program,
+                                                         "interface_size");
+    new -> uniform_time = glGetUniformLocation(new -> program, "time");
+    new -> uniform_integer = glGetUniformLocation(new -> program, "integer");
+    new -> uniform_texture1 = glGetUniformLocation(new -> program, "texture1");
+    if(shader_source != NULL){ // Insere na lista encadeada:
+      MUTEX_WAIT(&linked_list_mutex); // Preparando mutex
+      if(last_structure != NULL)
+        ((struct interface *) last_structure)-> next = (void *) new;
+      else
+        last_structure = (void *) new;
+      MUTEX_SIGNAL(&linked_list_mutex);
+    }
+  }
+  return new;
+}
+@
+\fimcodigo
+
+Basically the code above uses the functions defined in Section 4 to
+compile the shader and after compiling it, gets the address where we
+can find the compiled shader variables that can be changed before
+executing the shader. These addresses are stored in the shader data
+structure.
+
+Now we can initialize the default shader in the Initialization:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+default_shader = new_shader(NULL);
+@
+\fimcodigo
+
+To destroy a shader, we need to inform that the compiler shader
+program will not be executed anymore and should be deleted. Then, we
+disallocate the allocated memory for the struct:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>+=
+static void destroy_shader(struct shader *shader_struct){
+  glDeleteProgram(shader_struct -> program);
+  if(permanent_free != NULL)
+    permanent_free(shader_struct);
+}
+@
+\fimcodigo
+
+The default shader should be destroyed in the API finalization:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+destroy_shader(default_shader);
+@
+\fimcodigo
+
+\subsecao{6.2. Creating and Destroying Interfaces}
 
 As was described in the Introduction, all new interfaces will be
 created using function \monoespaco{\_Wnew\_interface}. This function
@@ -1634,9 +1789,9 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> visible = true;
     initialize_model_view_matrix(new_interface);
     if(shader_filename != NULL)
-      new_interface -> _shader = new_shader_from_file(shader_filename);
+      new_interface -> shader_program = new_shader(shader_filename);
     else
-      new_interface -> _shader = default_shader_program;
+      new_interface -> shader_program = default_shader;
     new_interface -> _texture1 = NULL;
     new_interface -> _loaded_texture = false;
     new_interface -> animate = false;
@@ -1678,7 +1833,33 @@ the variables in the interface, insert it in the linked list and run
 the correct function to load the texture, depending on the filename
 extension.
 
-\subsecao{6.2. Creating a Link to an Existing Interface}
+Destroy an interface means checking if some of its variables have
+values different than \monoespaco{NULL}. If so, this means that these
+variables were allocated by the loading function andd should also be
+disallocated. Some variables of this kind is the texture variable and
+the list of frame duration for animated textures. The destructor
+function should first disallocate these variables, and then
+disallocate the entire struct:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>+=
+static void destroy_interface(struct interface *interface_struct){
+  if(interface_struct -> _texture1 != NULL){
+    glDeleteTextures(interface_struct -> number_of_frames,
+                     interface_struct -> _texture1);
+    if(permanent_free != NULL)
+      permanent_free(interface_struct -> _texture1);
+  }
+  if(interface_struct -> frame_duration != NULL && permanent_free != NULL)
+    permanent_free(interface_struct -> frame_duration);
+  MUTEX_DESTROY(&(interface_struct -> interface_mutex));
+  if(permanent_free != NULL)
+    permanent_free(interface_struct);
+}
+@
+\fimcodigo
+
+\subsecao{6.3. Creating and Destroying Link to an Existing Interface}
 
 As was explained, instead of creating a new interface, we can create a
 link to an existing interface. This makes that interface acts as a
@@ -1708,7 +1889,11 @@ struct interface *_Wlink_interface(struct interface *i){
 @
 \fimcodigo
 
-\subsecao{6.3. Creating Markings in the Interface History}
+Destroying a link is done just running the disallocation
+function. Because of this, we will not define an auxiliary function to
+perform this action.
+
+\subsecao{6.4. Creating Markings in the Interface History}
 
 To create a new marking in our interface history, the user should call
 the function \monoespaco{\_Wmark\_history\_interface}. After this
@@ -1765,7 +1950,14 @@ last_structure = NULL;
 @
 \fimcodigo
 
-\subsecao{6.4. Removing Markings and Interfaces}
+The function \monoespaco{\_Wrestore\_history\_interface} is an API
+function that we will define in the next Section. It destroys and
+removes all structures created after the last marking. Then it removes
+and destroy the last marking. Except that it never will destroy the
+first marking. Because of this, in the code above we destroy manually
+the first marking with \monoespaco{permanenet\_free}.
+
+\subsecao{6.5. Removing Markings and Interfaces}
 
 We will remove and disallocate interfaces using the function to
 restore the history to a previous point. The function will remove all
@@ -1784,7 +1976,6 @@ The function is implemented as below:
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrestore_history_interface(void){
-  int i;
   struct marking *to_be_removed;
   struct interface *current, *next;
   MUTEX_WAIT(&linked_list_mutex);
@@ -1794,24 +1985,19 @@ void _Wrestore_history_interface(void){
   // Removing interfaces after the last marking:
   while(current != NULL){
     next = (struct interface *) (current -> next);
-    if(current -> type == TYPE_INTERFACE){
-      if(current -> _shader != default_shader_program)
-        glDeleteProgram(current -> _shader);
-      if(current -> number_of_frames > 0)
-        glDeleteTextures(current -> number_of_frames, current -> _texture1);
-      if(current -> _texture1 != NULL && permanent_free != NULL)
-        permanent_free(current -> _texture1);
-      MUTEX_DESTROY(&(current -> interface_mutex));
-    }
-    if(permanent_free != NULL)
+    if(current -> type == TYPE_INTERFACE)
+      destroy_interface(current);
+    else if(current -> type == TYPE_SHADER)
+      destroy_shader((struct shader *) current);
+    else if(permanent_free != NULL)
       permanent_free(current);
     current = next;
   }
   // Removing last marking, except if it is also the first marking:
   if(to_be_removed -> previous_marking != NULL){
     last_marking = to_be_removed -> previous_marking;
-    if(temporary_free != NULL)
-      temporary_free(to_be_removed);
+    if(permanent_free != NULL)
+      permanent_free(to_be_removed);
   }
   else
     to_be_removed -> number_of_interfaces = 0;
@@ -1820,14 +2006,12 @@ void _Wrestore_history_interface(void){
 @
 \fimcodigo
 
-The function first removes all interfaces created after the last
-marking. For each interface, if it is a complete interface instead of
-a link, it destroys its shader program, erases its textures, finalize
-its mutex and disallocate some of its structures, before disalocatting
-the entire structure in the end. Only after this, the last interface
-is removed, except if it is also the first marking. The pointer to the
-last structure in the linked list is updated in the beginning of the
-function, checking the pointer to the element before the last marking.
+The function first removes all structures created after the last
+marking. Only after this the last marking is removed, except if it is
+also the first marking. The pointer to the last structure in the
+linked list is updated in the beginning of the function, checking the
+pointer to the element before presented and stored in the last
+marking that was removed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

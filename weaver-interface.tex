@@ -537,42 +537,46 @@ Mutex, podemos liberar ele com o código abaixo:
 
 \secao{2. Estruturas de Dados}
 
-Nesta seção descreveremos as três principais estruturas de dados que
-gerenciaremos nesta API: as interfaces de usuário, as ligações para
-interfaces já criadas e as marcações de tempo.
+Nesta seção descreveremos as quatro principais estruturas de dados que
+gerenciaremos nesta API: os shaders, as interfaces de usuário, as
+ligações para interfaces já criadas e as marcações de tempo.
 
-\subsecao{2.1. A Estrutura da Interface}
+\subsecao{2.1. Estrutura de Dados de Shader}
 
-A principal estrutura deste documento será a estrutura que armazena
-informações sobre a interface de usuário. A descrição dela é:
+Para renderizarmos qualquer coisa na placa de vídeo, é necessário que
+sejam definidas as regas para a renderização. Em que posição iremos
+colocar o objeto renderizado? Qual a cor que ele terá? Qual a textura?
+A renderização irá mudar com o tempo ou dependendo do ângulo de
+visualização? Para responder isso, usam-se programas especiais que são
+compilados e executados na placa de vídeo. Tais programas são os
+shaders.
+
+Mas além do programa em si, para cada shader precisamos armazenar
+algumas variáveis adicionais. Shaders possuem suas próprias variáveis
+que podem ser modificadas e ajustadas antes deles serem
+executados. Para cada variável modificável, temos que armazenar o
+endereço no programa de tais variáveis. Só com esta informação podemos
+ajustá-las.
+
+Um shader então terá a seguinte forma:
 
 \iniciocodigo
-@<Estrutura de Dados (interface.h)@>=
-struct interface {
+@<Estrutura de Dados Locais (interface.c)@>=
+struct shader {
   int type;
   void *next; // Ponteiro de lista encadeada
-  float x, y, z;
-  float rotation;
-  GLfloat _transform_matrix[16];
-  float height, width;
-  float background_color[4], foreground_color[4];
-  int integer;
-  bool visible;
-  GLuint _shader;
-  _MUTEX_DECLARATION(interface_mutex);
-  /* Atributos abaixo devem ser preenchidos por função de carregamento: */
-  GLuint *_texture1;
-  bool _loaded_texture;
-  bool animate;
-  unsigned number_of_frames;
-  unsigned current_frame;
-  unsigned *frame_duration;
-  unsigned long _t;
-  int max_repetition;
+  GLuint program; // O programa em si
+  /* Aqui começam as variáveis modificáveis de shader */
+  GLint attribute_vertex_position; // Posição de cada vértice
+  GLint uniform_foreground_color, uniform_background_color; // Cor de frente/fundo
+  GLint uniform_model_view_matrix; // Matriz com tamanho, rotação e translação
+  GLint uniform_interface_size; // Tamanho em píxels do objeto renderizado
+  GLint uniform_time; // Contador de tempo para texturas animadas
+  GLint uniform_integer; // Inteiro arbitrário que pode ser passado
+  GLint uniform_texture1; // A textura do objeto a ser renderizado
 };
 @
 \fimcodigo
-
 
 Como usamos declarações do OpenGL, como \monoespaco{GLuint}, vamos
 inserir o cabeçalho OpenGL:
@@ -591,30 +595,73 @@ inserir o cabeçalho OpenGL:
 @
 \fimcodigo
 
-Vamos agora descrever o que significa cada elemento desta estrutura.
 
-O primeiro atributo é o tipo. Nós vamos querer armazenar as nossas
-interfaces em uma lista encadeada (e por isso abaixo do tipo já temos
-um ponteiro para montar a lista encadeada). Mas essa lista não
-necessariamente armazenará interfaces como a acima. Nós podemos
-armazenar na lista encadeada outras coisas, como marcações de tempo ou
-então ligações para interfaces que já foram criadas antes. Nós
-saberemos o quê exatamente tem em cada posição da lista encadeada
-através do valor encontrado no tipo. O tipo pode então ser de três
-tipos:
+As duas primeiras variáveis na estrutura de dados existem porque
+iremos armazenar os shaders, assim como outros tipos de estruturas de
+dados em uma lista encadeada. O tipo serve para identificar o quê
+exatamente está em cada posição da lista e o ponteiro para o próximo
+elemento é o que monta a nossa lista encadeada ao ligar cada elemento
+ao seguinte.
+
+No caso de uma estrutura de shader, o tipo, primeira variável, terá
+sempre o valor de \monoespaco{TYPE\_SHADER}. Todos os tipos diferentes
+que podem ser armazenados na lista encadeada são:
 
 \iniciocodigo
 @<Macros Locais (interface.c)@>=
-#define TYPE_INTERFACE 1 // Uma interface como a acima
+#define TYPE_INTERFACE 1 // Uma interface, ou seja, objeto a ser renderizado
 #define TYPE_LINK      2 // Ligação para interface anterior
 #define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
+#define TYPE_SHADER    4 // Shader para renderizar interface
 @
 \fimcodigo
 
-Toda vez então que o valor do primeiro atributo for 1, isso significa
-que estamos diante de uma interface completa como a descrita acima.
+A variável \monoespaco{program} é a representação do programa de
+shader compilado. E tudo o que vem depois são variáveis indicando onde
+cada uma das diferentes variáveis configuráveis de nosso programa de
+shader pode ser encontrada. Nem todas as variáveis que aparecem
+necessariamente serão usadas por todos os shaders, mas estas são as
+variáveis que nossa API suporta. Há variáveis com informações sobre o
+vértices a serem renderizado, tamanho, posição, cores, textura e
+algumas coisas mais.
 
-Depois do tipo e so ponteiro, armazenamos as informações sobre posição
+\subsecao{2.2. A Estrutura da Interface}
+
+A principal estrutura de dados deste documento é a que armazena
+informações sobre a interface de usuário. A descrição dela é:
+
+\iniciocodigo
+@<Estrutura de Dados (interface.h)@>=
+struct interface {
+  int type;
+  void *next; // Ponteiro de lista encadeada
+  float x, y, z;
+  float rotation;
+  GLfloat _transform_matrix[16];
+  float height, width;
+  float background_color[4], foreground_color[4];
+  int integer;
+  bool visible;
+  struct shader *shader_program;
+  _MUTEX_DECLARATION(interface_mutex);
+  /* Atributos abaixo devem ser preenchidos por função de carregamento: */
+  GLuint *_texture1;
+  bool _loaded_texture;
+  bool animate;
+  unsigned number_of_frames;
+  unsigned current_frame;
+  unsigned *frame_duration;
+  unsigned long _t;
+  int max_repetition;
+};
+@
+\fimcodigo
+
+Vamos agora descrever o que significa cada elemento desta estrutura. O
+tipo e o ponteiro para o próximo elemento já foram descritos e são os
+mesmos que para a estrutura de dados de shaders.
+
+Depois destas duas variáveis, armazenamos as informações sobre posição
 e tamanho da interface. Temos a sua posição em pixels (eixo $x$ e
 $y$), seu ``índice-z'' (eixo $z$) que determina a ordem em que as
 interfaces serão desenhadas e quais aparecerão na frente das outras, a
@@ -641,11 +688,11 @@ será usado, isso irá depender do shader.
 O próximo atributo indica se a interface está visível ou não. Se não
 estiver, ela não será renderizada.
 
-O shader compilado a ser usado pela nossa interface aparece em
-seguida.
+Em seguida há um ponteiro para a estrutura de dados de shader
+associada à nossa interface. Que mostra como ela será renderizada.
 
 E por fim, é inserida uma declaração de um mutex para que múltiplos
-processos possam maniplar simultaneamente nossa interface.
+processos possam manipular simultaneamente nossa interface.
 
 Os atributos que vem à seguir desta parte inicialmente sempre começam
 como sendo 0, falso ou nulo. É de responsabilidade da função de
@@ -688,19 +735,19 @@ positivo coloca u limite no número de repetições. Quando repetirmos a
 animação pela última vez permitida, ela ficará estacionada no último
 frame sem voltar novamente para o primeiro.
 
-\subsecao{2.2. Marcações no Histórico}
+\subsecao{2.3. Marcações no Histórico}
 
 Como mencionado na Introdução, a lógica de quais interfaces estarão
 acessíveis em um dado momento terá relação com as marcações feitas no
 nosso histórico de interfaces. Todas as interfaces criadas após a
 última marcação estão acessíveis, mas aquelas que forem mais antigas
-que isso não poderão ser acessadas. Elas não serão renedeerizadas e
+que isso não poderão ser acessadas. Elas não serão renderizadas e
 nem pode-se interagir com elas. Podem ser criadas várias marcações. E
 a marcação mais recente existente pode ser destruída, o que destrói
 as interfaces criadas depois dela.
 
 Para que isso seja possível, cada marcação precisa memorizar qual era
-a marcação anterior a também umponteiro para o elemento anterior na
+a marcação anterior a também um ponteiro para o elemento anterior na
 lista encadeada. Desta forma, quando apagamos uma marcação, podemos
 substituir a marcação memorizada colocando-a no logar daquela que foi
 removida e fazer as atualizações devidas de modo mais fácil. Além
@@ -709,7 +756,7 @@ que foi criada depois dela. É o número de interfaces que estão ativas
 e existirão enquanto a marcação existir.
 
 \iniciocodigo
-@<Estrutura de Dados Locais (interface.c)@>=
+@<Estrutura de Dados Locais (interface.c)@>+=
 struct marking {
   int type;
   void *next; // Ponteiro para próximo na lista encadeada
@@ -728,7 +775,7 @@ com a existência delas somente por meio das funções
 \monoespaco{\_Wmark\_history\_interface} e
 \monoespaco{\_Wrestore\_history\_interface} descritas na Introdução.
 
-\subsecao{2.3. Ligações para Outras Interfaces}
+\subsecao{2.4. Ligações para Outras Interfaces}
 
 Caso uma interface esteja inacessível por ser mais antiga que a última
 marcação, é possível criar uma ligação para ela com a função
@@ -952,9 +999,9 @@ problema.
 
 Uma das coisas que precisaremos definir é o shader padrão a ser usado
 caso o usuário não forneça nenhum personalizado. Isso nos dá uma ótima
-oportunidade para apresentar os requisitos para os shaders suportados
-por esta API e como esperaremos que um shader estejas organizado para
-que ele seja suportado.
+oportunidade para apresentar em mais detalhes os requisitos para os
+shaders suportados por esta API e como esperaremos que um shader
+estejas organizado para que ele seja suportado.
 
 A primeira informação sobre o formato de um shader é qual a linguagem
 usada para defini-lo. Usaremos a linguagem GLSL, mas existem várias
@@ -1078,7 +1125,7 @@ em um único programa.
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>+=
 @<Funções para Checar Erros de Compilação@>
-static GLuint new_shader(const char *source_code){
+static GLuint compile_shader(const char *source_code){
   GLuint vertex_shader, fragment_shader, program;
   const char *list_of_source_code[5];
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -1219,12 +1266,37 @@ interface usando sempre a mesma sequência de vértices: $(0, 0, 0), (1,
 @<Variáveis Locais (interface.c)@>+=
 static const float interface_vertices[12] = {0.0, 0.0, 0.0,
   1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 };
+static GLuint interface_vbo;
 @
 \fimcodigo
 
-Ou seja, a interface originalmente será sempre um quadrado posicionado
-no anto da tela e cujo tamanho ocupa praticamente a tela inteira.
-Para transformar esse quadrado fixo em coisas de diferentes tamanhos,
+Estes vértices serão carregados na placa de vídeo a à partir daí
+poderão ser acessados por meio do VBO, ou ``vertex buffer object''
+correspondente. Carregar os vértices para a placa de vídeo é feito na
+inicialização:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+glGenBuffers(1, &interface_vbo);
+glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
+// Enviando os vértices para a placa de vídeo:
+glBufferData(GL_ARRAY_BUFFER, sizeof(interface_vertices), interface_vertices,
+             GL_STATIC_DRAW);
+@
+\fimcodigo
+
+Na finalização devemos destruir o VBO que criamos:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+glDeleteBuffers(1, &interface_vbo);
+@
+\fimcodigo
+
+De qualquer forma, isso significa que a interface originalmente será
+sempre um retângulo que irá cobrir a tela inteira, pois no OpenGL o
+valor de 1 vai ser sempre tanto a altura como largura da tela.  Para
+transformar esse retângulo fixo em coisas de diferentes tamanhos,
 posições e rotações nós usamos diferentes matrizes de modelo e
 visualização e multiplicamos a posição fixa pela matriz que será
 diferente para cada interface.
@@ -1294,31 +1366,6 @@ textura que iremos usar.
 @
 \fimcodigo
 
-Vamos compilar este shader padrão na inicialização da nossa API. Após
-compilado, ele será representado pela seguinte variável:
-
-\iniciocodigo
-@<Variáveis Locais (interface.c)@>+=
-static GLuint default_shader_program;
-@
-\fimcodigo
-
-Vamos compilá-lo durante a inicialização:
-
-\iniciocodigo
-@<Inicialização da API de Interface@>=
-default_shader_program = new_shader(default_shader_source);
-@
-\fimcodigo
-
-E na finalização iremos destruir o programa:
-
-\iniciocodigo
-@<Finalização da API de Interface@>+=
-glDeleteProgram(default_shader_program);
-@
-\fimcodigo
-
 Note que nós não usamos todas as variáveis definidas no shader
 padrão. Durante a compilação muitas delas serão simplesmente ignoradas
 e descartadas como otimização. Mas declaramos mesmo as que não usamos
@@ -1333,7 +1380,7 @@ arquivo cujo caminho é passado como argumento:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
-static GLuint new_shader_from_file(const char *filename){
+static GLuint compile_shader_from_file(const char *filename){
   char *buffer;
   size_t source_size;
   FILE *fp;
@@ -1349,7 +1396,7 @@ static GLuint new_shader_from_file(const char *filename){
   if(buffer == NULL) return 0;
   fread(buffer, sizeof(char), source_size, fp);
   buffer[source_size] = '\0';
-  shader_program = new_shader(buffer);
+  shader_program = compile_shader(buffer);
   if(temporary_free != NULL) temporary_free(buffer);
   return shader_program;
 }
@@ -1626,7 +1673,117 @@ MUTEX_DESTROY(&linked_list_mutex);
 @
 \fimcodigo
 
-\subsecao{6.1. Criando Interface}
+\subsecao{6.1. Criando e Destruindo Estruturas de Shader}
+
+Na Seção 4 nós mostramos o código-fonte do shader padrão e também
+mostramos funções que fazem a compilação do código-fonte de um
+shader. Mas nós não mostramos como aquelas funções são intergradas na
+função que constrói a estrutura de shader. Faremos isso nesta seção.
+
+A nossa API não tem nenhuma função definida para gerar um novo shader
+por si só. Ao invés disso, nós iremos criar um novo shader por meio de
+uma função interna toda vez que formos criar uma nova interface e o
+usuário passar um shader personalizado. Ou seja, quando o usuário da
+API invoca \monoespaco{\_Wnew\_interface} com o segundo parâmetro, que
+é o do arquivo com código-fonte de shader, diferente
+de \monoespaco{NULL}.
+
+Também precisamos gerar a estrutura para o shader padrão, cujo código
+apresentamos na Seção 4.
+
+O shader padrão será armazenado no seguinte ponteiro:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+struct shader *default_shader;
+@
+\fimcodigo
+
+Vamos definir agora uma função interna que irá gerar uma nova
+estrutura de shader. Ela recebe como argumento a string com nome de
+arquivo onde está o código-fonte do shader. A função retorna o
+ponteiro para a estrutura gerada e também a insere na lista
+encadeada. Exceto se o nome de arquivo passado
+for \monoespaco{NULL}. Neste caso, nós apenas geramos uma estrutura à
+partir do código-fonte do shader padrão definido na Seção 4. Ele não é
+armazenado na lista encadeada.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>+=
+static struct shader *new_shader(char *shader_source){
+  struct shader *new = (struct shader *) permanent_alloc(sizeof(struct shader));
+  if(new != NULL){
+    new -> type = TYPE_SHADER;
+    new -> next = NULL;
+    if(shader_source == NULL)
+      new -> program = compile_shader(default_shader_source);
+    else
+      new -> program = compile_shader_from_file(shader_source);
+    new -> attribute_vertex_position = glGetAttribLocation(new -> program,
+                                                           "vertex_position");
+    new -> uniform_foreground_color =  glGetUniformLocation(new -> program,
+                                                            "foreground_color");
+    new -> uniform_background_color =  glGetUniformLocation(new -> program,
+                                                            "background_color");
+    new -> uniform_model_view_matrix = glGetUniformLocation(new -> program,
+                                                            "model_view_matrix");
+    new -> uniform_interface_size = glGetUniformLocation(new -> program,
+                                                         "interface_size");
+    new -> uniform_time = glGetUniformLocation(new -> program, "time");
+    new -> uniform_integer = glGetUniformLocation(new -> program, "integer");
+    new -> uniform_texture1 = glGetUniformLocation(new -> program, "texture1");
+    if(shader_source != NULL){ // Insere na lista encadeada:
+      MUTEX_WAIT(&linked_list_mutex); // Preparando mutex
+      if(last_structure != NULL)
+        ((struct interface *) last_structure)-> next = (void *) new;
+      else
+        last_structure = (void *) new;
+      MUTEX_SIGNAL(&linked_list_mutex);
+    }
+  }
+  return new;
+}
+@
+\fimcodigo
+
+Basicamente o código acima usa a função da Seção 4 para compilar o
+shader, e uma vez que tem o shader compilado, armazena na estrutura de
+shader a posição de cada uma das variáveis do shader compilado que
+podem ser modificadas antes de executar o shader.
+
+Lembrando que o shader padrão precisa ser compilado e criado na
+Inicialização. O código para isso é:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+default_shader = new_shader(NULL);
+@
+\fimcodigo
+
+Para destruir um shader criado, só precisamos informar que não
+usaremos mais o programa de shader compilado e que ele deve ser
+apagado. Em seguida, desalocamos a estrutura de shader que o
+armazenava:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>+=
+static void destroy_shader(struct shader *shader_struct){
+  glDeleteProgram(shader_struct -> program);
+  if(permanent_free != NULL)
+    permanent_free(shader_struct);
+}
+@
+\fimcodigo
+
+O shader padrão deve ser destruído na finalização da API:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+destroy_shader(default_shader);
+@
+\fimcodigo
+
+\subsecao{6.2. Criando e Destruindo Interface}
 
 Vimos que a criação de novas interfaces se dará pela função
 \monoespaco{\_Wnew\_interface}. Esta função deverá alocar a nova
@@ -1666,9 +1823,9 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> visible = true;
     initialize_model_view_matrix(new_interface);
     if(shader_filename != NULL)
-      new_interface -> _shader = new_shader_from_file(shader_filename);
+      new_interface -> shader_program = new_shader(shader_filename);
     else
-      new_interface -> _shader = default_shader_program;
+      new_interface -> shader_program = default_shader;
     new_interface -> _texture1 = NULL;
     new_interface -> _loaded_texture = false;
     new_interface -> animate = false;
@@ -1709,7 +1866,35 @@ com a função de alocação permanente configurada, inicializar os
 valores iniciais, inseri-la na lista encadeada e executar a função
 adequada para carrega a textura dependendo da extensão do arquivo.
 
-\subsecao{6.2. Criando Ligação para Interface Existente}
+Destruir uma interface significa checar algumas de suas variáveis
+específicas para vcer se tem um valor diferente
+de \monoespacio{NULL}. Se for o caso, isso significa que a função de
+carregamento alocou e preencheu alguns de seus valores. Como por
+exemplo, as variáveis que armazenam texturas, que armazenam o tempo
+para cada frame de animação se for uma textura animada. A função de
+destruição de interfaces desaloca primeiro essas coisas antes de
+desalocar a estrutura de interface em si. Ela também deve finalizar o
+mutex da interface.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>+=
+static void destroy_interface(struct interface *interface_struct){
+  if(interface_struct -> _texture1 != NULL){
+    glDeleteTextures(interface_struct -> number_of_frames,
+                     interface_struct -> _texture1);
+    if(permanent_free != NULL)
+      permanent_free(interface_struct -> _texture1);
+  }
+  if(interface_struct -> frame_duration != NULL && permanent_free != NULL)
+    permanent_free(interface_struct -> frame_duration);
+  MUTEX_DESTROY(&(interface_struct -> interface_mutex));
+  if(permanent_free != NULL)
+    permanent_free(interface_struct);
+}
+@
+\fimcodigo
+
+\subsecao{6.3. Criando e Destruindo Ligação para Interface Existente}
 
 Como vimos, além de criar uma nova interface podemos apenas criar uma
 ligação para uma interface existente, que ela irá se comportar como
@@ -1739,7 +1924,11 @@ struct interface *_Wlink_interface(struct interface *i){
 @
 \fimcodigo
 
-\subsecao{6.3. Criando Marcação no Histórico de Interfaces}
+Destruir uma interface de ligação significa apenas executar a função
+de desalocação e por isso não criaremos uma função auxiliar para isso.
+
+
+\subsecao{6.4. Criando Marcação no Histórico de Interfaces}
 
 Para criar uma nova marcação no histórico de interfaces, o usuário
 deve usar a função \monoespaco{\_Wmark\_history\_interface}. Depois da
@@ -1796,7 +1985,14 @@ last_structure = NULL;
 @
 \fimcodigo
 
-\subsecao{6.4. Removendo Marcações e Interfaces}
+A função \monoespaco{\_Wrestore\_history\_interface} é uma das funções
+de API que ainda não definimos. Ela destrói e remove todas as
+estruturas criadas após a última marcação no histórico e a última
+marcação. Exceto no caso da primeira marcação que nunca é removida. E
+por causa disso, no código acima, esta primeira marcação é removida
+manualmente com um \monoespaco{permanenet\_free}.
+
+\subsecao{6.5. Removendo Marcações e Interfaces}
 
 A forma de remover e desalocar interfaces é através da restauração do
 histórico, removendo a última marcação e voltando ao estado que
@@ -1817,53 +2013,200 @@ A implementação da função é:
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrestore_history_interface(void){
-  int i;
   struct marking *to_be_removed;
   struct interface *current, *next;
   MUTEX_WAIT(&linked_list_mutex);
   last_structure = last_marking -> prev;
   to_be_removed = last_marking;
   current = (struct interface *) to_be_removed -> next;
-  // Removendo interfaces após última marcação:
+  // Removendo estruturas criadas após última marcação:
   while(current != NULL){
     next = (struct interface *) (current -> next);
-    if(current -> type == TYPE_INTERFACE){
-      if(current -> _shader != default_shader_program)
-        glDeleteProgram(current -> _shader);
-      if(current -> number_of_frames > 0)
-        glDeleteTextures(current -> number_of_frames, current -> _texture1);
-      if(current -> _texture1 != NULL && permanent_free != NULL)
-        permanent_free(current -> _texture1);
-      MUTEX_DESTROY(&(current -> interface_mutex));
-    }
-    if(permanent_free != NULL)
+    if(current -> type == TYPE_INTERFACE)
+      destroy_interface(current);
+    else if(current -> type == TYPE_SHADER)
+      destroy_shader((struct shader *) current);
+    else if(permanent_free != NULL)
       permanent_free(current);
     current = next;
   }
   // Removendo última marcação se não for a primeira
   if(to_be_removed -> previous_marking != NULL){
     last_marking = to_be_removed -> previous_marking;
-    if(temporary_free != NULL)
-      temporary_free(to_be_removed);
+    if(permanent_free != NULL)
+      permanent_free(to_be_removed);
   }
   else
     to_be_removed -> number_of_interfaces = 0;
+  @<Restauração de Histórico@>
   MUTEX_SIGNAL(&linked_list_mutex);
 }
 @
 \fimcodigo
 
-Basicamente a função acima primeiro remove todas as interfaces criadas
-após a última marcação. Quando ela é uma interface completa, e não uma
-ligação para outra interface, é preciso fazer coisas como eliminar o
-programa de shader comilado associado à ela, remover todas as texturas
-e finalizar o mudex da interface. Só depois de fazer isso que a
+Basicamente a função acima primeiro remove todas as estruturas de
+dados criadas após a última marcação. Só depois de fazer isso que a
 marcação é então removida. Exceto se não houver nenhuma marcação
 antes, o que significa que devemos mantê-la. O ponteiro para o último
 elemento da nossa lista encadeada é atualizado logo no começo da
 função, pois a última marcação armazena qual era o último elemento
 antes dela ser criada por meio de seu ponteiro para o elemento
 anterior.
+
+\secao{7. Renderizando Interfaces}
+
+Para renderizar as interfaces, devemos levar em conta a ordem correta
+em que cada uma delas deve ser renderizada. Uma das formas mais
+simples de se lidar com isso é simplesmente desenhar em qualquer ordem
+e confiar na coordenada $z$ para que o OpenGL saiba o que desenhar na
+frente por meio de um simples teste de profundidade. Contudo, ao lidar
+com objetos trasparentes, isso nem sempre gera o resultado correto. Se
+primeiro desenharmos um objeto transparente e depois um objeto opaco
+logo atrás dele, partes que deveriam aparecer do objeto atrás por
+causa da transparêndia do objeto na frente podem não aparecer.
+
+No caso de nossas interfaces, como estamos sempre lidando com objetos
+bidimensionais que sempre estarão paralelos em relação ao eixo $z$, o
+que faremos é apenas manter uma lista ordenada de ponteiros para
+interfaces. A lista estará ordenada de modo que objetos com valores
+menores da coordenada $z$ apareçam antes dos objetos com coordenadas
+de valores maiores. Desta forma, objetos que são desenhados na frente
+serão desenhados sempre depois de objetos posicionados atrás
+deles. Basicamente este é o chamado ``algoritmo do pintor''. Tal como
+o pintor de um quadro, começaremos sempre desenhando aquilo que
+estiver mais distante.
+
+Para interfaces que tiverem exatamente a mesma posição na coordenada
+$z$, elas poderão ser desenhadas em qualquer ordem. Neste caso, iremos
+ordená-las de acordo com o valor de seu programa de shader. Desta
+forma, poderemos minimizar a troca de programas de shader durante a
+renderização.
+
+O ponteiro que aponta para a lista ordenada de interfaces será este:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static struct interface **list_z = NULL;
+static unsigned list_z_size = 0;
+@
+\fimcodigo
+
+Ao finalizar a nossa API, se a lista de interfaces foi alocada e
+portanto tem um valor diferente de nulo, precisamos desalocar e
+ajustar o valor para nulo novamente:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+if(list_z != NULL && permanent_free != NULL)
+  permanent_free(list_z);
+list_z = NULL;
+list_z_size = 0;
+@
+\fimcodigo
+
+Da mesma forma que na finalização, quando restauramos o histórico de
+interfaces, removendo uma marcação e todas as interfaces depois dela,
+teremos que reiniciar nossa lista deixando-a vazia novamente.
+
+\iniciocodigo
+@<Restauração de Histórico@>=
+if(list_z != NULL && permanent_free != NULL)
+  permanent_free(list_z);
+list_z = NULL;
+list_z_size = 0;
+@
+\fimcodigo
+
+A inicialização desta lista ordenada de interfaces se dará na função
+de renderização \monoespaco{\_Wrender\_interface}. Dentro desta
+função, deveremos checar se o tamanho desta lista é igual ao número de
+interfaces tivas no momento (que pode ser conferida checando a última
+marcação de histórico). Se for um valor diferente, isso significa que
+interfaces novas foram criadas e devemos gerar novamente nossa lista
+ordenada com as interfaces que temos. O código que faz isso é mostrado
+abaixo:
+
+\iniciocodigo
+@<Gerar Lista Ordenada de Interfaces@>=
+if(list_z_size != last_marking -> number_of_interfaces){
+  void *p;
+  int i, j;
+  // Realocando
+  if(list_z != NULL && permanent_free != NULL)
+    permanent_free(list_z);
+  list_z_size = last_marking -> number_of_interfaces;
+  list_z = (struct interface **) permanent_alloc(sizeof(struct interface *) *
+                                                 last_z_size);
+  // Copiando para lista:
+  p = last_marking -> next;
+  for(i = 0; i < list_z_size; i ++){
+    if(((struct interface *) p) -> type == TYPE_INTERFACE)
+      list_z[i] = (struct interface *) p;
+    else
+      list_z[i] = ((struct link *)) p -> linked_interface;
+    p = ((struct interface *) p) -> next;
+  }
+  // Ordenando lista (insertion sort):
+  for(i = 1; i < list_z_size; i ++){
+    j = i;
+    while(j > 0 && list_z[j - 1] -> z > list_z[j] -> z){
+      p = list_z[j];
+      list_z[j] = list_z[j - 1];
+      list_z[j - 1] = (struct interface *) p;
+      j = j - 1;
+    }
+  }
+}
+@
+\fimcodigo
+
+Note que este cenário no qual a lista deve ser reconstruída é para ser
+incomum. Tipicamente ele irá ocorrer na primiera vez que formos
+renderizar após o programa começar a execução e após restaurarmos
+histórico. O único cenário no qual a execução deste código será mais
+frequente é quando novas interfaces forem sendo criadas durante o laço
+principal. Contud, esta é uma má prática e por isso iremos assuir que
+somente raramente o código acima entrará em execução para inicializar
+a lista. No caso típico, já temos uma lista ordenada com todas as
+interfaces, e de vez em quando ajustamos a posição de um dos elementos
+se ele for movido.
+
+Uma vez que tenhamos a lista ordenada, basta renderizarmos
+individualmente as interfaces na ordem que elas aparecem. Para cada
+uma delas devemos carregar o shader correto, passar os atributos,
+uniformes e variantes para ele e pedir para renderizar os vértices
+compartilhados por todas as interfaces:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wrender_interface(void){
+  @<Gerar Lista Ordenada de Interfaces@>
+  {
+    int i;
+    glBindBuffer(GL_ARRAY_BUFFER,_interface_VBO);
+    for(i = 0; i < z_list_size; i ++){
+      // Carregando os vértices do VBO:
+      glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
+      // Escolhendo o shader certo:
+      glUseProgram(z_list[i] -> _shader);
+      // Especificando como os dados estão representados no VBO:
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
+                            (void *) 0);
+      glEnableVertexAttribArray(0);
+      // Passando os Uniformes:
+      glUniform4f(current_shader -> _uniform_object_color,
+                _interface_queue[_number_of_loops][i] -> r,
+                    _interface_queue[_number_of_loops][i] -> g,
+                    _interface_queue[_number_of_loops][i] -> b,
+                    _interface_queue[_number_of_loops][i] -> a);
+
+      // Rendering:
+      glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+  }
+}
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
