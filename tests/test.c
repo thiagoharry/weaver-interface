@@ -42,6 +42,14 @@ void assert(char *descricao, bool valor){
   }
 }
 
+struct marking {
+  int type;
+  void *next; // Ponteiro para próximo na lista encadeada
+  void *prev; // Ponteiro para anterior na lista encadeada
+  struct marking *previous_marking;
+  unsigned number_of_interfaces;
+};
+
 static int counter_permanent_alloc = 0;
 void *custom_permanent_alloc(size_t n){
   counter_permanent_alloc ++;
@@ -125,10 +133,36 @@ void test_custom_functions(void){
 	 counter_temporary_free == 0);
 }
 
+void test_structure_history(void){
+  _Winit_interface(&window_width, &window_height,
+		   malloc, free, malloc, free, NULL, NULL, NULL);
+  struct interface *i0, *i1, *i2, *tmp;
+  struct marking *mark;
+  i0 = _Wnew_interface(NULL, NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
+  i1 = _Wnew_interface(NULL, NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
+  tmp = (struct interface *) i0 -> next;
+  assert("List of structures linking new elements",
+	 tmp != NULL && tmp == i1 && i1 -> next == NULL);
+  _Wmark_history_interface();
+  mark = (struct marking *) i1 -> next;
+  assert("Creating markings in the structure history",
+	 mark != NULL && mark -> prev == (void *) i1 &&
+	 i1 -> next == (void *) mark);
+  i2 = _Wnew_interface(NULL, NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
+  _Wlink_interface(i0);
+  assert("History markings counting elements correctly",
+	 mark -> next != NULL && mark -> number_of_interfaces == 2);
+  _Wrestore_history_interface();
+  assert("Linked list updated after restoring history",
+	 i1 -> next == NULL);
+  _Wfinish_interface(); 
+}
+
 int main(int argc, char **argv){
   _Wcreate_window();
   _Wget_window_size(&window_width, &window_height);
   test_custom_functions();
+  test_structure_history();
   imprime_resultado();
   _Wdestroy_window();
   return 0;

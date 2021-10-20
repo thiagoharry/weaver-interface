@@ -1736,8 +1736,7 @@ static struct shader *new_shader(char *shader_source){
       MUTEX_WAIT(&linked_list_mutex); // Preparando mutex
       if(last_structure != NULL)
         ((struct interface *) last_structure)-> next = (void *) new;
-      else
-        last_structure = (void *) new;
+      last_structure = (void *) new;
       MUTEX_SIGNAL(&linked_list_mutex);
     }
   }
@@ -1838,8 +1837,7 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
       ((struct interface *) last_structure)-> next = (void *) new_interface;
-    else
-      last_structure = (void *) new_interface;
+    last_structure = (void *) new_interface;
     last_marking -> number_of_interfaces ++;
     MUTEX_SIGNAL(&linked_list_mutex);
     if(filename != NULL){ // Get and run loading function:
@@ -1915,8 +1913,7 @@ struct interface *_Wlink_interface(struct interface *i){
   MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
   if(last_structure != NULL)
     ((struct interface *) last_structure)-> next = (void *) new_link;
-  else
-    last_structure = (void *) new_link;
+  last_structure = (void *) new_link;
   last_marking -> number_of_interfaces ++;
   MUTEX_SIGNAL(&linked_list_mutex);
   return i;
@@ -1948,8 +1945,7 @@ void _Wmark_history_interface(void){
     new_marking -> prev = last_structure;
     if(last_structure != NULL)
       ((struct interface *) last_structure)-> next = (void *) new_marking;
-    else
-      last_structure = (void *) new_marking;
+    last_structure = (void *) new_marking;
     last_marking = new_marking;
     MUTEX_SIGNAL(&linked_list_mutex);
   }
@@ -2017,6 +2013,8 @@ void _Wrestore_history_interface(void){
   struct interface *current, *next;
   MUTEX_WAIT(&linked_list_mutex);
   last_structure = last_marking -> prev;
+  if(last_structure != NULL)
+    ((struct interface *) last_structure) -> next = NULL;
   to_be_removed = last_marking;
   current = (struct interface *) to_be_removed -> next;
   // Removendo estruturas criadas após última marcação:

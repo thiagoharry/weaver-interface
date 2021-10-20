@@ -429,7 +429,6 @@ if(shader_source!=NULL){
 MUTEX_WAIT(&linked_list_mutex);
 if(last_structure!=NULL)
 ((struct interface*)last_structure)->next= (void*)new;
-else
 last_structure= (void*)new;
 MUTEX_SIGNAL(&linked_list_mutex);
 }
@@ -437,7 +436,7 @@ MUTEX_SIGNAL(&linked_list_mutex);
 return new;
 }
 /*:68*//*70:*/
-#line 1735 "weaver-interface_en.tex"
+#line 1734 "weaver-interface_en.tex"
 
 static void destroy_shader(struct shader*shader_struct){
 glDeleteProgram(shader_struct->program);
@@ -445,7 +444,7 @@ if(permanent_free!=NULL)
 permanent_free(shader_struct);
 }
 /*:70*//*73:*/
-#line 1845 "weaver-interface_en.tex"
+#line 1843 "weaver-interface_en.tex"
 
 static void destroy_interface(struct interface*interface_struct){
 if(interface_struct->_texture1!=NULL){
@@ -541,11 +540,11 @@ glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
 MUTEX_INIT(&linked_list_mutex);
 /*:65*//*69:*/
-#line 1725 "weaver-interface_en.tex"
+#line 1724 "weaver-interface_en.tex"
 
 default_shader= new_shader(NULL);
 /*:69*//*76:*/
-#line 1932 "weaver-interface_en.tex"
+#line 1928 "weaver-interface_en.tex"
 
 _Wmark_history_interface();
 /*:76*/
@@ -573,11 +572,11 @@ glDeleteTextures(1,&default_texture);
 
 MUTEX_DESTROY(&linked_list_mutex);
 /*:66*//*71:*/
-#line 1747 "weaver-interface_en.tex"
+#line 1746 "weaver-interface_en.tex"
 
 destroy_shader(default_shader);
 /*:71*//*77:*/
-#line 1938 "weaver-interface_en.tex"
+#line 1934 "weaver-interface_en.tex"
 
 
 while(last_marking->previous_marking!=NULL){
@@ -610,7 +609,7 @@ void _Wset_interface_shader_library(char*source){
 shader_library= source;
 }
 /*:43*//*72:*/
-#line 1761 "weaver-interface_en.tex"
+#line 1760 "weaver-interface_en.tex"
 
 struct interface*_Wnew_interface(char*filename,char*shader_filename,
 float x,float y,float z,float width,
@@ -657,7 +656,6 @@ MUTEX_INIT(&(new_interface->interface_mutex));
 MUTEX_WAIT(&linked_list_mutex);
 if(last_structure!=NULL)
 ((struct interface*)last_structure)->next= (void*)new_interface;
-else
 last_structure= (void*)new_interface;
 last_marking->number_of_interfaces++;
 MUTEX_SIGNAL(&linked_list_mutex);
@@ -678,7 +676,7 @@ after_loading_interface,filename,new_interface);
 return new_interface;
 }
 /*:72*//*74:*/
-#line 1872 "weaver-interface_en.tex"
+#line 1870 "weaver-interface_en.tex"
 
 struct interface*_Wlink_interface(struct interface*i){
 struct link*new_link= permanent_alloc(sizeof(struct link));
@@ -690,14 +688,13 @@ new_link->linked_interface= i;
 MUTEX_WAIT(&linked_list_mutex);
 if(last_structure!=NULL)
 ((struct interface*)last_structure)->next= (void*)new_link;
-else
 last_structure= (void*)new_link;
 last_marking->number_of_interfaces++;
 MUTEX_SIGNAL(&linked_list_mutex);
 return i;
 }
 /*:74*//*75:*/
-#line 1904 "weaver-interface_en.tex"
+#line 1901 "weaver-interface_en.tex"
 
 void _Wmark_history_interface(void){
 struct marking*new_marking= permanent_alloc(sizeof(struct marking));
@@ -710,20 +707,21 @@ MUTEX_WAIT(&linked_list_mutex);
 new_marking->prev= last_structure;
 if(last_structure!=NULL)
 ((struct interface*)last_structure)->next= (void*)new_marking;
-else
 last_structure= (void*)new_marking;
 last_marking= new_marking;
 MUTEX_SIGNAL(&linked_list_mutex);
 }
 }
 /*:75*//*78:*/
-#line 1977 "weaver-interface_en.tex"
+#line 1973 "weaver-interface_en.tex"
 
 void _Wrestore_history_interface(void){
 struct marking*to_be_removed;
 struct interface*current,*next;
 MUTEX_WAIT(&linked_list_mutex);
 last_structure= last_marking->prev;
+if(last_structure!=NULL)
+((struct interface*)last_structure)->next= NULL;
 to_be_removed= last_marking;
 current= (struct interface*)to_be_removed->next;
 
