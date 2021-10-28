@@ -187,9 +187,14 @@ them:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wrender_interface(void);
+void _Wrender_interface(unsigned long long time);
 @
 \fimcodigo
+
+The time parameter is necessary for when the function needs to know
+how much time in microseconds passed between the function
+invocation. This is useful to reder correctly interfaces with animated
+textures.
 
 But rendering all previous interfaces may not be what the user wants,
 Sometimes, a person want to render just the interfaces created after
@@ -548,7 +553,7 @@ struct shader {
   GLint uniform_foreground_color, uniform_background_color; // Cor de frente/fundo
   GLint uniform_model_view_matrix; // Matriz com tamanho, rotação e translação
   GLint uniform_interface_size; // Tamanho em píxels do objeto renderizado
-  GLint uniform_time; // Contador de tempo para texturas animadas
+  GLint uniform_time; // Contador de tempo
   GLint uniform_integer; // Inteiro arbitrário que pode ser passado
   GLint uniform_texture1; // A textura do objeto a ser renderizado
 };
@@ -1232,10 +1237,21 @@ have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
 static const float interface_vertices[12] = {0.0, 0.0, 0.0,
-  1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 };
+                                             1.0, 0.0, 0.0,
+                                             1.0, 1.0, 0.0,
+                                             0.0, 1.0, 0.0 };
 static GLuint interface_vbo;
 @
 \fimcodigo
+
+The order in which we declare these vertices is important. If we
+follow these vertices in the declared order, we draw a square in a
+counter-clockwise order. This is how we declare to OpenGL that we are
+seeing the front of this interface, not its back. We do this to be
+prepared for if the user configures OpenGL to do not show the back of
+geometric figures. This is a very common optimization and a necessary
+one in lots of contexts. Specifying this order guarantees that the
+interface will be visible even with this option enabled.
 
 These vertices will be loaded in the video card and after this we
 could render them asking to render the corresponding VBO (``vertex
@@ -1484,8 +1500,11 @@ depending of the values that we want for the scale, rotation and
 translation. However, the order in which we multiply these matrices
 change the result. The correct order for each operation is:
 
-1. First we should center the interface square in the origin $(0, 0,
-0, 1)$. (Matrix A)
+1. First we should center the interface square in coordinate $(-1, -1,
+0, 1)$ that we will consider the origin. (Matrix A) Because OpebGL
+considers the center of the screen as the origin ands (-1, -1) the
+lower left corner of the screen. But we want to use the lower left
+corner as our origin.
 
 2. Then we increase or decrease the size of each side of our
 interface. (Matrix B).
@@ -1536,9 +1555,10 @@ $$
 
 
 And finally, we multiply this by matrix $A$, which center the
-interface in $(0, 0, 0, 1)$. Recall that the interface originally is
+interface in $(-1, -1, 0, 1)$. Recall that the interface originally is
 centered in position $(1/2, 1/2, 0, 1)$. Therefore, matrix $A$ is just
-a translation matrix with constant values:
+a translation matrix with constant values that moves each vertex 3/2
+to the left and 3/2 down:
 
 $$
 DCBA=\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
@@ -1546,16 +1566,16 @@ DCBA=\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
   {{x \atop y}\atop{0\atop 1}}\right]
 \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{-1/2 \atop -1/2}\atop{0\atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{-3/2 \atop -3/2}\atop{0\atop
       1}}\right]=
 \left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
   {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
-  {{-w/2\cdot cos(\theta) + h/2\cdot sin(\theta)+x \atop -w/2\cdot sin(\theta)-h/2\cdot cos(\theta)+y}\atop{0\atop 1}}\right]
+  {{-3w/2\cdot cos(\theta) + 3h/2\cdot sin(\theta)+x \atop -3w/2\cdot sin(\theta)-3h/2\cdot cos(\theta)+y}\atop{0\atop 1}}\right]
 $$
 
 The format above is the final form of our model-view matrix for each
-interface. Assuing that we have some given interface with correct
+interface. Assuming that we have some given interface with correct
 values in its variables \monoespaco{x},
 \monoespaco{y}, \monoespaco{width}, \monoespaco{height} and
 \monoespaco{rotation}, we can use these values to build its  model-view
@@ -1564,10 +1584,10 @@ matrix as shown in the auxiliary function below:
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
 static void initialize_model_view_matrix(struct interface *in){
-  GLfloat width = ((GLfloat) in -> width) / ((GLfloat) *window_width);
-  GLfloat height = ((GLfloat) in -> height) / ((GLfloat) *window_height);
-  GLfloat x = ((GLfloat) in -> x) / ((GLfloat) *window_width);
-  GLfloat y = ((GLfloat) in -> y) / ((GLfloat) *window_height);
+  GLfloat width = 2.0 * ((GLfloat) in -> width) / ((GLfloat) *window_width);
+  GLfloat height = 2.0 * ((GLfloat) in -> height) / ((GLfloat) *window_height);
+  GLfloat x = 2.0 * ((GLfloat) in -> x) / ((GLfloat) *window_width);
+  GLfloat y = 2.0 * ((GLfloat) in -> y) / ((GLfloat) *window_height);
   GLfloat cos_theta = cos(in -> rotation);
   GLfloat sin_theta = sin(in -> rotation);
   /* Primeira Coluna */
@@ -1586,13 +1606,19 @@ static void initialize_model_view_matrix(struct interface *in){
   in -> _transform_matrix[10] = 1.0;
   in -> _transform_matrix[11] = 0.0;
   /* Quarta Coluna */
-  in -> _transform_matrix[12] = -width/2 * cos_theta + height/2 * sin_theta + x;
-  in -> _transform_matrix[13] = -width/2 * sin_theta - height/2 * cos_theta + y;
+  in -> _transform_matrix[12] = -3 * width/2 * cos_theta +
+                                 3 * height/2 * sin_theta + x;
+  in -> _transform_matrix[13] = -3 * width/2 * sin_theta -
+                                 3 * height/2 * cos_theta + y;
   in -> _transform_matrix[14] = 0.0;
   in -> _transform_matrix[15] = 1.0;
 }
 @
 \fimcodigo
+
+The height, width and position above are conveted from pixels to
+OpenGL coordinates which defines as 2.0 the height and width of our
+drawing area.
 
 Using sine and cosine functions requires the header for mathematical
 operations:
@@ -2010,6 +2036,234 @@ also the first marking. The pointer to the last structure in the
 linked list is updated in the beginning of the function, checking the
 pointer to the element before presented and stored in the last
 marking that was removed.
+
+\secao{7. Rendering Interfaces}
+
+To render interfaces, we should take into account the correct order in
+which each interface is rendered. One of the simplest methods to do it
+is drawing the interfaces in any order and use th $z$ coordinate nd a
+$z$-buffer to check if each interface should be drawn using a depth
+test. However, when dealing with transparent objects, not always this
+produces the correct result. If we first draw a tranparent object and
+after draw an opaque object behind it, parts of the opaque object that
+should be visible because of the transparency would not be visible.
+
+But for our interfaces, as we are always dealing with bidimentional
+objecs that always are parallel to the axis $z$, we instead will store
+an ordered list of interfaces that determines the correct drawing
+order for our interfaces. The list will be ordered by the $z$
+coordinate and will make all interfaces be drawn before any interface
+in front of it. Basically, this is called the ``painter
+algorithm''. As a painter always begin the drawing by more distant
+objects, we also will begin drawing more distant interfaces.
+
+If two interfaces havethe same value in their $z$ coordinate, we can
+draw them in any order.
+
+The pointer that stores our ordered list address is this:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static struct interface **z_list = NULL;
+static unsigned list_z_size = 0;
+@
+\fimcodigo
+
+After finalizing our AP*I, if this interface list was allocated, we
+need to disallocate it and set this pointer to null again:
+
+\iniciocodigo
+@<Finalização da API de Interface@>+=
+if(z_list != NULL && permanent_free != NULL)
+  permanent_free(z_list);
+z_list = NULL;
+list_z_size = 0;
+@
+\fimcodigo
+
+As we did in the finalization, when we restore our interface history,
+we change the list of interfaces that we are viewing, restoring
+previous interfaces. In this case we need to reset our list making it
+empty again.
+
+\iniciocodigo
+@<Restauração de Histórico@>=
+if(z_list != NULL && permanent_free != NULL)
+  permanent_free(z_list);
+z_list = NULL;
+list_z_size = 0;
+@
+\fimcodigo
+
+We must initialize this list of ordered interfaces in the rendering
+function \monoespaco{\_Wrender\_interface}. Inside this function, we
+should check if the size of this list is equal the number of active
+interfaces in the current moment (the number of active interfaces can
+be checked in the last history marking). If we have a different value,
+this means that new interfaces were created and we should regenerate
+our ordered list. The code that perform this can be seen below:
+
+\iniciocodigo
+@<Gerar Lista Ordenada de Interfaces@>=
+if(list_z_size != last_marking -> number_of_interfaces){
+  void *p;
+  int i, j;
+  // Realocando
+  if(z_list != NULL && permanent_free != NULL)
+    permanent_free(z_list);
+  list_z_size = last_marking -> number_of_interfaces;
+  z_list = (struct interface **) permanent_alloc(sizeof(struct interface *) *
+                                                 list_z_size);
+  // Copiando para lista:
+  p = last_marking -> next;
+  for(i = 0; i < list_z_size; i ++){
+    if(((struct interface *) p) -> type == TYPE_INTERFACE)
+      z_list[i] = (struct interface *) p;
+    else
+      z_list[i] = ((struct link *) p) -> linked_interface;
+    p = ((struct interface *) p) -> next;
+  }
+  // Ordenando lista (insertion sort):
+  for(i = 1; i < list_z_size; i ++){
+    j = i;
+    while(j > 0 && z_list[j - 1] -> z > z_list[j] -> z){
+      p = z_list[j];
+      z_list[j] = z_list[j - 1];
+      z_list[j - 1] = (struct interface *) p;
+      j = j - 1;
+    }
+  }
+}
+@
+\fimcodigo
+
+Notice that the scenario in which the ordered list should be rebuild
+with the code above in uncommon. We run the code above when we are
+rendering for the first time in a main loop or after restoring our
+interface history. The only expected scenario where we run the code
+above with more frequency is if the user is creating new interfaces in
+its program main loop. In such case, every rendering after a new
+interface creation, runs the code above. However, this is a bad
+practice and so we will assume that the code above rarely will be
+executed, besides being placed in the rendering function. In the
+typical case, we already have an ordered list with all the active
+interfaces, and we need only to adjust the interface position in the
+list if the interface is moved.
+
+Once we have the ordered list of interfaces, we can just render each
+interface in the order they appear in the list. For each one we load
+the correct shader, pass the attributes, uniforms and varyings to the
+shader program and use the OpenGL function to render the interface
+vertices.
+
+We render the interface when the
+function \monoespaco{\_Wrender\_interface} is invoked. The function
+gets as parameter the current time in microseconds. But to know what
+was the elapsed time between two consecutive renderings, we need to
+store the previous time received by the function. We will store this
+previous time in the variable below, that is initialized with zero
+before receiving the first time:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>=
+static unsigned long long previous_time = 0;
+@
+\fimcodigo
+
+But we also need to initialize this variable in the
+initialization. Otherwise, the variable would store incorrect values
+if the API is finalized and initialized again:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+previous_time = 0;
+@
+\fimcodigo
+
+And below we show the function that iterates over the ordered list of
+interfaces and render each one, updating also the time variables. The
+function first updates the time, after load the interface vertices
+indicating how they are represented, and finally iterates over
+interfaces.
+
+For each interface, we load the shader program and pass to it each
+uniform and varying necessary stored in the interface struct. After
+this, we check the interface textures. If we have more than one
+texture, this means that we could have animated textures (for example,
+we could have loaded an anmated GIF). If we indeed have an animated
+texture, we need to check the elapsed time between renderings and the
+time since we are in the current frame animation. If we see that we
+need to change to the next animation frame, we update it. And finally
+we pass to the shader the correct texture. Only after iterate over all
+interfaces, we store the time in our static global variable that
+remember when the last rendering happened.
+
+The implementation for the procedure described above is:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wrender_interface(unsigned long long time){
+  @<Gerar Lista Ordenada de Interfaces@>
+  {
+    int i, elapsed_time;
+    if(previous_time != 0)
+      elapsed_time = (int) (time - previous_time);
+    else
+      elapsed_time = 0;
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    // Carregando os vértices do VBO:
+    glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
+    // Especificando como os dados estão representados no VBO:
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0,
+                          (void *) 0);
+    glEnableVertexAttribArray(0);
+    for(i = 0; i < list_z_size; i ++){
+      // Escolhendo o shader certo:
+      glUseProgram(z_list[i] -> shader_program -> program);
+      // Passando os Uniformes:
+      glUniform4fv(z_list[i] -> shader_program -> uniform_foreground_color, 4,
+                   z_list[i] -> foreground_color);
+      glUniform4fv(z_list[i] -> shader_program -> uniform_background_color, 4,
+                   z_list[i] -> background_color);
+      glUniformMatrix4fv(z_list[i] -> shader_program ->
+                           uniform_model_view_matrix, 1, false,
+                         z_list[i] -> _transform_matrix);
+      glUniform2f(z_list[i] -> shader_program -> uniform_interface_size,
+                  z_list[i] -> width, z_list[i] -> height);
+      // O shader recebe contagem de tempo em segundos módulo 1 hora
+      glUniform1f(z_list[i] -> shader_program -> uniform_time,
+                  ((double) (time % 3600000000ull)) / (double) (1000000.0)); 
+      glUniform1i(z_list[i] -> shader_program -> uniform_integer,
+                 z_list[i] -> integer);
+      // Animating texture
+      if(z_list[i] -> animate && z_list[i] -> number_of_frames > 1 &&
+         z_list[i] -> max_repetition != 0 && z_list[i] -> animate){
+        z_list[i] -> _t += elapsed_time;
+        z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
+        while(z_list[i] -> _t >=
+                     z_list[i] -> frame_duration[z_list[i] -> current_frame]){
+          z_list[i] -> _t -=
+            z_list[i] -> frame_duration[z_list[i] -> current_frame];
+          z_list[i] -> current_frame ++;
+          z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
+        }
+      }
+      // Rendering:
+      if(z_list[i] -> _texture1 != NULL)
+        glBindTexture(GL_TEXTURE_2D,
+                      z_list[i] -> _texture1[z_list[i] -> current_frame]);
+      else
+        glBindTexture(GL_TEXTURE_2D, default_texture);
+      glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
+  previous_time = time;
+}
+@
+\fimcodigo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

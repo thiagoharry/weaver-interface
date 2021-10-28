@@ -158,11 +158,31 @@ void test_structure_history(void){
   _Wfinish_interface(); 
 }
 
+void rendering_test(void){
+  _Winit_interface(&window_width, &window_height,
+		   malloc, free, malloc, free, NULL, NULL, NULL);
+  _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 0.0,
+		  window_width / 2, window_height / 2);
+  {
+    time_t initial_time, current_time;
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    current_time = initial_time = time(NULL);
+    while(current_time < initial_time + 2){
+      glClear(GL_COLOR_BUFFER_BIT);
+      current_time = time(NULL);
+      _Wrender_interface((unsigned long long) current_time * 1000000llu);
+      _Wrender_window();
+    }
+  }
+  _Wfinish_interface(); 
+}
+
 int main(int argc, char **argv){
   _Wcreate_window();
   _Wget_window_size(&window_width, &window_height);
   test_custom_functions();
   test_structure_history();
+  rendering_test();
   imprime_resultado();
   _Wdestroy_window();
   return 0;
