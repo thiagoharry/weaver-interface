@@ -1401,11 +1401,7 @@ static GLuint default_texture;
 We will create this texture during the initialization. This is done in
 the following code, where we generate the texture in OpenGL, associate
 it as the current 2D-texture and specify the white pixel explaining
-how it is represented. In the end, the last two lines of code below
-sets how the texture pixels should be interpolated. This is a global
-configuration for all the next textures. We ask to use a linear
-interpolation, what gives us a basic anti-aliasing. If needed, the
-user can later change this default configuration.
+how it is represented.
 
 \iniciocodigo
 @<Inicialização da API de Interface@>+=
@@ -1415,8 +1411,6 @@ user can later change this default configuration.
   glBindTexture(GL_TEXTURE_2D, default_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
                pixels);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 @
 \fimcodigo
@@ -2210,8 +2204,6 @@ void _Wrender_interface(unsigned long long time){
       elapsed_time = (int) (time - previous_time);
     else
       elapsed_time = 0;
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
     // Carregando os vértices do VBO:
     glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
     // Especificando como os dados estão representados no VBO:
@@ -2219,6 +2211,8 @@ void _Wrender_interface(unsigned long long time){
                           (void *) 0);
     glEnableVertexAttribArray(0);
     for(i = 0; i < list_z_size; i ++){
+      if(!(z_list[i] -> _loaded_texture) || !(z_list[i] -> visible))
+        continue;
       // Escolhendo o shader certo:
       glUseProgram(z_list[i] -> shader_program -> program);
       // Passando os Uniformes:
@@ -2238,7 +2232,7 @@ void _Wrender_interface(unsigned long long time){
                  z_list[i] -> integer);
       // Animating texture
       if(z_list[i] -> animate && z_list[i] -> number_of_frames > 1 &&
-         z_list[i] -> max_repetition != 0 && z_list[i] -> animate){
+         z_list[i] -> max_repetition != 0){
         z_list[i] -> _t += elapsed_time;
         z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
         while(z_list[i] -> _t >=

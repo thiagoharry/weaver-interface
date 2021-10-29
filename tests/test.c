@@ -100,6 +100,36 @@ void empty_loading_function(void *(*permanent_alloc)(size_t),
     after_loading_interface();
 }
 
+void animated_loading_function(void *(*permanent_alloc)(size_t),
+		      void (*permanent_free)(void *),
+		      void *(*temporary_alloc)(size_t),
+		      void (*temporary_free)(void *),
+		      void *(*before_loading_interface)(void),
+		      void *(*after_loading_interface)(void),
+		      char *source_filename, struct interface *target){
+  GLubyte frame1[3] = {255, 0, 0};
+  GLubyte frame2[3] = {0, 255, 0};
+  if(before_loading_interface != NULL)
+    before_loading_interface();
+  target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint) * 2);
+  glGenTextures(2, target -> _texture1);
+  glBindTexture(GL_TEXTURE_2D, target -> _texture1[0]);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
+               frame1);
+  glBindTexture(GL_TEXTURE_2D, target -> _texture1[1]);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
+               frame2);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  target -> animate = true;
+  target -> number_of_frames = 2;
+  target -> max_repetition = -1;
+  target -> frame_duration = (unsigned *) permanent_alloc(sizeof(unsigned) * 2);
+  target -> frame_duration[0] = 1000000;
+  target -> frame_duration[1] = 1000000;
+  target -> _loaded_texture = true;
+  if(after_loading_interface != NULL)
+    after_loading_interface();  
+}
 
 void test_custom_functions(void){
   _Winit_interface(&window_width, &window_height,
@@ -159,21 +189,28 @@ void test_structure_history(void){
 }
 
 void rendering_test(void){
+  bool testing = true;
+  struct interface *i;
   _Winit_interface(&window_width, &window_height,
-		   malloc, free, malloc, free, NULL, NULL, NULL);
-  _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 0.0,
-		  window_width / 2, window_height / 2);
+		   malloc, free, malloc, free, NULL, NULL,
+		   "animate", animated_loading_function,
+		   NULL);
+  i = _Wnew_interface(".animate", NULL, window_width / 4, window_height / 4, 0.0,
+		      window_width / 2, window_height / 2);
   {
     time_t initial_time, current_time;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     current_time = initial_time = time(NULL);
-    while(current_time < initial_time + 2){
+    while(current_time < initial_time + 3){
       glClear(GL_COLOR_BUFFER_BIT);
       current_time = time(NULL);
       _Wrender_interface((unsigned long long) current_time * 1000000llu);
+      if(i -> current_frame != (current_time - initial_time) % 2)
+	testing = false;
       _Wrender_window();
     }
   }
+  assert("Testing rendering of animated interface", testing);
   _Wfinish_interface(); 
 }
 
