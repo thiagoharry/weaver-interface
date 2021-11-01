@@ -1494,18 +1494,17 @@ depending of the values that we want for the scale, rotation and
 translation. However, the order in which we multiply these matrices
 change the result. The correct order for each operation is:
 
-1. First we should center the interface square in coordinate $(-1, -1,
-0, 1)$ that we will consider the origin. (Matrix A) Because OpebGL
-considers the center of the screen as the origin ands (-1, -1) the
-lower left corner of the screen. But we want to use the lower left
-corner as our origin.
+1. First we should center the interface square in the OpenGL
+origin. (Matrix A).
 
 2. Then we increase or decrease the size of each side of our
 interface. (Matrix B).
 
 3. We rotate the interface $\theta$ radians. (Matrix C)
 
-4. Finally, we translate the interface for its correct position. (Matrix D)
+4. Finally, we translate the interface for its correct
+position. Taking in consideration that we measure the coordinates
+differently than OpenGL. (Matrix D)
 
 To make these operations in the correct order, each vetor $v$ should
 be multiplied in the following order:
@@ -1549,10 +1548,10 @@ $$
 
 
 And finally, we multiply this by matrix $A$, which center the
-interface in $(-1, -1, 0, 1)$. Recall that the interface originally is
+interface in $(0, 0, 0, 1)$. Recall that the interface originally is
 centered in position $(1/2, 1/2, 0, 1)$. Therefore, matrix $A$ is just
-a translation matrix with constant values that moves each vertex 3/2
-to the left and 3/2 down:
+a translation matrix with constant values that moves each vertex 1/2
+to the left and 1/2 down:
 
 $$
 DCBA=\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
@@ -1560,59 +1559,69 @@ DCBA=\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
   {{x \atop y}\atop{0\atop 1}}\right]
 \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{-3/2 \atop -3/2}\atop{0\atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{-1/2 \atop -1/2}\atop{0\atop
       1}}\right]=
 \left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
   {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
-  {{-3w/2\cdot cos(\theta) + 3h/2\cdot sin(\theta)+x \atop -3w/2\cdot sin(\theta)-3h/2\cdot cos(\theta)+y}\atop{0\atop 1}}\right]
+  {{-w/2\cdot cos(\theta) + h/2\cdot sin(\theta)+x \atop -w/2\cdot sin(\theta)-h/2\cdot cos(\theta)+y}\atop{0\atop 1}}\right]
 $$
 
 The format above is the final form of our model-view matrix for each
-interface. Assuming that we have some given interface with correct
-values in its variables \monoespaco{x},
-\monoespaco{y}, \monoespaco{width}, \monoespaco{height} and
-\monoespaco{rotation}, we can use these values to build its  model-view
-matrix as shown in the auxiliary function below:
+interface.
+
+However, the values $(x, y)$ and $(h, w)$ above are in OpenGL
+coordinates. But in this API we measure differently the coordinates
+and the sizes. In our measures, the origin of ou coordinate is the
+lower left corner of the screen, not in the center of screen like in
+OpenGL. And our drawing area size is measured in pixels, not using the
+constant size 2, like in OpenGL. A function that fills the model-view
+matrix must first convert our coordinates and sizes to OpenGL format.
+
+Assuming that we have a pointer \monoespaco{i} to a given interface, this can be done with the following code:
 
 \iniciocodigo
-@<Funções Auxiliares Locais (interface.c)@>=
-static void initialize_model_view_matrix(struct interface *in){
-  GLfloat width = 2.0 * ((GLfloat) in -> width) / ((GLfloat) *window_width);
-  GLfloat height = 2.0 * ((GLfloat) in -> height) / ((GLfloat) *window_height);
-  GLfloat x = 2.0 * ((GLfloat) in -> x) / ((GLfloat) *window_width);
-  GLfloat y = 2.0 * ((GLfloat) in -> y) / ((GLfloat) *window_height);
-  GLfloat cos_theta = cos(in -> rotation);
-  GLfloat sin_theta = sin(in -> rotation);
-  /* Primeira Coluna */
-  in -> _transform_matrix[0] = width * cos_theta;
-  in -> _transform_matrix[1] = width * sin_theta;
-  in -> _transform_matrix[2] = 0.0;
-  in -> _transform_matrix[3] = 0.0;
-  /* Segunda Coluna */
-  in -> _transform_matrix[4] = -height * sin_theta;
-  in -> _transform_matrix[5] = height * cos_theta;
-  in -> _transform_matrix[6] = 0.0;
-  in -> _transform_matrix[7] = 0.0;
-  /* Terceira Coluna */
-  in -> _transform_matrix[8] = 0.0;
-  in -> _transform_matrix[9] = 0.0;
-  in -> _transform_matrix[10] = 1.0;
-  in -> _transform_matrix[11] = 0.0;
-  /* Quarta Coluna */
-  in -> _transform_matrix[12] = -3 * width/2 * cos_theta +
-                                 3 * height/2 * sin_theta + x;
-  in -> _transform_matrix[13] = -3 * width/2 * sin_theta -
-                                 3 * height/2 * cos_theta + y;
-  in -> _transform_matrix[14] = 0.0;
-  in -> _transform_matrix[15] = 1.0;
-}
+@<Conversão de Coordenadas e Tamanho@>=
+x = 2.0 * (i -> x) / (*window_width) - 1.0;
+y = 2.0 * (i -> y) / (*window_height) - 1.0;
+w = 2.0 * (i -> width) / (*window_width);
+h = 2.0 * (i -> height) / (*window_height);
 @
 \fimcodigo
 
-The height, width and position above are conveted from pixels to
-OpenGL coordinates which defines as 2.0 the height and width of our
-drawing area.
+And using the conversion rules above, we can fill the model-view
+matrix for the first time with the function below:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (interface.c)@>=
+static void initialize_model_view_matrix(struct interface *i){
+  GLfloat x, y, w, h;
+  @<Conversão de Coordenadas e Tamanho@>
+  GLfloat cos_theta = cos(i -> rotation);
+  GLfloat sin_theta = sin(i -> rotation);
+  /* Primeira Coluna */
+  i -> _transform_matrix[0] = w * cos_theta;
+  i -> _transform_matrix[1] = w * sin_theta;
+  i -> _transform_matrix[2] = 0.0;
+  i -> _transform_matrix[3] = 0.0;
+  /* Segunda Coluna */
+  i -> _transform_matrix[4] = -h * sin_theta;
+  i -> _transform_matrix[5] = h * cos_theta;
+  i -> _transform_matrix[6] = 0.0;
+  i -> _transform_matrix[7] = 0.0;
+  /* Terceira Coluna */
+  i -> _transform_matrix[8] = 0.0;
+  i -> _transform_matrix[9] = 0.0;
+  i -> _transform_matrix[10] = 1.0;
+  i -> _transform_matrix[11] = 0.0;
+  /* Quarta Coluna */
+  i -> _transform_matrix[12] = -w/2 * cos_theta + h/2 * sin_theta + x;
+  i -> _transform_matrix[13] = -w/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[14] = 0.0;
+  i -> _transform_matrix[15] = 1.0;
+}
+@
+\fimcodigo
 
 Using sine and cosine functions requires the header for mathematical
 operations:
@@ -1812,7 +1821,10 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     else
       new_interface -> shader_program = default_shader;
     new_interface -> _texture1 = NULL;
-    new_interface -> _loaded_texture = false;
+    if(filename != NULL) // Still need to load texture:
+      new_interface -> _loaded_texture = false;
+    else // No texture to be loaded:
+      new_interface -> _loaded_texture = true;
     new_interface -> animate = false;
     new_interface -> number_of_frames = 0;
     new_interface -> current_frame = 0;

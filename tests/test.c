@@ -197,6 +197,8 @@ void rendering_test(void){
 		   NULL);
   i = _Wnew_interface(".animate", NULL, window_width / 4, window_height / 4, 0.0,
 		      window_width / 2, window_height / 2);
+  _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 1.0,
+		  100, 100);
   {
     time_t initial_time, current_time;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
