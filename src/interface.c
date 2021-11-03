@@ -235,12 +235,13 @@ struct shader*default_shader;
 #line 2112 "weaver-interface.tex"
 
 static struct interface**z_list= NULL;
-static unsigned list_z_size= 0;
-/*:80*//*84:*/
-#line 2212 "weaver-interface.tex"
+static unsigned z_list_size= 0;
+_STATIC_MUTEX_DECLARATION(z_list_mutex);
+/*:80*//*85:*/
+#line 2229 "weaver-interface.tex"
 
 static unsigned long long previous_time= 0;
-/*:84*/
+/*:85*/
 #line 424 "weaver-interface.tex"
 
 /*34:*/
@@ -554,11 +555,17 @@ default_shader= new_shader(NULL);
 #line 1992 "weaver-interface.tex"
 
 _Wmark_history_interface();
-/*:77*//*85:*/
-#line 2222 "weaver-interface.tex"
+/*:77*//*81:*/
+#line 2123 "weaver-interface.tex"
+
+MUTEX_INIT(&z_list_mutex);
+z_list_size= 0;
+z_list= NULL;
+/*:81*//*86:*/
+#line 2239 "weaver-interface.tex"
 
 previous_time= 0;
-/*:85*/
+/*:86*/
 #line 944 "weaver-interface.tex"
 
 }
@@ -600,14 +607,15 @@ if(permanent_free!=NULL)
 permanent_free(last_marking);
 last_marking= NULL;
 last_structure= NULL;
-/*:78*//*81:*/
-#line 2123 "weaver-interface.tex"
+/*:78*//*82:*/
+#line 2135 "weaver-interface.tex"
 
+MUTEX_DESTROY(&z_list_mutex);
 if(z_list!=NULL&&permanent_free!=NULL)
 permanent_free(z_list);
 z_list= NULL;
-list_z_size= 0;
-/*:81*/
+z_list_size= 0;
+/*:82*/
 #line 980 "weaver-interface.tex"
 
 if(permanent_free!=NULL)
@@ -764,37 +772,40 @@ permanent_free(to_be_removed);
 }
 else
 to_be_removed->number_of_interfaces= 0;
-/*82:*/
-#line 2136 "weaver-interface.tex"
+/*83:*/
+#line 2149 "weaver-interface.tex"
 
+MUTEX_WAIT(&z_list_mutex);
 if(z_list!=NULL&&permanent_free!=NULL)
 permanent_free(z_list);
 z_list= NULL;
-list_z_size= 0;
-/*:82*/
+z_list_size= 0;
+MUTEX_SIGNAL(&z_list_mutex);
+/*:83*/
 #line 2068 "weaver-interface.tex"
 
 MUTEX_SIGNAL(&linked_list_mutex);
 }
-/*:79*//*86:*/
-#line 2248 "weaver-interface.tex"
+/*:79*//*87:*/
+#line 2265 "weaver-interface.tex"
 
 void _Wrender_interface(unsigned long long time){
-/*83:*/
-#line 2154 "weaver-interface.tex"
+/*84:*/
+#line 2169 "weaver-interface.tex"
 
-if(list_z_size!=last_marking->number_of_interfaces){
+if(z_list_size!=last_marking->number_of_interfaces){
 void*p;
 int i,j;
+MUTEX_WAIT(&z_list_mutex);
 
 if(z_list!=NULL&&permanent_free!=NULL)
 permanent_free(z_list);
-list_z_size= last_marking->number_of_interfaces;
+z_list_size= last_marking->number_of_interfaces;
 z_list= (struct interface**)permanent_alloc(sizeof(struct interface*)*
-list_z_size);
+z_list_size);
 
 p= last_marking->next;
-for(i= 0;i<list_z_size;i++){
+for(i= 0;i<z_list_size;i++){
 if(((struct interface*)p)->type==TYPE_INTERFACE)
 z_list[i]= (struct interface*)p;
 else
@@ -802,7 +813,7 @@ z_list[i]= ((struct link*)p)->linked_interface;
 p= ((struct interface*)p)->next;
 }
 
-for(i= 1;i<list_z_size;i++){
+for(i= 1;i<z_list_size;i++){
 j= i;
 while(j> 0&&z_list[j-1]->z> z_list[j]->z){
 p= z_list[j];
@@ -811,9 +822,10 @@ z_list[j-1]= (struct interface*)p;
 j= j-1;
 }
 }
+MUTEX_SIGNAL(&z_list_mutex);
 }
-/*:83*/
-#line 2250 "weaver-interface.tex"
+/*:84*/
+#line 2267 "weaver-interface.tex"
 
 {
 int i,elapsed_time;
@@ -827,7 +839,8 @@ glBindBuffer(GL_ARRAY_BUFFER,interface_vbo);
 glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,
 (void*)0);
 glEnableVertexAttribArray(0);
-for(i= 0;i<list_z_size;i++){
+MUTEX_WAIT(&z_list_mutex);
+for(i= 0;i<z_list_size;i++){
 if(!(z_list[i]->_loaded_texture)||!(z_list[i]->visible))
 continue;
 
@@ -868,11 +881,56 @@ else
 glBindTexture(GL_TEXTURE_2D,default_texture);
 glDrawArrays(GL_TRIANGLE_FAN,0,4);
 }
+MUTEX_SIGNAL(&z_list_mutex);
 glBindTexture(GL_TEXTURE_2D,0);
 }
 previous_time= time;
 }
-/*:86*/
+/*:87*//*88:*/
+#line 2347 "weaver-interface.tex"
+
+void _Wmove_interface(struct interface*i,float new_x,float new_y,float new_z){
+GLfloat x,y,w,h;
+GLfloat cos_theta= cos(i->rotation);
+GLfloat sin_theta= sin(i->rotation);
+MUTEX_WAIT(&(i->interface_mutex));
+i->x= new_x;
+i->y= new_y;
+/*62:*/
+#line 1612 "weaver-interface.tex"
+
+x= 2.0*(i->x)/(*window_width)-1.0;
+y= 2.0*(i->y)/(*window_height)-1.0;
+w= 2.0*(i->width)/(*window_width);
+h= 2.0*(i->height)/(*window_height);
+/*:62*/
+#line 2355 "weaver-interface.tex"
+
+i->_transform_matrix[12]= -w/2*cos_theta+h/2*sin_theta+x;
+i->_transform_matrix[13]= -w/2*sin_theta-h/2*cos_theta+y;
+if(new_z!=i->z){
+int j;
+i->z= new_z;
+MUTEX_WAIT(&z_list_mutex);
+for(j= 0;j<z_list_size;j++){
+if(z_list[j]==i){
+while(j> 0&&i->z<z_list[j-1]->z){
+z_list[j]= z_list[j-1];
+z_list[j-1]= i;
+j--;
+}
+while(j<z_list_size-1&&i->z> z_list[j+1]->z){
+z_list[j]= z_list[j+1];
+z_list[j+1]= i;
+j++;
+}
+}
+}
+MUTEX_SIGNAL(&z_list_mutex);
+}
+MUTEX_SIGNAL(&(i->interface_mutex));
+}
+/*:88*/
 #line 426 "weaver-interface.tex"
 
 /*:20*/
