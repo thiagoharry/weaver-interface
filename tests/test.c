@@ -190,15 +190,17 @@ void test_structure_history(void){
 
 void rendering_test(void){
   bool testing = true;
-  struct interface *i;
+  struct interface *i, *j;
   _Winit_interface(&window_width, &window_height,
 		   malloc, free, malloc, free, NULL, NULL,
 		   "animate", animated_loading_function,
 		   NULL);
   i = _Wnew_interface(".animate", NULL, window_width / 4, window_height / 4, 0.0,
 		      window_width / 2, window_height / 2);
-  _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 1.0,
-		  100, 100);
+  j = _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 1.0,
+		      100, 100);
+  //_Wrotate_interface(j, 0.5);
+  //_Wrotate_interface(j, 0.0);
   {
     time_t initial_time, current_time;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -206,6 +208,13 @@ void rendering_test(void){
     while(current_time < initial_time + 3){
       glClear(GL_COLOR_BUFFER_BIT);
       current_time = time(NULL);
+      if(current_time % 2){
+	_Wmove_interface(j, j -> x + 1.0, j -> y + 1.0, j -> z);
+      }
+      else{
+	_Wmove_interface(j, j -> x - 1.0, j -> y - 1.0, j -> z);
+      }
+      _Wrotate_interface(j, j -> rotation + 0.1);
       _Wrender_interface((unsigned long long) current_time * 1000000llu);
       if(i -> current_frame != (current_time - initial_time) % 2)
 	testing = false;

@@ -1497,10 +1497,10 @@ change the result. The correct order for each operation is:
 1. First we should center the interface square in the OpenGL
 origin. (Matrix A).
 
-2. Then we increase or decrease the size of each side of our
-interface. (Matrix B).
+2. We rotate the interface $\theta$ radians. (Matrix B)
 
-3. We rotate the interface $\theta$ radians. (Matrix C)
+2. Then we increase or decrease the size of each side of our
+interface. (Matrix C).
 
 4. Finally, we translate the interface for its correct
 position. Taking in consideration that we measure the coordinates
@@ -1524,26 +1524,26 @@ matrices $D$ and $C$, we get:
 
 $$ DC=\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{x \atop y}\atop{0\atop
-      1}}\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
-      0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}{{0\atop
+      1}}\right]\left[{{w
+      \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop 0}}{{0\atop
       0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
-\left[{{cos(\theta) \atop sin(\theta)}\atop {0\atop 0}}
-  {{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}
+\left[{{w \atop 0}\atop {0\atop 0}}
+  {{0 \atop h}\atop {0 \atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
   {{x \atop y}\atop{0\atop 1}}\right]
 $$
 
 Now if we multiply the result by matrix $B$, we obtain:
 
-$$ DCB = \left[{{cos(\theta) \atop sin(\theta)}\atop {0\atop 0}}
-  {{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}} {{0\atop
-      0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop 1}}\right]\left[{{w
-      \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop 0}}{{0\atop
-      0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
-\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
-  {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
+$$ DCB = \left[{{w \atop 0}\atop {0\atop 0}} {{0 \atop h}\atop
+  {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop
+  1}}\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
+  0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}{{0\atop
+  0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
+\left[{{w\cdot cos(\theta) \atop h\cdot sin(\theta)}\atop {0\atop 0}}
+  {{-w\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
-  {{a \atop b}\atop{0\atop 1}}\right]
+  {{x \atop y}\atop{0\atop 1}}\right]
 $$
 
 
@@ -1554,17 +1554,18 @@ a translation matrix with constant values that moves each vertex 1/2
 to the left and 1/2 down:
 
 $$
-DCBA=\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
-  {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
+\left[{{w\cdot cos(\theta) \atop h\cdot sin(\theta)}\atop {0\atop 0}}
+  {{-w\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
   {{x \atop y}\atop{0\atop 1}}\right]
 \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{-1/2 \atop -1/2}\atop{0\atop
       1}}\right]=
-\left[{{w\cdot cos(\theta) \atop w\cdot sin(\theta)}\atop {0\atop 0}}
-  {{-h\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
-  {{0\atop 0}\atop{1 \atop 0}}
-  {{-w/2\cdot cos(\theta) + h/2\cdot sin(\theta)+x \atop -w/2\cdot sin(\theta)-h/2\cdot cos(\theta)+y}\atop{0\atop 1}}\right]
+\left[{{w\cdot cos(\theta) \atop h\cdot sin(\theta)}\atop {0\atop 0}}
+  {{-w\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
+  {{0\atop 0}\atop{1 \atop 0}} {{-w/2\cdot cos(\theta) + w/2\cdot
+  sin(\theta)+x \atop -h/2\cdot sin(\theta)-h/2\cdot
+  cos(\theta)+y}\atop{0\atop 1}}\right]
 $$
 
 The format above is the final form of our model-view matrix for each
@@ -1601,11 +1602,11 @@ static void initialize_model_view_matrix(struct interface *i){
   GLfloat sin_theta = sin(i -> rotation);
   /* Primeira Coluna */
   i -> _transform_matrix[0] = w * cos_theta;
-  i -> _transform_matrix[1] = w * sin_theta;
+  i -> _transform_matrix[1] = h * sin_theta;
   i -> _transform_matrix[2] = 0.0;
   i -> _transform_matrix[3] = 0.0;
   /* Segunda Coluna */
-  i -> _transform_matrix[4] = -h * sin_theta;
+  i -> _transform_matrix[4] = -w * sin_theta;
   i -> _transform_matrix[5] = h * cos_theta;
   i -> _transform_matrix[6] = 0.0;
   i -> _transform_matrix[7] = 0.0;
@@ -1615,8 +1616,8 @@ static void initialize_model_view_matrix(struct interface *i){
   i -> _transform_matrix[10] = 1.0;
   i -> _transform_matrix[11] = 0.0;
   /* Quarta Coluna */
-  i -> _transform_matrix[12] = -w/2 * cos_theta + h/2 * sin_theta + x;
-  i -> _transform_matrix[13] = -w/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
+  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
   i -> _transform_matrix[14] = 0.0;
   i -> _transform_matrix[15] = 1.0;
 }
@@ -2316,8 +2317,8 @@ void _Wmove_interface(struct interface *i, float new_x, float new_y, float new_z
   i -> x = new_x;
   i -> y = new_y;
   @<Conversão de Coordenadas e Tamanho@>
-  i -> _transform_matrix[12] = -w/2 * cos_theta + h/2 * sin_theta + x;
-  i -> _transform_matrix[13] = -w/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
+  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
   if(new_z != i -> z){ // Atualizando lista ordenada de interfaces
     int j;
     i -> z = new_z;
@@ -2343,7 +2344,31 @@ void _Wmove_interface(struct interface *i, float new_x, float new_y, float new_z
 @
 \fimcodigo
 
+\subsecao{8.2. Rotating Interfaces}
 
+Rotating an interface involves reserving its mutex, updating the
+rotation variable and also updating its model-view matrix. The code
+for this can be seen below:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wrotate_interface(struct interface *i, float rotation){
+  GLfloat x, y, w, h;
+  GLfloat cos_theta = cos(rotation);
+  GLfloat sin_theta = sin(rotation);
+  MUTEX_WAIT(&(i -> interface_mutex));
+  i -> rotation = rotation;
+  @<Conversão de Coordenadas e Tamanho@>
+  i -> _transform_matrix[0] = w * cos_theta;
+  i -> _transform_matrix[1] = h * sin_theta;
+  i -> _transform_matrix[4] = -w * sin_theta;
+  i -> _transform_matrix[5] = h * cos_theta;
+  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
+  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
+  MUTEX_SIGNAL(&(i -> interface_mutex));
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

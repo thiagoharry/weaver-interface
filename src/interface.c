@@ -391,11 +391,11 @@ GLfloat cos_theta= cos(i->rotation);
 GLfloat sin_theta= sin(i->rotation);
 
 i->_transform_matrix[0]= w*cos_theta;
-i->_transform_matrix[1]= w*sin_theta;
+i->_transform_matrix[1]= h*sin_theta;
 i->_transform_matrix[2]= 0.0;
 i->_transform_matrix[3]= 0.0;
 
-i->_transform_matrix[4]= -h*sin_theta;
+i->_transform_matrix[4]= -w*sin_theta;
 i->_transform_matrix[5]= h*cos_theta;
 i->_transform_matrix[6]= 0.0;
 i->_transform_matrix[7]= 0.0;
@@ -405,8 +405,8 @@ i->_transform_matrix[9]= 0.0;
 i->_transform_matrix[10]= 1.0;
 i->_transform_matrix[11]= 0.0;
 
-i->_transform_matrix[12]= -w/2*cos_theta+h/2*sin_theta+x;
-i->_transform_matrix[13]= -w/2*sin_theta-h/2*cos_theta+y;
+i->_transform_matrix[12]= -w/2*cos_theta+w/2*sin_theta+x;
+i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
 i->_transform_matrix[14]= 0.0;
 i->_transform_matrix[15]= 1.0;
 }
@@ -906,8 +906,8 @@ h= 2.0*(i->height)/(*window_height);
 /*:62*/
 #line 2355 "weaver-interface.tex"
 
-i->_transform_matrix[12]= -w/2*cos_theta+h/2*sin_theta+x;
-i->_transform_matrix[13]= -w/2*sin_theta-h/2*cos_theta+y;
+i->_transform_matrix[12]= -w/2*cos_theta+w/2*sin_theta+x;
+i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
 if(new_z!=i->z){
 int j;
 i->z= new_z;
@@ -930,7 +930,34 @@ MUTEX_SIGNAL(&z_list_mutex);
 }
 MUTEX_SIGNAL(&(i->interface_mutex));
 }
-/*:88*/
+/*:88*//*89:*/
+#line 2390 "weaver-interface.tex"
+
+void _Wrotate_interface(struct interface*i,float rotation){
+GLfloat x,y,w,h;
+GLfloat cos_theta= cos(rotation);
+GLfloat sin_theta= sin(rotation);
+MUTEX_WAIT(&(i->interface_mutex));
+i->rotation= rotation;
+/*62:*/
+#line 1612 "weaver-interface.tex"
+
+x= 2.0*(i->x)/(*window_width)-1.0;
+y= 2.0*(i->y)/(*window_height)-1.0;
+w= 2.0*(i->width)/(*window_width);
+h= 2.0*(i->height)/(*window_height);
+/*:62*/
+#line 2397 "weaver-interface.tex"
+
+i->_transform_matrix[0]= w*cos_theta;
+i->_transform_matrix[1]= h*sin_theta;
+i->_transform_matrix[4]= -w*sin_theta;
+i->_transform_matrix[5]= h*cos_theta;
+i->_transform_matrix[12]= -w/2*cos_theta+w/2*sin_theta+x;
+i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
+MUTEX_SIGNAL(&(i->interface_mutex));
+}
+/*:89*/
 #line 426 "weaver-interface.tex"
 
 /*:20*/
