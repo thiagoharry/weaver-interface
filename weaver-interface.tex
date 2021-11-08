@@ -161,23 +161,14 @@ void _Wresize_interface(struct interface *i, float new_width, float new_height);
 \fimcodigo
 
 A função acima deverá respeitar limites ajustados pelo usuário, se
-eles existirem. Pode-se estabelecer valores mínimos para uma interface
-com o código abaixo:
+eles existirem. Pode-se estabelecer valores mínimos e máximos para uma
+interface com o código abaixo:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wset_max_size_interface(struct interface *i, float max_width,
+void _Wset_size_limit_interface(struct interface *i, float min_width,
+                              float min_height, float max_width,
                               float max_height);
-@
-\fimcodigo
-
-Um tamanho máximo de zero significa que a interface não tem um tamanho
-máximo. Pode-se também ajustar um tamanho mínimo com a função abaixo:
-
-\iniciocodigo
-@<Declaração de Função (interface.h)@>+=
-void _Wset_min_size_interface(struct interface *i, float min_width,
-                              float min_height);
 @
 \fimcodigo
 
@@ -642,7 +633,7 @@ struct interface {
   float x, y, z;
   float rotation;
   GLfloat _transform_matrix[16];
-  float height, width;
+  float height, width, min_height, max_height, min_width, max_width;
   float background_color[4], foreground_color[4];
   int integer;
   bool visible;
@@ -1840,6 +1831,8 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> rotation = 0;
     new_interface -> width = width;
     new_interface -> height = height;
+    new_interface -> min_width = new_interface -> max_width = 0;
+    new_interface -> min_height = new_interface -> max_height = 0;
     for(i = 0; i < 4; i ++){
       new_interface -> background_color[i] = 0.0;
       new_interface -> foreground_color[i] = 0.0;
@@ -2402,6 +2395,65 @@ void _Wrotate_interface(struct interface *i, float rotation){
   i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
   i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
   MUTEX_SIGNAL(&(i -> interface_mutex));
+}
+@
+\fimcodigo
+
+\subsecao{8.3. Redimensionando Interfaces}
+
+Redimensionar interfaces, assim como rotacioná-las, envolve apenas
+reservar um mutex, atualizar as variáveis de tamanho e atualizar a
+matriz de modelo-visualização. Entretanto, também devemos tomar
+cuidado com as variáveis de tamanho máximo e mínimo da interface,
+lembrando que um tamanho máximo ou mínimo não-positivo significa que
+tal limite não existe.
+
+A função que redimenciona interfaces é:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wresize_interface(struct interface *i, float new_width, float new_height){
+  GLfloat x, y, w, h;
+  GLfloat cos_theta = cos(i -> rotation);
+  GLfloat sin_theta = sin(i -> rotation);
+  MUTEX_WAIT(&(i -> interface_mutex));
+  i -> width = new_width;
+  if(i -> min_width > 0.0 && new_width < i -> min_width)
+    i -> width = i -> min_width;
+  else if(i -> max_width > 0.0 && new_width > i -> max_width)
+    i -> width = i -> max_width;
+  i -> height = new_height;
+  if(i -> min_height > 0.0 && new_height < i -> min_height)
+    i -> height = i -> min_height;
+  else if(i -> max_height > 0.0 && new_height > i -> max_height)
+    i -> height = i -> max_height;
+  @<Conversão de Coordenadas e Tamanho@>
+  i -> _transform_matrix[0] = w * cos_theta;
+  i -> _transform_matrix[1] = h * sin_theta;
+  i -> _transform_matrix[4] = -w * sin_theta;
+  i -> _transform_matrix[5] = h * cos_theta;
+  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
+  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
+  MUTEX_SIGNAL(&(i -> interface_mutex));
+}
+@
+\fimcodigo
+
+Já para ajustar o tamanho máximo e mínimo de uma interface, usamos a
+função abaixo:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Wset_size_limit_interface(struct interface *i, float min_width,
+                              float min_height, float max_width,
+                              float max_height){
+  MUTEX_WAIT(&(i -> interface_mutex));
+  i -> min_width = min_width;
+  i -> min_height = min_height;
+  i -> max_width = max_width;
+  i -> max_height = max_height;
+  MUTEX_SIGNAL(&(i -> interface_mutex));
+  _Wresize_interface(i, i -> width, i -> height);
 }
 @
 \fimcodigo

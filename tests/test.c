@@ -210,9 +210,11 @@ void rendering_test(void){
       current_time = time(NULL);
       if(current_time % 2){
 	_Wmove_interface(j, j -> x + 1.0, j -> y + 1.0, j -> z);
+	_Wresize_interface(j, j -> width + 1.0, j -> height + 1.0);
       }
       else{
 	_Wmove_interface(j, j -> x - 1.0, j -> y - 1.0, j -> z);
+	_Wresize_interface(j, j -> width - 1.0, j -> height - 1.0);
       }
       _Wrotate_interface(j, j -> rotation + 0.1);
       _Wrender_interface((unsigned long long) current_time * 1000000llu);
@@ -222,6 +224,12 @@ void rendering_test(void){
     }
   }
   assert("Testing rendering of animated interface", testing);
+  _Wset_size_limit_interface(i, 5.0, 5.0, 10.0, 10.0);
+  assert("Setting size limits in interfaces", i -> width >= 5.0 &&
+	 i -> width <= 10.0 && i -> height >= 5.0 && i -> height <= 10.0);
+  _Wresize_interface(i, 4.0, 11.0);
+  assert("Size limits for interfaces are in effect", i -> width >= 5.0 &&
+	 i -> width <= 10.0 && i -> height >= 5.0 && i -> height <= 10.0);
   _Wfinish_interface(); 
 }
 
