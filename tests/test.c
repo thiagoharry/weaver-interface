@@ -224,12 +224,6 @@ void rendering_test(void){
     }
   }
   assert("Testing rendering of animated interface", testing);
-  _Wset_size_limit_interface(i, 5.0, 5.0, 10.0, 10.0);
-  assert("Setting size limits in interfaces", i -> width >= 5.0 &&
-	 i -> width <= 10.0 && i -> height >= 5.0 && i -> height <= 10.0);
-  _Wresize_interface(i, 4.0, 11.0);
-  assert("Size limits for interfaces are in effect", i -> width >= 5.0 &&
-	 i -> width <= 10.0 && i -> height >= 5.0 && i -> height <= 10.0);
   _Wfinish_interface(); 
 }
 
