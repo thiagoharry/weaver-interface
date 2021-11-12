@@ -190,7 +190,7 @@ the mouse over them or if the user clicks in some interface:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Winteract_interface(int mouse_x, int mouse_y, bool moving, bool left_click,
+void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click);
 @
 \fimcodigo
@@ -587,6 +587,16 @@ struct interface{
   GLfloat _transform_matrix[16];
   struct shader *shader_program;
   _MUTEX_DECLARATION(interface_mutex);
+  /* Interacting functions */
+  bool _mouse_over;
+  void (*on_mouse_over)(struct interface *);
+  void (*on_mouse_out)(struct interface *);
+  void (*on_mouse_left_down)(struct interface *);
+  void (*on_mouse_left_up)(struct interface *);
+  void (*on_mouse_middle_down)(struct interface *);
+  void (*on_mouse_middle_up)(struct interface *);
+  void (*on_mouse_right_down)(struct interface *);
+  void (*on_mouse_right_up)(struct interface *);
   /* Attributes below should be filled by the loading function: */
   GLuint *_texture1;
   bool _loaded_texture;
@@ -629,12 +639,19 @@ will not be rendered in the screen.
 Next we put a pointer to the shader data structure associated with
 this interface. It has the rules about how to render this interface.
 
-The attributes after this part are initialized with 0, false and
-NULL. But while the loading function is interpreting the filename, it
-should change and update the values. The loading function is one of
-the functions that should be passed to the initialization function in
-our API and that interpret files with a given extension to produce the
-textures and other information for our interfaces.
+The interacting functions below are usually initialized
+with \monoespaco{NULL}. If they are not \monoespaco{NULL}, they are
+executed if the mouse hover over the interface, leave the interface,
+or when some mouse button is pressed or released over them. We also
+have a boolean variable that store if the mouse is over this interface
+or not.
+
+The attributes after the interacting functions are initialized with 0,
+false and NULL. But while the loading function is interpreting the
+filename, it should change and update the values. The loading function
+is one of the functions that should be passed to the initialization
+function in our API and that interpret files with a given extension to
+produce the textures and other information for our interfaces.
 
 In this part first we have a pointer for the OpenGL texture for our
 interface. We can have not a single texture, but several
@@ -1796,6 +1813,15 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> _t = 0;
     new_interface -> max_repetition = 0;
     MUTEX_INIT(&(new_interface -> interface_mutex));
+    new_interface -> _mouse_over = false;
+    new_interface -> on_mouse_over = NULL;
+    new_interface -> on_mouse_out = NULL;
+    new_interface -> on_mouse_left_down = NULL;
+    new_interface -> on_mouse_left_up = NULL;
+    new_interface -> on_mouse_middle_down = NULL;
+    new_interface -> on_mouse_middle_up = NULL;
+    new_interface -> on_mouse_right_down = NULL;
+    new_interface -> on_mouse_right_up = NULL;
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
       ((struct interface *) last_structure)-> next = (void *) new_interface;

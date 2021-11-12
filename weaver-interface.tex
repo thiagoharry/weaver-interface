@@ -203,7 +203,7 @@ retira o mouse sobre uma interface ou clica nela:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Winteract_interface(int mouse_x, int mouse_y, bool moving, bool left_click,
+void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click);
 @
 \fimcodigo
@@ -598,7 +598,7 @@ informações sobre a interface de usuário. A descrição dela é:
 
 \iniciocodigo
 @<Estrutura de Dados (interface.h)@>=
-struct interface {
+struct interface{
   int type;
   void *next; // Ponteiro de lista encadeada
   float x, y, z;
@@ -610,6 +610,16 @@ struct interface {
   bool visible;
   struct shader *shader_program;
   _MUTEX_DECLARATION(interface_mutex);
+  /* Funções de interação*/
+  bool _mouse_over;
+  void (*on_mouse_over)(struct interface *);
+  void (*on_mouse_out)(struct interface *);
+  void (*on_mouse_left_down)(struct interface *);
+  void (*on_mouse_left_up)(struct interface *);
+  void (*on_mouse_middle_down)(struct interface *);
+  void (*on_mouse_middle_up)(struct interface *);
+  void (*on_mouse_right_down)(struct interface *);
+  void (*on_mouse_right_up)(struct interface *);
   /* Atributos abaixo devem ser preenchidos por função de carregamento: */
   GLuint *_texture1;
   bool _loaded_texture;
@@ -659,6 +669,12 @@ associada à nossa interface. Que mostra como ela será renderizada.
 
 E por fim, é inserida uma declaração de um mutex para que múltiplos
 processos possam manipular simultaneamente nossa interface.
+
+Em seguida temos as funções de interação que se forem diferentes
+de \monoespaco{NULL}, serão executadas quando o mouse passa sobre a
+interface, quando deixa a interface ou quando algum botão do mouse é
+pressionado ou solto sobre elas. E as interfaces tem também uma
+variável booleana que indica se o mouse está sobre elas ou não.
 
 Os atributos que vem à seguir desta parte inicialmente sempre começam
 como sendo 0, falso ou nulo. É de responsabilidade da função de
@@ -1825,6 +1841,15 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> _t = 0;
     new_interface -> max_repetition = 0;
     MUTEX_INIT(&(new_interface -> interface_mutex));
+    new_interface -> _mouse_over = false;
+    new_interface -> on_mouse_over = NULL;
+    new_interface -> on_mouse_out = NULL;
+    new_interface -> on_mouse_left_down = NULL;
+    new_interface -> on_mouse_left_up = NULL;
+    new_interface -> on_mouse_middle_down = NULL;
+    new_interface -> on_mouse_middle_up = NULL;
+    new_interface -> on_mouse_right_down = NULL;
+    new_interface -> on_mouse_right_up = NULL;
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
       ((struct interface *) last_structure)-> next = (void *) new_interface;
@@ -2400,6 +2425,167 @@ void _Wresize_interface(struct interface *i, float new_width, float new_height){
 @
 \fimcodigo
 
+\secao{8. Interagindo com Interfaces}
+
+Dadas as interfaces ativas, pode-se interagir com elas passando o
+cursor do mouse delas, clicando com o botão direito do mouse nelas,
+clicando com o esquerdo ou clicando com o botão do meio. Para
+gerenciar isso usamos a função \monoespaco{\_Winteract\_interface} que
+nos informa o que o mouse está fazendo.
+
+Para gerenciar o que está sendo feito, é importante também memorizar o
+estado anterior dos botões do mouse, não apenas lidar com o estado
+atual. Por causa disso, vamos usar as seguintes variáveis estáticas
+para memorizar o último estado dos botões:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>=
+static bool mouse_last_left_click = false, mouse_last_middle_click = false,
+  mouse_last_right_click = false;
+@
+\fimcodigo
+
+Inicializamos tais valores como zero e falso na inicialização de nossa API:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+mouse_last_left_click = false;
+mouse_last_middle_click = false;
+mouse_last_right_click = false;
+@
+\fimcodigo
+
+Sabendo o estado anterior do mouse e o estado atual, somos capazes de
+dizer se o clique do mouse começou agora ou não, ou se o usuário
+terminou agora o clique soltando o botão. Desta forma somos capazes de
+executar corretamente as funções de interação de interface.
+
+Em um dado frame, só podemos interagir com uma única interface, dado
+que só temos um cursor do mouse. Mas se mais de uma interface ocupar a
+mesma posição, como saberemos com qual interagir. Ora, felizmente
+armazenamso em uma lista ordenada as interfaces na ordem em que elas
+são desenhadas na tela. Devemos então priorizar a interface que é
+desenhada depois, pois é ela que o usuário está vendo sob o cursor do
+mouse.
+
+Então, para interagir com interfaces, percorremos em ordem reversa a
+lista ordenada de interfaces até acharmos aquela que está diretamente
+sob o mouse. É com ela que iremos interagir. Só temos que também ao
+percorrer a lista, marcar que o mouse não está sobre qualquer uma
+outra. E se for o caso, executar a função \monoespaco{on_mouse_out} da
+interface. Só então, checamos a interação com a interface certa e
+executamos a função adequada se existir.
+
+O código da função que faz isso é:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
+                          bool middle_click, bool right_click){
+  int i;
+  struct interface *previous = NULL, *current = NULL;
+  MUTEX_WAIT(&z_list_mutex);
+  for(i = z_list_size - 1; i >= 0; i --){
+    float x, y;
+    @<Converter Coordenadas do Mouse para x e y@>
+    if(current == NULL && z_list[i] -> x - (z_list[i] -> width / 2) < x &&
+       z_list[i] -> x + (z_list[i] -> width / 2) > x &&
+       z_list[i] -> y - (z_list[i] -> height / 2) < y &&
+       z_list[i] -> y + (z_list[i] -> height / 2) > y)
+      current = z_list[i];
+    else{
+      if(z_list[i] -> _mouse_over){
+         z_list[i] -> _mouse_over = false;
+         previous = z_list[i];
+       }
+    }
+  }
+  MUTEX_SIGNAL(&z_list_mutex);
+  if(previous != NULL && previous -> on_mouse_out != NULL){
+    previous -> on_mouse_out(previous);
+  }
+  if(current != NULL){
+    if(current -> _mouse_over == false){
+      current -> _mouse_over = true;
+      if(current -> on_mouse_over != NULL)
+        current -> on_mouse_over(current);
+    }
+    if(left_click && !mouse_last_left_click && current -> on_mouse_left_down)
+      current -> on_mouse_left_down(current);
+    else if(!left_click && mouse_last_left_click && current -> on_mouse_left_up)
+      current -> on_mouse_left_up(current);
+    if(middle_click && !mouse_last_middle_click &&
+       current -> on_mouse_middle_down)
+      current -> on_mouse_middle_down(current);
+    else if(!middle_click && mouse_last_middle_click &&
+            current -> on_mouse_middle_up)
+      current -> on_mouse_middle_up(current);
+    if(right_click && !mouse_last_right_click && current -> on_mouse_right_down)
+      current -> on_mouse_right_down(current);
+    else if(!right_click && mouse_last_right_click &&
+            current -> on_mouse_right_up)
+      current -> on_mouse_right_up(current);
+  }
+  mouse_last_left_click = left_click;
+  mouse_last_middle_click = middle_click;
+  mouse_last_right_click = right_click;
+}
+@
+\fimcodigo
+
+O código acima é bem direto. Ele percorre as interfaces desenhadas na
+tela na ordem reversa na qual foram desenhadas para saber qual delas é
+alvo atual de interação com o mouse. Se no frame anterior uma
+interface diferente era a ativa, verificamos se temos que executar uma
+função pelo fato do mouse ter abandonado ela. Se a interface atual
+começou a ter foco do mouse agora, também verificamos se há função a
+ser executada. Em caso de cliques com o mouse, também checamos se o
+clique começou agora ou se acabamos de parar com um clique, e checamos
+se a interface com o foco atual tem funções a serem executadas neste
+caso.
+
+A parte que não aparece acima é como obtemos a coordenada $(x, y)$ que
+usamos para comparar com a posição de cada interface à partir das
+coordenadas de mouse que recebemos como argumento. A coordenada $(x,
+y)$, muitos casos é exatamente a mesma coordenada de mouse que
+recebemos como argumento. Mas se a interface estiver rotacionada,
+então precisamos fazer um ajuste para poder medir corretamente.
+
+Se o mouse estiver bem na ponta inferior direita de interface
+retangular, e subitamente ela for rotacionada um pouco, a interface
+não estará mais sob o mouse. Para levar em conta esse tipo de rotação,
+a forma mais fácil é ignorarmos que a interface está rotacionada e
+rotacionarmos as coordenadas do mouse na direção oposta da rotação da
+interface e usando o centro da interface como eixo de rotação. Se a
+coordenada transformada ainda estiver dentro dos limites retangulares
+da interface, isso significa que o mouse realmente está sobre a nossa
+interface.
+
+O código que gera a coordenada $(x, y)$ etão apenas checa se a
+interface está rotacionada. Se não estiver, usamos como valores as
+próprias coordenadas do mouse, sem precisar fazer cálculos adicionais
+de conversão. Se estiver, então obtemos $(x, y)$ fazendo a rotação
+descrita na coordenada do mouse:
+
+TODO: Rotação tá errada, não usa eixo
+\iniciocodigo
+@<Converter Coordenadas do Mouse para x e y@>=
+if(z_list[i] -> rotation == 0.0){
+  x = mouse_x;
+  y = mouse_y;
+}
+else{
+ float cos_theta = cos(- (z_list[i] -> rotation));
+ float sin_theta = sin(- (z_list[i] -> rotation));
+ x = (mouse_x - z_list[i] -> x) * cos_theta -
+       (mouse_y - z_list[i] -> y) * sin_theta;
+ y = (mouse_x - z_list[i] -> x) * sin_theta +
+       (mouse_y - z_list[i] -> y) * cos_theta;
+ x +=  z_list[i] -> x;
+ y +=  z_list[i] -> y;
+}
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

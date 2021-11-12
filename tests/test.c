@@ -188,7 +188,33 @@ void test_structure_history(void){
   _Wfinish_interface(); 
 }
 
+void set_integer(struct interface *i){
+  i -> integer = 1;
+}
+
+void unset_integer(struct interface *i){
+  i -> integer = 0;
+}
+
+void width_up(struct interface *i){
+  _Wresize_interface(i, i -> width + 50, i -> height);
+}
+
+void width_down(struct interface *i){
+  _Wresize_interface(i, i -> width - 50, i -> height);
+}
+
+void height_up(struct interface *i){
+  _Wresize_interface(i, i -> width, i -> height + 50);
+}
+
+void height_down(struct interface *i){
+  _Wresize_interface(i, i -> width, i -> height - 50);
+}
+
+
 void rendering_test(void){
+  unsigned long elapsed;
   bool testing = true;
   struct interface *i, *j;
   _Winit_interface(&window_width, &window_height,
@@ -199,16 +225,25 @@ void rendering_test(void){
 		      window_width / 2, window_height / 2);
   j = _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 1.0,
 		      100, 100);
-  //_Wrotate_interface(j, 0.5);
-  //_Wrotate_interface(j, 0.0);
+  j -> on_mouse_over = set_integer;
+  j -> on_mouse_out = unset_integer;
+  j -> on_mouse_left_down = width_up;
+  j -> on_mouse_left_up = width_down;
+  j -> on_mouse_right_down = height_up;
+  j -> on_mouse_right_up = height_down;
   {
-    time_t initial_time, current_time;
+    struct timeval initial_time, current_time;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    current_time = initial_time = time(NULL);
-    while(current_time < initial_time + 3){
+    gettimeofday(&current_time, NULL);
+    gettimeofday(&initial_time, NULL);
+    elapsed = 0;
+    while(elapsed < 3000000){
+      _Wget_window_input(elapsed);
+      _Winteract_interface(_Wmouse.x, _Wmouse.y, _Wmouse.button[W_MOUSE_LEFT],
+			   _Wmouse.button[W_MOUSE_MIDDLE],
+			   _Wmouse.button[W_MOUSE_RIGHT]);
       glClear(GL_COLOR_BUFFER_BIT);
-      current_time = time(NULL);
-      if(current_time % 2){
+      if((elapsed / 1000000) % 2){
 	_Wmove_interface(j, j -> x + 1.0, j -> y + 1.0, j -> z);
 	_Wresize_interface(j, j -> width + 1.0, j -> height + 1.0);
       }
@@ -216,10 +251,14 @@ void rendering_test(void){
 	_Wmove_interface(j, j -> x - 1.0, j -> y - 1.0, j -> z);
 	_Wresize_interface(j, j -> width - 1.0, j -> height - 1.0);
       }
-      _Wrotate_interface(j, j -> rotation + 0.1);
-      _Wrender_interface((unsigned long long) current_time * 1000000llu);
-      if(i -> current_frame != (current_time - initial_time) % 2)
+      if(j -> integer == 0)
+	_Wrotate_interface(j, j -> rotation + 0.1);
+      _Wrender_interface((unsigned long long) elapsed);
+      if(i -> current_frame != (elapsed / 1000000) % 2)
 	testing = false;
+      gettimeofday(&current_time, NULL);
+      elapsed = (current_time.tv_sec - initial_time.tv_sec) * 1000000;
+      elapsed += (current_time.tv_usec - initial_time.tv_usec);
       _Wrender_window();
     }
   }
