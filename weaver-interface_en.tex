@@ -854,20 +854,14 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
     int count = -1, i; /* Part 2: Count the remaining functions */
     va_list args;
     char *ext;
-    void (*func)(void *(*permanent_alloc)(size_t),
-                 void (*permanent_free)(void *), void *(*temporary_alloc)(size_t),
-                 void (*temporary_free)(void *),
-                 void (*before_loading_interface)(void),
-                 void (*after_loading_interface)(void),
-                 char *source_filename, struct interface *target);
     va_start(args, new_after_loading_interface);
     do{
       count ++;
       ext = va_arg(args, char *);
-      func = va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
-                                   void *(*)(size_t), void (*)(void *),
-                                   void (*)(void), void (*)(void),
-                                   char *, struct interface *)); 
+      va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
+                            void *(*)(size_t), void (*)(void *),
+                            void (*)(void), void (*)(void),
+                            char *, struct interface *)); 
     } while(ext != NULL);
     number_of_file_functions_in_the_list = count;
     list_of_file_functions = (struct file_function *)
@@ -1345,7 +1339,7 @@ filename given as argument:
 @<Funções Auxiliares Locais (interface.c)@>=
 static GLuint compile_shader_from_file(const char *filename){
   char *buffer;
-  size_t source_size;
+  size_t source_size, ret;
   FILE *fp;
   GLuint shader_program;
   fp = fopen(filename, "r");
@@ -1353,11 +1347,13 @@ static GLuint compile_shader_from_file(const char *filename){
   // Vai pro fim do arquivo para ler o tamanho e volta pro começo:
   fseek(fp, 0, SEEK_END);
   source_size = ftell(fp);
-  rewind(fp);
   // Aloca e lê buffer
   buffer = (char *) temporary_alloc(sizeof(char) * (source_size + 1));
   if(buffer == NULL) return 0;
-  fread(buffer, sizeof(char), source_size, fp);
+  do{
+    rewind(fp);
+    ret = fread(buffer, sizeof(char), source_size, fp);
+  } while(feof(fp) && !ferror(fp) && ret / sizeof(char) == source_size);
   buffer[source_size] = '\0';
   shader_program = compile_shader(buffer);
   if(temporary_free != NULL) temporary_free(buffer);
@@ -1980,7 +1976,7 @@ the first marking with \monoespaco{permanenet\_free}.
 We will remove and disallocate interfaces using the function to
 restore the history to a previous point. The function will remove all
 interfaces created after the last marking and will remove the last
-marking. This restoration will be made with
+marking. This will be made with
 function \monoespaco{\_Wrestore\_history\_interface}.
 
 After this function, the last marking will be removed and we will
@@ -2107,7 +2103,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 @
 \fimcodigo
 
-We must initialize this list of ordered interfaces in the rendering
+We must initialize this list in the rendering
 function \monoespaco{\_Wrender\_interface}. Inside this function, we
 should check if the size of this list is equal the number of active
 interfaces in the current moment (the number of active interfaces can
@@ -2388,6 +2384,153 @@ void _Wresize_interface(struct interface *i, float new_width, float new_height){
 @
 \fimcodigo
 
+\secao{8. Interacting with Interfaces}
+
+Given the active interfaces, we can interact with them passing the
+mouse cursor over them or clicking with some mouse button on them. To
+manage these interactions we use the
+function \monoespaco{\_Winteract\_interface} that gives us information
+about what the mouse is doing and automatically executes functions
+associated with interactions with interfaces.
+
+To make this possible we need to memorize the mouse button
+states. Because we need to know not only the current mouse button
+status, but also the previous status. To memorize this, we will use
+the following variables, one for each mouse button:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>=
+static bool mouse_last_left_click = false, mouse_last_middle_click = false,
+  mouse_last_right_click = false;
+@
+\fimcodigo
+
+We initialize these variables with false during the API
+initialization:
+
+\iniciocodigo
+@<Inicialização da API de Interface@>+=
+mouse_last_left_click = false;
+mouse_last_middle_click = false;
+mouse_last_right_click = false;
+@
+\fimcodigo
+
+Knowing the previous mouse state and the current state, we are able to
+notice not only that the user is clicking in something, but also if
+the clicking is beginning in this frame or it is just continuing. We
+know not only if the user is not clicking, but also know if the button
+was released at some moment between the last frame and the current
+frame. Only with these information we can execute correctly the
+functions that interact with each interface.
+
+In a given frame we can interact only with a single interface, as we
+have only a single mouse cursor. But if more than one interface occupy
+the same position, how could we know which one is the correct
+interface? Well, fortunately we a list of active interfaces where they
+are ordered according with the order in which they are draw. When more
+than one interface occupy the same point where the mouse cursor is,
+the correct interface is the one that is in the front of others. 
+
+So we iterate over each interface in the reverse order in which they
+are drawn and check the first interface under the mouse cursor. This
+is the current interface. If there is another interface marked as
+current one, we remove the mark and consider this the previous
+interacted interface. If necessary, and if they exist, we execute
+functions associated with the previous interface (the mouse cursor
+abandoned this interface) and with the current one (if the mouse
+hovered over it, or clicked on it).
+
+The code to perform this is:
+
+\iniciocodigo
+@<Definição de Funções da API (interface.c)@>+=
+void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
+                          bool middle_click, bool right_click){
+  int i;
+  struct interface *previous = NULL, *current = NULL;
+  MUTEX_WAIT(&z_list_mutex);
+  for(i = z_list_size - 1; i >= 0; i --){
+    float x, y;
+    @<Converter Coordenadas do Mouse para x e y@>
+    if(current == NULL && z_list[i] -> x - (z_list[i] -> width / 2) < x &&
+       z_list[i] -> x + (z_list[i] -> width / 2) > x &&
+       z_list[i] -> y - (z_list[i] -> height / 2) < y &&
+       z_list[i] -> y + (z_list[i] -> height / 2) > y)
+      current = z_list[i];
+    else{
+      if(z_list[i] -> _mouse_over){
+         z_list[i] -> _mouse_over = false;
+         previous = z_list[i];
+       }
+    }
+  }
+  MUTEX_SIGNAL(&z_list_mutex);
+  if(previous != NULL && previous -> on_mouse_out != NULL){
+    previous -> on_mouse_out(previous);
+  }
+  if(current != NULL){
+    if(current -> _mouse_over == false){
+      current -> _mouse_over = true;
+      if(current -> on_mouse_over != NULL)
+        current -> on_mouse_over(current);
+    }
+    if(left_click && !mouse_last_left_click && current -> on_mouse_left_down)
+      current -> on_mouse_left_down(current);
+    else if(!left_click && mouse_last_left_click && current -> on_mouse_left_up)
+      current -> on_mouse_left_up(current);
+    if(middle_click && !mouse_last_middle_click &&
+       current -> on_mouse_middle_down)
+      current -> on_mouse_middle_down(current);
+    else if(!middle_click && mouse_last_middle_click &&
+            current -> on_mouse_middle_up)
+      current -> on_mouse_middle_up(current);
+    if(right_click && !mouse_last_right_click && current -> on_mouse_right_down)
+      current -> on_mouse_right_down(current);
+    else if(!right_click && mouse_last_right_click &&
+            current -> on_mouse_right_up)
+      current -> on_mouse_right_up(current);
+  }
+  mouse_last_left_click = left_click;
+  mouse_last_middle_click = middle_click;
+  mouse_last_right_click = right_click;
+}
+@
+\fimcodigo
+
+This is a very direct code, but we ommited the part where we transform
+the mouse coordinates in coordinates $(x, y)$ to compare with each
+interface. If the interface is not rotated, no transformation is
+necessary and we could use directly the mouse coordinates. But if the
+interface is rotated, the easiest way to check if the mouse is over it
+is ignoring its rotation and rotate the mouse in the opposite angle,
+with axis on the center of the interface. After this transformation,
+we check if the coordinate is over the interface in the exactly same
+manner.
+
+Our code to generate $(x, y)$ just checks if the interface is
+rotated. If not, no transformation is necessary. If yes, we just make
+some trigonometric calculations to determine the transformed
+coordinate:
+
+\iniciocodigo
+@<Converter Coordenadas do Mouse para x e y@>=
+if(z_list[i] -> rotation == 0.0){
+  x = mouse_x;
+  y = mouse_y;
+}
+else{
+ float cos_theta = cos(- (z_list[i] -> rotation));
+ float sin_theta = sin(- (z_list[i] -> rotation));
+ x = (mouse_x - z_list[i] -> x) * cos_theta -
+       (mouse_y - z_list[i] -> y) * sin_theta;
+ y = (mouse_x - z_list[i] -> x) * sin_theta +
+       (mouse_y - z_list[i] -> y) * cos_theta;
+ x +=  z_list[i] -> x;
+ y +=  z_list[i] -> y;
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

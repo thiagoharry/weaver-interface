@@ -890,20 +890,14 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
     int count = -1, i; /* Parte 2: Contar quantas mais funções existem */
     va_list args;
     char *ext;
-    void (*func)(void *(*permanent_alloc)(size_t),
-                 void (*permanent_free)(void *), void *(*temporary_alloc)(size_t),
-                 void (*temporary_free)(void *),
-                 void (*before_loading_interface)(void),
-                 void (*after_loading_interface)(void),
-                 char *source_filename, struct interface *target);
     va_start(args, new_after_loading_interface);
     do{
       count ++;
       ext = va_arg(args, char *);
-      func = va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
-                                   void *(*)(size_t), void (*)(void *),
-                                   void (*)(void), void (*)(void),
-                                   char *, struct interface *)); 
+      va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
+                            void *(*)(size_t), void (*)(void *),
+                            void (*)(void), void (*)(void),
+                            char *, struct interface *)); 
     } while(ext != NULL);
     number_of_file_functions_in_the_list = count;
     list_of_file_functions = (struct file_function *)
@@ -1375,7 +1369,7 @@ arquivo cujo caminho é passado como argumento:
 @<Funções Auxiliares Locais (interface.c)@>=
 static GLuint compile_shader_from_file(const char *filename){
   char *buffer;
-  size_t source_size;
+  size_t source_size, ret;
   FILE *fp;
   GLuint shader_program;
   fp = fopen(filename, "r");
@@ -1383,11 +1377,13 @@ static GLuint compile_shader_from_file(const char *filename){
   // Vai pro fim do arquivo para ler o tamanho e volta pro começo:
   fseek(fp, 0, SEEK_END);
   source_size = ftell(fp);
-  rewind(fp);
   // Aloca e lê buffer
   buffer = (char *) temporary_alloc(sizeof(char) * (source_size + 1));
   if(buffer == NULL) return 0;
-  fread(buffer, sizeof(char), source_size, fp);
+  do{
+    rewind(fp);
+    ret = fread(buffer, sizeof(char), source_size, fp);
+  } while(feof(fp) && !ferror(fp) && ret / sizeof(char) == source_size);
   buffer[source_size] = '\0';
   shader_program = compile_shader(buffer);
   if(temporary_free != NULL) temporary_free(buffer);
@@ -2009,8 +2005,8 @@ manualmente com um \monoespaco{permanenet\_free}.
 A forma de remover e desalocar interfaces é através da restauração do
 histórico, removendo a última marcação e voltando ao estado que
 estávamos quando ela foi criada. Isso remove toda e qualquer interface
-que tenha sido criada após a marcação removida. Esta restauração do
-histórico é feita usando a função
+que tenha sido criada após a marcação removida. Isso é feito usando a
+função
 \monoespaco{\_Wrestore\_history\_interface}.
 
 O que esta função faz é remover a última marcação de histórico em
@@ -2431,12 +2427,13 @@ Dadas as interfaces ativas, pode-se interagir com elas passando o
 cursor do mouse delas, clicando com o botão direito do mouse nelas,
 clicando com o esquerdo ou clicando com o botão do meio. Para
 gerenciar isso usamos a função \monoespaco{\_Winteract\_interface} que
-nos informa o que o mouse está fazendo.
+nos informa o que o mouse está fazendo e automaticamente executa as
+funções associadas com cada interação para cada interface.
 
-Para gerenciar o que está sendo feito, é importante também memorizar o
-estado anterior dos botões do mouse, não apenas lidar com o estado
-atual. Por causa disso, vamos usar as seguintes variáveis estáticas
-para memorizar o último estado dos botões:
+Para isso ser possível, temos que memorizar o estado anterior dos
+botões do mouse, não apenas lidar com o estado atual. Por causa disso,
+vamos usar as seguintes variáveis estáticas para memorizar o último
+estado dos botões:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>=
@@ -2445,7 +2442,8 @@ static bool mouse_last_left_click = false, mouse_last_middle_click = false,
 @
 \fimcodigo
 
-Inicializamos tais valores como zero e falso na inicialização de nossa API:
+Inicializamos tais variáveis com o valor falso na inicialização de
+nossa API:
 
 \iniciocodigo
 @<Inicialização da API de Interface@>+=
@@ -2456,14 +2454,17 @@ mouse_last_right_click = false;
 \fimcodigo
 
 Sabendo o estado anterior do mouse e o estado atual, somos capazes de
-dizer se o clique do mouse começou agora ou não, ou se o usuário
-terminou agora o clique soltando o botão. Desta forma somos capazes de
-executar corretamente as funções de interação de interface.
+dizer não apenas se um botão está sendo pressionado, mas também se ele
+começou a ser pressionado agora ou a pressão sobre ele está apenas
+continuando. Saberemos não apenas que um botão não está sendo
+pressionado, mas também se ele foi solto em algum momento entre o
+frame anterior e o atual. Só assim seremos capazes de executar
+corretamente as funções de interação de interface.
 
 Em um dado frame, só podemos interagir com uma única interface, dado
 que só temos um cursor do mouse. Mas se mais de uma interface ocupar a
 mesma posição, como saberemos com qual interagir. Ora, felizmente
-armazenamso em uma lista ordenada as interfaces na ordem em que elas
+armazenamos em uma lista ordenada as interfaces na ordem em que elas
 são desenhadas na tela. Devemos então priorizar a interface que é
 desenhada depois, pois é ela que o usuário está vendo sob o cursor do
 mouse.
@@ -2472,7 +2473,7 @@ Então, para interagir com interfaces, percorremos em ordem reversa a
 lista ordenada de interfaces até acharmos aquela que está diretamente
 sob o mouse. É com ela que iremos interagir. Só temos que também ao
 percorrer a lista, marcar que o mouse não está sobre qualquer uma
-outra. E se for o caso, executar a função \monoespaco{on_mouse_out} da
+outra. E se for o caso, executar a função \monoespaco{on\_mouse\_out} da
 interface. Só então, checamos a interação com a interface certa e
 executamos a função adequada se existir.
 
@@ -2533,18 +2534,7 @@ void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
 @
 \fimcodigo
 
-O código acima é bem direto. Ele percorre as interfaces desenhadas na
-tela na ordem reversa na qual foram desenhadas para saber qual delas é
-alvo atual de interação com o mouse. Se no frame anterior uma
-interface diferente era a ativa, verificamos se temos que executar uma
-função pelo fato do mouse ter abandonado ela. Se a interface atual
-começou a ter foco do mouse agora, também verificamos se há função a
-ser executada. Em caso de cliques com o mouse, também checamos se o
-clique começou agora ou se acabamos de parar com um clique, e checamos
-se a interface com o foco atual tem funções a serem executadas neste
-caso.
-
-A parte que não aparece acima é como obtemos a coordenada $(x, y)$ que
+A parte que omitimos acima é como obtemos a coordenada $(x, y)$ que
 usamos para comparar com a posição de cada interface à partir das
 coordenadas de mouse que recebemos como argumento. A coordenada $(x,
 y)$, muitos casos é exatamente a mesma coordenada de mouse que
@@ -2561,13 +2551,12 @@ coordenada transformada ainda estiver dentro dos limites retangulares
 da interface, isso significa que o mouse realmente está sobre a nossa
 interface.
 
-O código que gera a coordenada $(x, y)$ etão apenas checa se a
+O código que gera a coordenada $(x, y)$ então apenas checa se a
 interface está rotacionada. Se não estiver, usamos como valores as
 próprias coordenadas do mouse, sem precisar fazer cálculos adicionais
 de conversão. Se estiver, então obtemos $(x, y)$ fazendo a rotação
 descrita na coordenada do mouse:
 
-TODO: Rotação tá errada, não usa eixo
 \iniciocodigo
 @<Converter Coordenadas do Mouse para x e y@>=
 if(z_list[i] -> rotation == 0.0){
