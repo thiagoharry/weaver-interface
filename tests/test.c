@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#include <emscripten.h>
+
 #include "../src/interface.h"
 #include "window.h"
+
 
 static int window_width, window_height;
 

@@ -549,7 +549,7 @@ inserir o cabeçalho OpenGL:
 
 \iniciocodigo
 @<Inclui Cabeçalhos Gerais (interface.h)@>+=
-#if defined(__linux__) || defined(BSD)
+#if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #endif
