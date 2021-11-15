@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
+#endif
 
 #include "../src/interface.h"
 #include "window.h"
@@ -92,8 +94,8 @@ void empty_loading_function(void *(*permanent_alloc)(size_t),
 		      void (*permanent_free)(void *),
 		      void *(*temporary_alloc)(size_t),
 		      void (*temporary_free)(void *),
-		      void *(*before_loading_interface)(void),
-		      void *(*after_loading_interface)(void),
+		      void (*before_loading_interface)(void),
+		      void (*after_loading_interface)(void),
 		      char *source_filename, struct interface *target){
   if(before_loading_interface != NULL)
     before_loading_interface();
@@ -143,6 +145,7 @@ void test_custom_functions(void){
 		   "test", empty_loading_function,
 		   NULL);
   // Permanent alloc: interface + run empty_loading_function + default shader
+  // TODO: Wasm is failing here:
   _Wnew_interface("filename.test", NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
   _Wfinish_interface();
   assert("Using loading initialization function", counter_before == 1);
@@ -235,6 +238,9 @@ void rendering_test(void){
   j -> on_mouse_left_up = width_down;
   j -> on_mouse_right_down = height_up;
   j -> on_mouse_right_up = height_down;
+  //_Wtoggle_fullscreen();
+  //_Wresize_window(800,600);
+  //_Wget_window_size(&window_width, &window_height);
   {
     struct timeval initial_time, current_time;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -264,6 +270,9 @@ void rendering_test(void){
       elapsed = (current_time.tv_sec - initial_time.tv_sec) * 1000000;
       elapsed += (current_time.tv_usec - initial_time.tv_usec);
       _Wrender_window();
+#if defined(__EMSCRIPTEN__)
+      emscripten_sleep(10);
+#endif
     }
   }
   assert("Testing rendering of animated interface", testing);
