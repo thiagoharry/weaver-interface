@@ -282,6 +282,7 @@ void rendering_test(void){
 int main(int argc, char **argv){
   _Wcreate_window();
   _Wget_window_size(&window_width, &window_height);
+  //printf("%d x %d\n", window_width, window_height);
   test_custom_functions();
   test_structure_history();
   rendering_test();
