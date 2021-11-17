@@ -1670,13 +1670,8 @@ MUTEX_INIT(&linked_list_mutex);
 @
 \fimcodigo
 
-E ele será destruído na finalização:
-
-\iniciocodigo
-@<Finalização da API de Interface@>+=
-MUTEX_DESTROY(&linked_list_mutex);
-@
-\fimcodigo
+Deixaremos para definir a finalização deste mutex junto com a
+finalização de toda a lista encadeada nas próximas seções.
 
 \subsecao{6.1. Criando e Destruindo Estruturas de Shader}
 
@@ -1995,6 +1990,7 @@ if(permanent_free != NULL)
   permanent_free(last_marking);
 last_marking = NULL;
 last_structure = NULL;
+MUTEX_DESTROY(&linked_list_mutex);
 @
 \fimcodigo
 
@@ -2583,43 +2579,6 @@ else{
 @
 \fimcodigo
 
-\secao{9. Ajustes Finais}
-
-Nesta seção iremos nos ocupar apenas de resoluções de proplemas que
-podem vir a impedir nosso código de compilar ou funcionar
-corretamente.
-
-Por exemplo, mesmo que tenhamos uma biblioteca OpenGL ativa e tenhamos
-à nossa disposição as funções que compilam shaders e enviam texturas
-para a placa de vídeo, em ambiente Windows, os cabeçalhos padrão de
-OpenGL não carregam algumas macros que precisamos usar. Para estes
-casos, vamos definir elas manualmente:
-
-\iniciocodigo
-@<Cabeçalhos Locais (interface.c)@>+=
-#if !defined(GL_ARRAY_BUFFER)
-#define GL_ARRAY_BUFFER 0x8892
-#endif
-#if !defined(GL_STATIC_DRAW)
-#define GL_STATIC_DRAW 0x88E4
-#endif
-#if !defined(GL_FRAGMENT_SHADER)
-#define GL_FRAGMENT_SHADER 0x8B30
-#endif
-#if !defined(GL_VERTEX_SHADER)
-#define GL_VERTEX_SHADER 0x8B31
-#endif
-#if !defined(GL_COMPILE_STATUS)
-#define GL_COMPILE_STATUS 0x8B81
-#endif
-#if !defined(GL_LINK_STATUS)
-#define GL_LINK_STATUS 0x8B82
-#endif
-#if !defined(GL_INFO_LOG_LENGTH)
-#define GL_INFO_LOG_LENGTH 0x8B84
-#endif
-@
-\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
