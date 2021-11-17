@@ -102,9 +102,9 @@ nova interface de usuário invocando a função:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>=
-struct interface *_Wnew_interface(char *filename, char *shader_filename,
-                                  float x, float y, float z, float width,
-                                  float height);
+struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
+                                      float x, float y, float z, float width,
+                                      float height);
 @
 \fimcodigo
 
@@ -132,7 +132,7 @@ Uma vez que tenhamos uma interface, poderemos movê-la com a função:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wmove_interface(struct interface *i, float x, float y, float z);
+void _Wmove_interface(struct user_interface *i, float x, float y, float z);
 @
 \fimcodigo
 
@@ -145,7 +145,7 @@ Podemos também rotacioná-la com a função:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wrotate_interface(struct interface *i, float rotation);
+void _Wrotate_interface(struct user_interface *i, float rotation);
 @
 \fimcodigo
 
@@ -156,7 +156,8 @@ Podemos redimencionar a interface com a função abaixo:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-void _Wresize_interface(struct interface *i, float new_width, float new_height);
+void _Wresize_interface(struct user_interface *i,
+                        float new_width, float new_height);
 @
 \fimcodigo
 
@@ -192,7 +193,7 @@ interface que na verdade é uma ligação para uma anterior:
 
 \iniciocodigo
 @<Declaração de Função (interface.h)@>+=
-struct interface *_Wlink_interface(struct interface *i);
+struct user_interface *_Wlink_interface(struct user_interface *i);
 @
 \fimcodigo
 
@@ -598,7 +599,7 @@ informações sobre a interface de usuário. A descrição dela é:
 
 \iniciocodigo
 @<Estrutura de Dados (interface.h)@>=
-struct interface{
+struct user_interface{
   int type;
   void *next; // Ponteiro de lista encadeada
   float x, y, z;
@@ -612,14 +613,14 @@ struct interface{
   _MUTEX_DECLARATION(interface_mutex);
   /* Funções de interação*/
   bool _mouse_over;
-  void (*on_mouse_over)(struct interface *);
-  void (*on_mouse_out)(struct interface *);
-  void (*on_mouse_left_down)(struct interface *);
-  void (*on_mouse_left_up)(struct interface *);
-  void (*on_mouse_middle_down)(struct interface *);
-  void (*on_mouse_middle_up)(struct interface *);
-  void (*on_mouse_right_down)(struct interface *);
-  void (*on_mouse_right_up)(struct interface *);
+  void (*on_mouse_over)(struct user_interface *);
+  void (*on_mouse_out)(struct user_interface *);
+  void (*on_mouse_left_down)(struct user_interface *);
+  void (*on_mouse_left_up)(struct user_interface *);
+  void (*on_mouse_middle_down)(struct user_interface *);
+  void (*on_mouse_middle_up)(struct user_interface *);
+  void (*on_mouse_right_down)(struct user_interface *);
+  void (*on_mouse_right_up)(struct user_interface *);
   /* Atributos abaixo devem ser preenchidos por função de carregamento: */
   GLuint *_texture1;
   bool _loaded_texture;
@@ -771,7 +772,7 @@ significa criar e colocar na lista encadeada a seguinte estrutura:
 struct link {
   int type;
   void *next; // Ponteiro de lista encadeada
-  struct interface *linked_interface;
+  struct user_interface *linked_interface;
 };
 @
 \fimcodigo
@@ -808,7 +809,7 @@ struct file_function {
                       void (*temporary_free)(void *),
                       void (*before_loading_interface)(void),
                       void (*after_loading_interface)(void),
-                      char *source_filename, struct interface *target);
+                      char *source_filename, struct user_interface *target);
 };
 static unsigned number_of_file_functions_in_the_list = 0;
 static struct file_function *list_of_file_functions = NULL;
@@ -835,7 +836,7 @@ static inline void (*get_loading_function(char *ext))
                            void (*temporary_free)(void *),
                            void (*before_loading_interface)(void),
                            void (*after_loading_interface)(void),
-                           char *source_filename, struct interface *target){
+                           char *source_filename, struct user_interface *target){
   unsigned i;
   for(i = 0; i < number_of_file_functions_in_the_list; i ++){
     if(!strcmp(list_of_file_functions[i].extension, ext)){
@@ -897,7 +898,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
       va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
                             void *(*)(size_t), void (*)(void *),
                             void (*)(void), void (*)(void),
-                            char *, struct interface *)); 
+                            char *, struct user_interface *)); 
     } while(ext != NULL);
     number_of_file_functions_in_the_list = count;
     list_of_file_functions = (struct file_function *)
@@ -910,7 +911,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
              va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
                                    void *(*)(size_t), void (*)(void *),
                                    void (*)(void), void (*)(void),
-                                   char *, struct interface *));
+                                   char *, struct user_interface *));
     }
   }
   @<Inicialização da API de Interface@>
@@ -1596,7 +1597,7 @@ modelo-visualização pela primeira vez:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
-static void initialize_model_view_matrix(struct interface *i){
+static void initialize_model_view_matrix(struct user_interface *i){
   GLfloat x, y, w, h;
   @<Conversão de Coordenadas e Tamanho@>
   GLfloat cos_theta = cos(i -> rotation);
@@ -1735,7 +1736,7 @@ static struct shader *new_shader(char *shader_source){
     if(shader_source != NULL){ // Insere na lista encadeada:
       MUTEX_WAIT(&linked_list_mutex); // Preparando mutex
       if(last_structure != NULL)
-        ((struct interface *) last_structure)-> next = (void *) new;
+        ((struct user_interface *) last_structure)-> next = (void *) new;
       last_structure = (void *) new;
       MUTEX_SIGNAL(&linked_list_mutex);
     }
@@ -1792,19 +1793,19 @@ adequada. A função será definida como:
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
-struct interface *_Wnew_interface(char *filename, char *shader_filename,
+struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                                   float x, float y, float z, float width,
                                   float height){
-  struct interface *new_interface;
+  struct user_interface *new_interface;
   void (*loading_function)(void *(*permanent_alloc)(size_t),
                            void (*permanent_free)(void *),
                            void *(*temporary_alloc)(size_t),
                            void (*temporary_free)(void *),
                            void (*before_loading_interface)(void),
                            void (*after_loading_interface)(void),
-                           char *source_filename, struct interface *target);
+                           char *source_filename, struct user_interface *target);
   int i;
-  new_interface = permanent_alloc(sizeof(struct interface));
+  new_interface = permanent_alloc(sizeof(struct user_interface));
   if(new_interface != NULL){
     new_interface -> type = TYPE_INTERFACE;
     new_interface -> next = NULL;
@@ -1848,7 +1849,7 @@ struct interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> on_mouse_right_up = NULL;
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
-      ((struct interface *) last_structure)-> next = (void *) new_interface;
+      ((struct user_interface *) last_structure)-> next = (void *) new_interface;
     last_structure = (void *) new_interface;
     last_marking -> number_of_interfaces ++;
     MUTEX_SIGNAL(&linked_list_mutex);
@@ -1888,7 +1889,7 @@ mutex da interface.
 
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>+=
-static void destroy_interface(struct interface *interface_struct){
+static void destroy_interface(struct user_interface *interface_struct){
   if(interface_struct -> _texture1 != NULL){
     glDeleteTextures(interface_struct -> number_of_frames,
                      interface_struct -> _texture1);
@@ -1915,7 +1916,7 @@ definição da função é:
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
-struct interface *_Wlink_interface(struct interface *i){
+struct user_interface *_Wlink_interface(struct user_interface *i){
   struct link *new_link = permanent_alloc(sizeof(struct link));
   if(new_link == NULL)
     return NULL;
@@ -1924,7 +1925,7 @@ struct interface *_Wlink_interface(struct interface *i){
   new_link -> linked_interface = i;
   MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
   if(last_structure != NULL)
-    ((struct interface *) last_structure)-> next = (void *) new_link;
+    ((struct user_interface *) last_structure)-> next = (void *) new_link;
   last_structure = (void *) new_link;
   last_marking -> number_of_interfaces ++;
   MUTEX_SIGNAL(&linked_list_mutex);
@@ -1956,7 +1957,7 @@ void _Wmark_history_interface(void){
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     new_marking -> prev = last_structure;
     if(last_structure != NULL)
-      ((struct interface *) last_structure)-> next = (void *) new_marking;
+      ((struct user_interface *) last_structure)-> next = (void *) new_marking;
     last_structure = (void *) new_marking;
     last_marking = new_marking;
     MUTEX_SIGNAL(&linked_list_mutex);
@@ -2022,16 +2023,16 @@ A implementação da função é:
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrestore_history_interface(void){
   struct marking *to_be_removed;
-  struct interface *current, *next;
+  struct user_interface *current, *next;
   MUTEX_WAIT(&linked_list_mutex);
   last_structure = last_marking -> prev;
   if(last_structure != NULL)
-    ((struct interface *) last_structure) -> next = NULL;
+    ((struct user_interface *) last_structure) -> next = NULL;
   to_be_removed = last_marking;
-  current = (struct interface *) to_be_removed -> next;
+  current = (struct user_interface *) to_be_removed -> next;
   // Removendo estruturas criadas após última marcação:
   while(current != NULL){
-    next = (struct interface *) (current -> next);
+    next = (struct user_interface *) (current -> next);
     if(current -> type == TYPE_INTERFACE)
       destroy_interface(current);
     else if(current -> type == TYPE_SHADER)
@@ -2093,7 +2094,7 @@ O ponteiro que aponta para a lista ordenada de interfaces será este:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static struct interface **z_list = NULL;
+static struct user_interface **z_list = NULL;
 static unsigned z_list_size = 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 @
@@ -2158,16 +2159,16 @@ if(z_list_size != last_marking -> number_of_interfaces){
   if(z_list != NULL && permanent_free != NULL)
     permanent_free(z_list);
   z_list_size = last_marking -> number_of_interfaces;
-  z_list = (struct interface **) permanent_alloc(sizeof(struct interface *) *
-                                                 z_list_size);
+  z_list = (struct user_interface **)
+             permanent_alloc(sizeof(struct user_interface *) * z_list_size);
   // Copiando para lista:
   p = last_marking -> next;
   for(i = 0; i < z_list_size; i ++){
-    if(((struct interface *) p) -> type == TYPE_INTERFACE)
-      z_list[i] = (struct interface *) p;
+    if(((struct user_interface *) p) -> type == TYPE_INTERFACE)
+      z_list[i] = (struct user_interface *) p;
     else
       z_list[i] = ((struct link *) p) -> linked_interface;
-    p = ((struct interface *) p) -> next;
+    p = ((struct user_interface *) p) -> next;
   }
   // Ordenando lista (insertion sort):
   for(i = 1; i < z_list_size; i ++){
@@ -2175,7 +2176,7 @@ if(z_list_size != last_marking -> number_of_interfaces){
     while(j > 0 && z_list[j - 1] -> z > z_list[j] -> z){
       p = z_list[j];
       z_list[j] = z_list[j - 1];
-      z_list[j - 1] = (struct interface *) p;
+      z_list[j - 1] = (struct user_interface *) p;
       j = j - 1;
     }
   }
@@ -2328,7 +2329,8 @@ A função que move interfaces em nossa API
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
-void _Wmove_interface(struct interface *i, float new_x, float new_y, float new_z){
+void _Wmove_interface(struct user_interface *i,
+                      float new_x, float new_y, float new_z){
   GLfloat x, y, w, h;
   GLfloat cos_theta = cos(i -> rotation);
   GLfloat sin_theta = sin(i -> rotation);
@@ -2371,7 +2373,7 @@ modelo-visualização. O código para isso segue abaixo:
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
-void _Wrotate_interface(struct interface *i, float rotation){
+void _Wrotate_interface(struct user_interface *i, float rotation){
   GLfloat x, y, w, h;
   GLfloat cos_theta = cos(rotation);
   GLfloat sin_theta = sin(rotation);
@@ -2402,7 +2404,8 @@ A função que redimenciona interfaces é:
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
-void _Wresize_interface(struct interface *i, float new_width, float new_height){
+void _Wresize_interface(struct user_interface *i,
+                        float new_width, float new_height){
   GLfloat x, y, w, h;
   GLfloat cos_theta = cos(i -> rotation);
   GLfloat sin_theta = sin(i -> rotation);
@@ -2484,7 +2487,7 @@ O código da função que faz isso é:
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click){
   int i;
-  struct interface *previous = NULL, *current = NULL;
+  struct user_interface *previous = NULL, *current = NULL;
   MUTEX_WAIT(&z_list_mutex);
   for(i = z_list_size - 1; i >= 0; i --){
     float x, y;

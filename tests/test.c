@@ -96,7 +96,7 @@ void empty_loading_function(void *(*permanent_alloc)(size_t),
 		      void (*temporary_free)(void *),
 		      void (*before_loading_interface)(void),
 		      void (*after_loading_interface)(void),
-		      char *source_filename, struct interface *target){
+		      char *source_filename, struct user_interface *target){
   if(before_loading_interface != NULL)
     before_loading_interface();
   char *p = (char *) temporary_alloc(1);
@@ -112,7 +112,7 @@ void animated_loading_function(void *(*permanent_alloc)(size_t),
 		      void (*temporary_free)(void *),
 		      void *(*before_loading_interface)(void),
 		      void *(*after_loading_interface)(void),
-		      char *source_filename, struct interface *target){
+		      char *source_filename, struct user_interface *target){
   GLubyte frame1[3] = {255, 0, 0};
   GLubyte frame2[3] = {0, 255, 0};
   if(before_loading_interface != NULL)
@@ -173,11 +173,11 @@ void test_custom_functions(void){
 void test_structure_history(void){
   _Winit_interface(&window_width, &window_height,
 		   malloc, free, malloc, free, NULL, NULL, NULL);
-  struct interface *i0, *i1, *tmp;
+  struct user_interface *i0, *i1, *tmp;
   struct marking *mark;
   i0 = _Wnew_interface(NULL, NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
   i1 = _Wnew_interface(NULL, NULL, 0.0, 0.0, 0.0, 100.0, 100.0);
-  tmp = (struct interface *) i0 -> next;
+  tmp = (struct user_interface *) i0 -> next;
   assert("List of structures linking new elements",
 	 tmp != NULL && tmp == i1 && i1 -> next == NULL);
   _Wmark_history_interface();
@@ -195,27 +195,27 @@ void test_structure_history(void){
   _Wfinish_interface(); 
 }
 
-void set_integer(struct interface *i){
+void set_integer(struct user_interface *i){
   i -> integer = 1;
 }
 
-void unset_integer(struct interface *i){
+void unset_integer(struct user_interface *i){
   i -> integer = 0;
 }
 
-void width_up(struct interface *i){
+void width_up(struct user_interface *i){
   _Wresize_interface(i, i -> width + 50, i -> height);
 }
 
-void width_down(struct interface *i){
+void width_down(struct user_interface *i){
   _Wresize_interface(i, i -> width - 50, i -> height);
 }
 
-void height_up(struct interface *i){
+void height_up(struct user_interface *i){
   _Wresize_interface(i, i -> width, i -> height + 50);
 }
 
-void height_down(struct interface *i){
+void height_down(struct user_interface *i){
   _Wresize_interface(i, i -> width, i -> height - 50);
 }
 
@@ -223,7 +223,7 @@ void height_down(struct interface *i){
 void rendering_test(void){
   unsigned long elapsed;
   bool testing = true;
-  struct interface *i, *j;
+  struct user_interface *i, *j;
   _Winit_interface(&window_width, &window_height,
 		   malloc, free, malloc, free, NULL, NULL,
 		   "animate", animated_loading_function,
