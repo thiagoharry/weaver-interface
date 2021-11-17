@@ -277,15 +277,26 @@ The window size is followed by custom functions as described before.
 What cames after the six initial functions is a NULL-terminated list
 of arguments composed by a string followed by some function that
 create a new interface given a file. The string represents a filename
-extension (for example, ``gif'', ``jpg'' or others) and the function
-after the string should get as arguments a filename, the functions for
-allocation and disallocation and a pointer to the interface that
-should be filled with information from the file. It is expected that
-each of these functions can interpret correctly the files with
-extensions given previously and fill the given interface with textures
-extracted from the file. This way, we pass to the user the
-responsability of provinding functions able to create interfaces from
-different file formats.
+extension (for example, ``gif'', ``jpg'' or others). The function
+after the file extension have the following type:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+typedef void pointer_to_interface_function(void *(*)(size_t), void (*)(void *),
+                                          void *(*)(size_t), void (*)(void *),
+                                          void (*)(void), void (*)(void),
+                                          char *, struct user_interface *);
+@
+\fimcodigo
+
+
+It gets as arguments the functions for allocation and disallocation, a
+filename and a pointer to the interface that should be filled with
+information from the file. It is expected that each of these functions
+can interpret correctly the files with extensions given previously and
+fill the given interface with textures extracted from the file. This
+way, we pass to the user the responsability of provinding functions
+able to create interfaces from different file formats.
 
 As we have an initialization function, we will need also a
 finalization function:
@@ -841,7 +852,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
                       void (*new_temporary_free)(void *),
                       void (*new_before_loading_interface)(void),
                       void (*new_after_loading_interface)(void), ...){
-  if(new_permanent_alloc != NULL) /* Part 1: Get the 6 functions + window size */
+  if(new_permanent_alloc != NULL) /* Parte 1: Pegar 6 Funções + tamanho janela*/
     permanent_alloc = new_permanent_alloc;
   if(new_temporary_alloc != NULL)
     temporary_alloc = new_temporary_alloc;
@@ -852,30 +863,24 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
   window_width = window_width_p;
   window_height = window_height_p;
   {
-    int count = -1, i; /* Part 2: Count the remaining functions */
+    int count = -1, i; /* Parte 2: Contar quantas mais funções existem */
     va_list args;
     char *ext;
     va_start(args, new_after_loading_interface);
     do{
       count ++;
       ext = va_arg(args, char *);
-      va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
-                            void *(*)(size_t), void (*)(void *),
-                            void (*)(void), void (*)(void),
-                            char *, struct user_interface *)); 
+      va_arg(args, pointer_to_interface_function*);
     } while(ext != NULL);
     number_of_file_functions_in_the_list = count;
     list_of_file_functions = (struct file_function *)
                                permanent_alloc(sizeof(struct file_function) * 
-                                               count); // Part 3: Allocate them
+                                               count); // Parte 3: Alocar o resto
     va_start(args, new_after_loading_interface);
     for(i = 0; i < count; i ++){
       list_of_file_functions[i].extension = va_arg(args, char *);
       list_of_file_functions[i].load_texture =
-             va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
-                                   void *(*)(size_t), void (*)(void *),
-                                   void (*)(void), void (*)(void),
-                                   char *, struct user_interface *));
+                          va_arg(args, pointer_to_interface_function*);
     }
   }
   @<Inicialização da API de Interface@>
@@ -2532,6 +2537,43 @@ else{
  x +=  z_list[i] -> x;
  y +=  z_list[i] -> y;
 }
+@
+\fimcodigo
+
+\secao{9. Final Adjustments}
+
+In this Section we will deal with some troubleshooting solving issues
+that could prevent the code compiling, linking or execution.
+
+For example, even if we have an active OpenGL library and if we have
+functions to compile shaders and send textures to the videocard, on
+Windows environments, the OpenGL header would not necessarily define
+all the standard macros that we use. To deal with this case, we will
+define them manually here:
+
+\iniciocodigo
+@<Cabeçalhos Locais (interface.c)@>+=
+#if !defined(GL_ARRAY_BUFFER)
+#define GL_ARRAY_BUFFER 0x8892
+#endif
+#if !defined(GL_STATIC_DRAW)
+#define GL_STATIC_DRAW 0x88E4
+#endif
+#if !defined(GL_FRAGMENT_SHADER)
+#define GL_FRAGMENT_SHADER 0x8B30
+#endif
+#if !defined(GL_VERTEX_SHADER)
+#define GL_VERTEX_SHADER 0x8B31
+#endif
+#if !defined(GL_COMPILE_STATUS)
+#define GL_COMPILE_STATUS 0x8B81
+#endif
+#if !defined(GL_LINK_STATUS)
+#define GL_LINK_STATUS 0x8B82
+#endif
+#if !defined(GL_INFO_LOG_LENGTH)
+#define GL_INFO_LOG_LENGTH 0x8B84
+#endif
 @
 \fimcodigo
 

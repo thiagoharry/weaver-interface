@@ -289,18 +289,28 @@ static int *window_width = NULL, *window_height = NULL;
 @
 \fimcodigo
 
-Depois, as seis funções personalizáveis vistas
-acima. Depois delas, os argumentos adicionais serão uma lista
-terminada em NULL de uma string seguida de uma função geradora de
-interfaces. A string representa uma extensão (por exemplo ``gif'',
-``jpg'' ou outras) e a função que a sucede recebe como argumento um
-nome de arquivo, as funções de alocação e desalocação e um ponteiro
-para a interface que deve ser atualizada e preenchida de acordo com o
-conteúdo do arquivo. Espera-se que a função consiga abrir e
-interpretar o arquivo e gerar uma nova interface à partir dele.  Desta
-forma, deixamos para o usuário a responsabilidade de fornecer as
-funções que criam interfaces à partir de arquivos de diferentes
-formatos.
+Depois, as seis funções personalizáveis vistas acima. Depois delas, os
+argumentos adicionais serão uma lista terminada em NULL de uma string
+seguida de uma função geradora de interfaces. A string representa uma
+extensão (por exemplo ``gif'', ``jpg'' ou outras) e a função que a
+sucede é representada pela seguinte definição de tipo:
+
+\iniciocodigo
+@<Macros Locais (interface.c)@>=
+typedef void pointer_to_interface_function(void *(*)(size_t), void (*)(void *),
+                                          void *(*)(size_t), void (*)(void *),
+                                          void (*)(void), void (*)(void),
+                                          char *, struct user_interface *);
+@
+\fimcodigo
+
+Ela recebe como argumento as funções de alocação e desalocação, um
+nome de arquivo e um ponteiro para a interface que deve ser atualizada
+e preenchida de acordo com o conteúdo do arquivo. Espera-se que a
+função consiga abrir e interpretar o arquivo e gerar uma nova
+interface à partir dele.  Desta forma, deixamos para o usuário a
+responsabilidade de fornecer as funções que criam interfaces à partir
+de arquivos de diferentes formatos.
 
 Como apresentamos uma função de inicialização, vamos precisar também
 da função de finalização:
@@ -895,10 +905,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
     do{
       count ++;
       ext = va_arg(args, char *);
-      va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
-                            void *(*)(size_t), void (*)(void *),
-                            void (*)(void), void (*)(void),
-                            char *, struct user_interface *)); 
+      va_arg(args, pointer_to_interface_function*);
     } while(ext != NULL);
     number_of_file_functions_in_the_list = count;
     list_of_file_functions = (struct file_function *)
@@ -908,10 +915,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
     for(i = 0; i < count; i ++){
       list_of_file_functions[i].extension = va_arg(args, char *);
       list_of_file_functions[i].load_texture =
-             va_arg(args, void (*)(void *(*)(size_t), void (*)(void *),
-                                   void *(*)(size_t), void (*)(void *),
-                                   void (*)(void), void (*)(void),
-                                   char *, struct user_interface *));
+                          va_arg(args, pointer_to_interface_function*);
     }
   }
   @<Inicialização da API de Interface@>
@@ -2576,6 +2580,44 @@ else{
  x +=  z_list[i] -> x;
  y +=  z_list[i] -> y;
 }
+@
+\fimcodigo
+
+\secao{9. Ajustes Finais}
+
+Nesta seção iremos nos ocupar apenas de resoluções de proplemas que
+podem vir a impedir nosso código de compilar ou funcionar
+corretamente.
+
+Por exemplo, mesmo que tenhamos uma biblioteca OpenGL ativa e tenhamos
+à nossa disposição as funções que compilam shaders e enviam texturas
+para a placa de vídeo, em ambiente Windows, os cabeçalhos padrão de
+OpenGL não carregam algumas macros que precisamos usar. Para estes
+casos, vamos definir elas manualmente:
+
+\iniciocodigo
+@<Cabeçalhos Locais (interface.c)@>+=
+#if !defined(GL_ARRAY_BUFFER)
+#define GL_ARRAY_BUFFER 0x8892
+#endif
+#if !defined(GL_STATIC_DRAW)
+#define GL_STATIC_DRAW 0x88E4
+#endif
+#if !defined(GL_FRAGMENT_SHADER)
+#define GL_FRAGMENT_SHADER 0x8B30
+#endif
+#if !defined(GL_VERTEX_SHADER)
+#define GL_VERTEX_SHADER 0x8B31
+#endif
+#if !defined(GL_COMPILE_STATUS)
+#define GL_COMPILE_STATUS 0x8B81
+#endif
+#if !defined(GL_LINK_STATUS)
+#define GL_LINK_STATUS 0x8B82
+#endif
+#if !defined(GL_INFO_LOG_LENGTH)
+#define GL_INFO_LOG_LENGTH 0x8B84
+#endif
 @
 \fimcodigo
 

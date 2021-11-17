@@ -1,5 +1,5 @@
-/*16:*/
-#line 340 "weaver-interface.tex"
+/*17:*/
+#line 350 "weaver-interface.tex"
 
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
@@ -10,16 +10,16 @@ extern"C"{
 #if !defined(_WIN32)
 #include <sys/param.h>  
 #endif
-/*19:*/
-#line 434 "weaver-interface.tex"
+/*20:*/
+#line 444 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h> 
 #elif defined(_WIN32)
 #include <windows.h> 
 #endif
-/*:19*//*25:*/
-#line 552 "weaver-interface.tex"
+/*:20*//*26:*/
+#line 562 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h> 
@@ -30,11 +30,11 @@ extern"C"{
 #include <windows.h> 
 #include <GL/gl.h> 
 #endif
-/*:25*/
-#line 350 "weaver-interface.tex"
+/*:26*/
+#line 360 "weaver-interface.tex"
 
-/*18:*/
-#line 415 "weaver-interface.tex"
+/*19:*/
+#line 425 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
@@ -46,11 +46,11 @@ extern"C"{
 #define _MUTEX_DECLARATION(mutex)
 #define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
-/*:18*/
-#line 351 "weaver-interface.tex"
+/*:19*/
+#line 361 "weaver-interface.tex"
 
-/*27:*/
-#line 601 "weaver-interface.tex"
+/*28:*/
+#line 611 "weaver-interface.tex"
 
 struct user_interface{
 int type;
@@ -84,8 +84,8 @@ unsigned*frame_duration;
 unsigned long _t;
 int max_repetition;
 };
-/*:27*/
-#line 352 "weaver-interface.tex"
+/*:28*/
+#line 362 "weaver-interface.tex"
 
 /*1:*/
 #line 104 "weaver-interface.tex"
@@ -143,15 +143,15 @@ void(*temporary_free)(void*),
 void(*before_loading_interface)(void),
 void(*after_loading_interface)(void),
 ...);
-/*:13*//*15:*/
-#line 309 "weaver-interface.tex"
+/*:13*//*16:*/
+#line 319 "weaver-interface.tex"
 
 void _Wfinish_interface(void);
-/*:15*/
-#line 353 "weaver-interface.tex"
+/*:16*/
+#line 363 "weaver-interface.tex"
 
 #ifdef __cplusplus
 }
 #endif
 #endif
-/*:16*/
+/*:17*/
