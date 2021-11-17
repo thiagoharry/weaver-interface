@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(_WIN32)
+#include <Windows.h>
+#else
 #include <sys/time.h>
+#endif
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
@@ -242,10 +246,17 @@ void rendering_test(void){
   //_Wresize_window(800,600);
   //_Wget_window_size(&window_width, &window_height);
   {
+#if defined(_WIN32)
+    LARGE_INTEGER initial_time, current_time, frequency;
+    QueryPerformanceCounter(&initial_time);
+    QueryPerformanceCounter(&current_time);
+    QueryPerformanceFrequency(&frequency);
+#else
     struct timeval initial_time, current_time;
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     gettimeofday(&current_time, NULL);
     gettimeofday(&initial_time, NULL);
+#endif
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     elapsed = 0;
     while(elapsed < 3000000){
       _Wget_window_input(elapsed);
@@ -266,9 +277,14 @@ void rendering_test(void){
       _Wrender_interface((unsigned long long) elapsed);
       if(i -> current_frame != (elapsed / 1000000) % 2)
 	testing = false;
+#if defined(_WIN32)
+      QueryPerformanceCounter(&current_time);
+      elapsed = ((current_time.QuadPart - initial_time.QuadPart) * 1000000) / frequency.QuadPart;
+#else
       gettimeofday(&current_time, NULL);
       elapsed = (current_time.tv_sec - initial_time.tv_sec) * 1000000;
       elapsed += (current_time.tv_usec - initial_time.tv_usec);
+#endif
       _Wrender_window();
 #if defined(__EMSCRIPTEN__)
       emscripten_sleep(10);
