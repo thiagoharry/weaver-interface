@@ -479,7 +479,7 @@ permanent_free(interface_struct->_texture1);
 }
 if(interface_struct->frame_duration!=NULL&&permanent_free!=NULL)
 permanent_free(interface_struct->frame_duration);
-MUTEX_DESTROY(&(interface_struct->interface_mutex));
+MUTEX_DESTROY(&(interface_struct->mutex));
 if(permanent_free!=NULL)
 permanent_free(interface_struct);
 }
@@ -686,7 +686,7 @@ new_interface->current_frame= 0;
 new_interface->frame_duration= NULL;
 new_interface->_t= 0;
 new_interface->max_repetition= 0;
-MUTEX_INIT(&(new_interface->interface_mutex));
+MUTEX_INIT(&(new_interface->mutex));
 new_interface->_mouse_over= false;
 new_interface->on_mouse_over= NULL;
 new_interface->on_mouse_out= NULL;
@@ -908,7 +908,7 @@ float new_x,float new_y,float new_z){
 GLfloat x,y,w,h;
 GLfloat cos_theta= cos(i->rotation);
 GLfloat sin_theta= sin(i->rotation);
-MUTEX_WAIT(&(i->interface_mutex));
+MUTEX_WAIT(&(i->mutex));
 i->x= new_x;
 i->y= new_y;
 /*60:*/
@@ -943,7 +943,7 @@ j++;
 }
 MUTEX_SIGNAL(&z_list_mutex);
 }
-MUTEX_SIGNAL(&(i->interface_mutex));
+MUTEX_SIGNAL(&(i->mutex));
 }
 /*:85*//*86:*/
 #line 2375 "weaver-interface.tex"
@@ -952,7 +952,7 @@ void _Wrotate_interface(struct user_interface*i,float rotation){
 GLfloat x,y,w,h;
 GLfloat cos_theta= cos(rotation);
 GLfloat sin_theta= sin(rotation);
-MUTEX_WAIT(&(i->interface_mutex));
+MUTEX_WAIT(&(i->mutex));
 i->rotation= rotation;
 /*60:*/
 #line 1591 "weaver-interface.tex"
@@ -970,7 +970,7 @@ i->_transform_matrix[4]= -w*sin_theta;
 i->_transform_matrix[5]= h*cos_theta;
 i->_transform_matrix[12]= -w/2*cos_theta+w/2*sin_theta+x;
 i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
-MUTEX_SIGNAL(&(i->interface_mutex));
+MUTEX_SIGNAL(&(i->mutex));
 }
 /*:86*//*87:*/
 #line 2406 "weaver-interface.tex"
@@ -980,7 +980,7 @@ float new_width,float new_height){
 GLfloat x,y,w,h;
 GLfloat cos_theta= cos(i->rotation);
 GLfloat sin_theta= sin(i->rotation);
-MUTEX_WAIT(&(i->interface_mutex));
+MUTEX_WAIT(&(i->mutex));
 i->width= new_width;
 i->height= new_height;
 /*60:*/
@@ -999,7 +999,7 @@ i->_transform_matrix[4]= -w*sin_theta;
 i->_transform_matrix[5]= h*cos_theta;
 i->_transform_matrix[12]= -w/2*cos_theta+w/2*sin_theta+x;
 i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
-MUTEX_SIGNAL(&(i->interface_mutex));
+MUTEX_SIGNAL(&(i->mutex));
 }
 /*:87*//*90:*/
 #line 2486 "weaver-interface.tex"

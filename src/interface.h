@@ -63,7 +63,7 @@ float background_color[4],foreground_color[4];
 int integer;
 bool visible;
 struct shader*shader_program;
-_MUTEX_DECLARATION(interface_mutex);
+_MUTEX_DECLARATION(mutex);
 
 bool _mouse_over;
 void(*on_mouse_over)(struct user_interface*);
