@@ -289,10 +289,10 @@ could begin changing the following model taken from the default shader:
  attribute vec3 vertex_position; 
  uniform vec4 foreground_color, background_color;
  uniform mat4 model_view_matrix;
- uniform float time;
+ uniform float time; // In seconds, modulus 1 hour
  uniform int integer;
  uniform sampler2D texture1;
- uniform vec2 size;
+ uniform vec2 interface_size; // In pixels
  varying mediump vec2 texture_coordinate;
  
  #if defined(VERTEX_SHADER)
