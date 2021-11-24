@@ -35,6 +35,7 @@ the LICENSE file.
 
 This creates a white rotating square in the center of the screen:
 
+```
     #include "interface.h"
     #include <time.h>
 
@@ -68,6 +69,7 @@ This creates a white rotating square in the center of the screen:
       // Put here something to close the window
       // ...
     }
+```
 
 ## Dependencies
 
@@ -84,6 +86,7 @@ Context. You can use any desired library to do these things.
 
 An user interface is a struct defined as:
 
+```
   struct user_interface{
     float x, y, z; // User-interface coordinates
     float rotation;
@@ -106,33 +109,34 @@ An user interface is a struct defined as:
     _MUTEX_DECLARATION(mutex);
     // ...
   };
+```
 
-The user interface coordinates is the coordinate in pixels (`x', `y')
-of the interface's center. The coordinate `z' is the
+The user interface coordinates is the coordinate in pixels (`x`, `y`)
+of the interface's center. The coordinate `z` is the
 z-index. Interfaces with higher z-indices are drawn in front of
 interface with smaller values. *All the coordinate values are
 read-only.* If you want to change them, use the API function
-`_Wmove_interface'.
+`_Wmove_interface`.
 
-The `rotation' measure the interface counter-clockwise rotation in
+The `rotation` measure the interface counter-clockwise rotation in
 radians. *This value is read-only.* If you want to change it, use the
-API function `_Wrotate_interface'.
+API function `_Wrotate_interface`.
 
-The `height' and `width' store the interface size in pixels. *These
+The `height` and `width` store the interface size in pixels. *These
 values are read-only.* If you want to change them, use the
-API function `_Wresize_interface'.
+API function `_Wresize_interface`.
 
-The `background_color', `foregound_color' and `integer' are values
+The `background_color`, `foregound_color` and `integer` are values
 that are passed to shaders. If you create a custom shader, you can use
 them. The default shader ignores them. Feel free to use these
 variables if you want to store some state about the interface.
 
-The `visible' variable determines if the interface is visible or
+The `visible` variable determines if the interface is visible or
 not. If not, it will not be drawn in the screen. All interfaces are
 visible by default, but you can change this status changing this
 variable.
 
-All the `on_mouse...' functions are pointers to functions that should
+All the `on_mouse...` functions are pointers to functions that should
 be executed over this interface respectively when the mouse hover over
 it, when the mouse hover out it, when the user presses the left mouse
 over it, when it releases the left mouse button over the interface,
@@ -141,21 +145,22 @@ mouse button, when presses the right mouse button and when releases
 the right mouse button.
 
 If we have an animated interface, you can turn on or off the animation
-setting variable `animate'. Yo can check the number of frames for the
-animation with `number_of_frames' variable. And in `frame_duration' we
+setting variable `animate`. Yo can check the number of frames for the
+animation with `number_of_frames` variable. And in `frame_duration` we
 have an allocated array the the duration in microseconds for each
-frame. The variable `max_repetition', if positive, sets how many times
+frame. The variable `max_repetition`, if positive, sets how many times
 the animation should loop.
 
 We also have a mutex on each interface. If you really need to interact
 with it because you are using threads, the portable way to interact
-with it is calling `MUTEX_WAIT(&i -> mutex)' and `MUTEX_SIGNAL(&i ->
-mutex)'. Take care with deadlocks.
+with it is calling `MUTEX_WAIT(&i -> mutex)` and `MUTEX_SIGNAL(&i ->
+mutex)`. Take care with deadlocks.
 
 ### Functions
 
 #### Initialization
 
+```
   void _Winit_interface(int *window_width, int *window_height,
                         void *(*permanent_alloc)(size_t),
                         void (*permanent_free)(void *),
@@ -164,6 +169,7 @@ mutex)'. Take care with deadlocks.
                         void (*before_loading_interface)(void),
                         void (*after_loading_interface)(void),
                         ...);
+```
 
 This function should be called before using all other functions. It is
 not thread-safe. You should call this function only once. It is safe
@@ -176,14 +182,14 @@ updated if the window is resized.
 
 The next four functions are the allocators and disallocators. A pair
 to make short-lived allocations and another to allocate memory that
-should not be freed soon.  You can pass `NULL' as a disallocator. This
+should not be freed soon.  You can pass `NULL` as a disallocator. This
 means that the memory will not be freed. This could be useful if you
 have some sort of garbage collector. These parameters are useful for
 people using custom memory managers. Otherwise, you can just use
-`malloc' and `free', like in the sample code in the "Sample Usage"
+`malloc` and `free`, like in the sample code in the "Sample Usage"
 section.
 
-The ponters `before_loading_interface' and `after_loading_interface',
+The ponters `before_loading_interface` and `after_loading_interface`,
 if non-NULL, are pointers for functions that should be executed
 respectively before loading a new interface and after loading a new
 interface. This could be useful if you load textures asynchronously
@@ -200,6 +206,7 @@ interpreting a "gif" file and create an animated interface).
 For example, a function which extracts texture from a GIF file could
 be:
 
+```
   void gif_extractor_sample(void *(*permanent_alloc)(size_t),
 		            void (*permanent_free)(void *),
 		            void *(*temporary_alloc)(size_t),
@@ -223,6 +230,7 @@ be:
     if(after_loading_interface != NULL)
       after_loading_interface();
   }
+```
 
 The API will call these functions automatically when it needs to
 interpret a filename with some texture. Our API do not know how to
@@ -231,17 +239,21 @@ functions to interpret the needed file formats in the correct format.
 
 #### Finalization
 
+```
   void _Wfinish_interface(void);
+```
 
 Call this function after you finished to use the API. After calling
 this function, you should not use other API functions, except if you
-reinitialize it again with `_Winit_interface'.
+reinitialize it again with `_Winit_interface`.
 
 #### Creating New Interface
 
+```
   struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                                         float x, float y, float z, float width,
                                         float height);
+```
 
 An user interface is created with the above function The first
 argument is a file with the interface texture. If the argument is NULL
@@ -253,14 +265,15 @@ coordinate (x, y) and the z-index. Finally we have the interface width
 and height in pixels.
 
 Interfaces can be destroyed only using
-`_Wrestore_history_interface'. However, this function erases
+`_Wrestore_history_interface`. However, this function erases
 all interfaces from the current scope. Scopes can be managed with
-`_Wmark_history_interface', `_Wrestore_history_interface' and
-`_Wlink_interface'.
+`_Wmark_history_interface`, `_Wrestore_history_interface` and
+`_Wlink_interface`.
 
 To create custom shaders, you should write using GLSL language. You
 could begin changing the following model taken from the default shader:
 
+```
  #version 100
  
  #if GL_FRAGMENT_PRECISION_HIGH == 1
@@ -294,11 +307,12 @@ could begin changing the following model taken from the default shader:
    gl_FragData[0] = texture;
  }
  #endif
+```
 
 Notice that both the vertex shader and the fragment shader should be
 stored in the same file. The API is responsible to pass correct values
-for the shader and to set correctly the macros `VEREX_SHADER' and
-`FRAGMENT_SHADER' that you should check to discover if the code is run
+for the shader and to set correctly the macros `VEREX_SHADER` and
+`FRAGMENT_SHADER` that you should check to discover if the code is run
 as a fragment shader or vertex shader.
 
 The time variable in the shader is measured in seconds, modulus 1
@@ -308,7 +322,9 @@ structure, described above in the section about data structures.
 
 #### Setting Shader Libraries
 
+```
   void _Wset_interface_shader_library(char *source);
+```
 
 You can define additional functions for your shaders passing all the
 source code for this function. The defined functions can then be used
@@ -316,29 +332,37 @@ both in vertex shaders and in fragment shaders.
 
 #### Moving Interfaces
 
+```
   void _Wmove_interface(struct user_interface *i, float x, float y, float z);
+```
 
 This can be used both to move the interface to a new coordinate (x, y)
 as to change the z-index value of the interface.
 
 #### Rotating Interfaces
 
+```
   void _Wrotate_interface(struct user_interface *i, float rotation);
+```
 
 This rotates the interface. The second parameter is the new
 conter-clockwise angle in radians.
 
 #### Resizing Interfaces
 
+```
   void _Wresize_interface(struct user_interface *i, float new_width,
                           float new_height);
+```
 
 This resizes the interface gicing it a new width and height, measured
 in pixels.
 
 #### Rendering Interfaces
 
+```
   void _Wrender_interface(unsigned long long time);
+```
 
 This renders all active interfaces. You should pass as parameter the
 time in microseconds. The time parameter is important because this is
@@ -347,11 +371,13 @@ update their frames.
 
 Not all interfaces are active. Only interfaces created after the last
 history marking are active. See the next function
-`_Wmark_history_interface'.
+`_Wmark_history_interface`.
 
 #### Marking Interface History (Creating Scopes for Interfaces)
 
+```
   void _Wmark_history_interface(void);
+```
 
 This creates a time marking to determine the active interfaces. After
 runnng this function, only new interfaces created after this moment
@@ -363,26 +389,30 @@ rendered. If you enter in a submenu where all the previous interfaces
 should not appear (but they should not be destroyed), just create a
 history marking and then create new interfaces. When exitting the
 submenu, destroy the history marking (see function
-`_Wrestore_history_interface'). This destroys the interfaces created
+`_Wrestore_history_interface`). This destroys the interfaces created
 in the submenu scope and the previous interfaces will be visible again.
 
 #### Linking Interfaces (Accessing Interfaces from Other Scopes)
 
+```
   struct user_interface *_Wlink_interface(struct user_interface *i);
+```
 
 This creates a link to an older interface passed as argument. A link
 is like a newly created interface. you can interact with it, and any
 change made to a link will be reflected in the linked interface.
 
-This is useful if you used `_Wmark_history_interface', but you want to
+This is useful if you used `_Wmark_history_interface`, but you want to
 show in the screen and allow interaction with some interface created
 before the marking. Creating a link do this without needing to
 recreate a new interface.
 
 #### Interacting with Interfaces
 
+```
   void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                             bool middle_click, bool right_click);
+```
 
 This function should be run each iteration in your main loop and it
 shows the mouse position in the screen (first two arguments), and also
@@ -394,16 +424,18 @@ This works if you set to correct function pointers the variables
 associated with mouse interaction in the user interface struct.
 
 You can only interact with active interfaces. Interfaces older than
-the last marking created with `_Wmark_history_interface' cannot be
+the last marking created with `_Wmark_history_interface` cannot be
 interacted with, except if you created a link to them with
-`_Wlink_interface'.
+`_Wlink_interface`.
 
 #### Erasing Interfaces and History Marking (Restore Previous Scope)
 
+```
   void _Wrestore_history_interface(void);
+```
 
 This functions erases the last marking created with
-`_Wmark_history_interface'. It also erases all interfaces created
+`_Wmark_history_interface`. It also erases all interfaces created
 after the last marking and all links to interfaces.
 
 If you never created a history marking, running this function erases
