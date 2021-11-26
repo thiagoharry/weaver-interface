@@ -441,3 +441,14 @@ after the last marking and all links to interfaces.
 If you never created a history marking, running this function erases
 all user interfaces.
 
+
+### Macro Configuration
+
+Defining the following macro will change this API default behaviour:
+
+* `W_FORCE_LANDSCAPE`: If our drawing area height is greater than the
+  width, we rotate 90 degrees our axis. The axis x became vertical and
+  the axis y horizontal. This swaps the x and y coordinates in our
+  interfaces and rotate them 90 degrees. This is useful for mobile
+  devices, when you want to have more horizontal space and expect the
+  user to rotate its device if necessary.

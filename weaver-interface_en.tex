@@ -307,7 +307,17 @@ void _Wfinish_interface(void);
 @
 \fimcodigo
 
-And this ends the description of our API.
+And this ends the description of our API functions.
+
+Besides the functions, the API can have its behaviour changed setting
+the macro \monoespaco{W\_FORCE\_LANDSCAPE}. If we have an environment
+where the width is greater than the height, setting this macro will
+change nothing. But if the window height is greater than the window
+width and this macro is set, then we will rotate 90 degrees
+counter-clockwise our axis $x$ and $y$. This is useful to create more
+consistent user interfaces in mobile devices. In this case, we can
+always assume that we will have more space horizontally than
+vertically and if necessary the user can rotate its device.
 
 \subsecao{1.1. Literate Programming}
 
@@ -590,8 +600,8 @@ data structure is:
 struct user_interface{
   int type;
   void *next; // Pointer for linked list
-  float x, y, z;
-  float rotation;
+  float x, y, _x, _y, z;
+  float rotation, _rotation;
   float height, width;
   float background_color[4], foreground_color[4];
   int integer;
@@ -637,6 +647,17 @@ we must update the transform matrix, which is how OpenGL and our
 shaders really represent these informations. And the z-index must also
 be updated in anoother list, where we will store the correct order to
 render each element.
+
+Notice that in fact we have two variables to store position $xx$, $y$
+and rotation. We do this because when the
+macro \monoespaco{W\_FORCE\_LANDSCAPE} is set, and if the window
+height is greater than window width, we swap the axis $x$ and $y$. In
+this case, the variables \monoespaco{\_x}, \monoespaco{\_y}
+and \monoespaco{\_rotation} will store the real value, as if the axis
+were not swapped and the variables \monoespaco{x}, \monoespaco{y}
+and \monoespaco{rotation} store the values with the swapped axis. When
+the height is not greater than the width or when the macro is not set,
+then both kind of variables will store the same value.
 
 The foreground and background color are colors in RGBA format with
 individual values in the range between 0 and 1. Such values will be
@@ -1566,8 +1587,8 @@ this can be done with the following code:
 
 \iniciocodigo
 @<Conversão de Coordenadas e Tamanho@>=
-x = 2.0 * (i -> x) / (*window_width) - 1.0;
-y = 2.0 * (i -> y) / (*window_height) - 1.0;
+x = 2.0 * (i -> _x) / (*window_width) - 1.0;
+y = 2.0 * (i -> _y) / (*window_height) - 1.0;
 w = 2.0 * (i -> width) / (*window_width);
 h = 2.0 * (i -> height) / (*window_height);
 @
@@ -1581,8 +1602,8 @@ matrix for the first time with the function below:
 static void initialize_model_view_matrix(struct user_interface *i){
   GLfloat x, y, w, h;
   @<Conversão de Coordenadas e Tamanho@>
-  GLfloat cos_theta = cos(i -> rotation);
-  GLfloat sin_theta = sin(i -> rotation);
+  GLfloat cos_theta = cos(i -> _rotation);
+  GLfloat sin_theta = sin(i -> _rotation);
   /* Primeira Coluna */
   i -> _transform_matrix[0] = w * cos_theta;
   i -> _transform_matrix[1] = h * sin_theta;
@@ -1782,10 +1803,17 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
   if(new_interface != NULL){
     new_interface -> type = TYPE_INTERFACE;
     new_interface -> next = NULL;
-    new_interface-> x = x;
-    new_interface -> y = y;
+    new_interface-> x = new_interface-> _x = x;
+    new_interface -> y = new_interface-> _y = y;
+    new_interface -> rotation = new_interface -> _rotation = 0;
+#if defined(W_FORCE_LANDSCAPE)
+   if(*window_height > *window_width){
+      new_interface-> _x = y;
+      new_interface -> _y = x;
+      new_interface -> _rotation += M_PI_2;
+   }
+#endif
     new_interface -> z = z;
-    new_interface -> rotation = 0;
     new_interface -> width = width;
     new_interface -> height = height;
     for(i = 0; i < 4; i ++){
@@ -2297,13 +2325,20 @@ is \monoespaco{\_Wmove\_interface} and we define the function as:
 
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
-void _Wmove_interface(struct user_interface *i, float new_x, float new_y, float new_z){
+void _Wmove_interface(struct user_interface *i,
+                      float new_x, float new_y, float new_z){
   GLfloat x, y, w, h;
-  GLfloat cos_theta = cos(i -> rotation);
-  GLfloat sin_theta = sin(i -> rotation);
+  GLfloat cos_theta = cos(i -> _rotation);
+  GLfloat sin_theta = sin(i -> _rotation);
   MUTEX_WAIT(&(i -> interface_mutex));
-  i -> x = new_x;
-  i -> y = new_y;
+  i -> x = i -> _x = new_x;
+  i -> y = i -> _y = new_y;
+#if defined(W_FORCE_LANDSCAPE)
+  if(*window_height > *window_width){
+     i -> _x = y;
+     i -> _y = x;
+  }
+#endif 
   @<Conversão de Coordenadas e Tamanho@>
   i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
   i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
@@ -2345,7 +2380,11 @@ void _Wrotate_interface(struct user_interface *i, float rotation){
   GLfloat cos_theta = cos(rotation);
   GLfloat sin_theta = sin(rotation);
   MUTEX_WAIT(&(i -> interface_mutex));
-  i -> rotation = rotation;
+  i -> rotation = i -> _rotation = rotation;
+#if defined(W_FORCE_LANDSCAPE)
+  if(*window_height > *window_width)
+     i -> _rotation = i -> rotation + M_PI_2;
+#endif
   @<Conversão de Coordenadas e Tamanho@>
   i -> _transform_matrix[0] = w * cos_theta;
   i -> _transform_matrix[1] = h * sin_theta;
@@ -2371,8 +2410,8 @@ The code to resize interfaces is:
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height){
   GLfloat x, y, w, h;
-  GLfloat cos_theta = cos(i -> rotation);
-  GLfloat sin_theta = sin(i -> rotation);
+  GLfloat cos_theta = cos(i -> _rotation);
+  GLfloat sin_theta = sin(i -> _rotation);
   MUTEX_WAIT(&(i -> interface_mutex));
   i -> width = new_width;
   i -> height = new_height;

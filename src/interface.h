@@ -1,5 +1,5 @@
 /*17:*/
-#line 350 "weaver-interface.tex"
+#line 364 "weaver-interface.tex"
 
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
@@ -11,7 +11,7 @@ extern"C"{
 #include <sys/param.h>  
 #endif
 /*20:*/
-#line 444 "weaver-interface.tex"
+#line 458 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h> 
@@ -19,7 +19,7 @@ extern"C"{
 #include <windows.h> 
 #endif
 /*:20*//*26:*/
-#line 562 "weaver-interface.tex"
+#line 576 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h> 
@@ -31,10 +31,10 @@ extern"C"{
 #include <GL/gl.h> 
 #endif
 /*:26*/
-#line 360 "weaver-interface.tex"
+#line 374 "weaver-interface.tex"
 
 /*19:*/
-#line 425 "weaver-interface.tex"
+#line 439 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
@@ -47,16 +47,16 @@ extern"C"{
 #define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
 /*:19*/
-#line 361 "weaver-interface.tex"
+#line 375 "weaver-interface.tex"
 
 /*28:*/
-#line 611 "weaver-interface.tex"
+#line 625 "weaver-interface.tex"
 
 struct user_interface{
 int type;
 void*next;
-float x,y,z;
-float rotation;
+float x,y,_x,_y,z;
+float rotation,_rotation;
 GLfloat _transform_matrix[16];
 float height,width;
 float background_color[4],foreground_color[4];
@@ -85,7 +85,7 @@ unsigned long _t;
 int max_repetition;
 };
 /*:28*/
-#line 362 "weaver-interface.tex"
+#line 376 "weaver-interface.tex"
 
 /*1:*/
 #line 104 "weaver-interface.tex"
@@ -148,7 +148,7 @@ void(*after_loading_interface)(void),
 
 void _Wfinish_interface(void);
 /*:16*/
-#line 363 "weaver-interface.tex"
+#line 377 "weaver-interface.tex"
 
 #ifdef __cplusplus
 }
