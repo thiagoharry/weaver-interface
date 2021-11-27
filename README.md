@@ -90,6 +90,7 @@ An user interface is a struct defined as:
   struct user_interface{
     float x, y, z; // User-interface coordinates
     float rotation;
+    float mouse_x, mouse_y;
     float height, width;
     float background_color[4], foreground_color[4]; int integer;
     bool visible;
@@ -125,6 +126,12 @@ API function `_Wrotate_interface`.
 The `height` and `width` store the interface size in pixels. *These
 values are read-only.* If you want to change them, use the
 API function `_Wresize_interface`.
+
+The `mouse_x` and `mouse_y` stores mouse coordinates. But not using
+the window coordinate, but using the interfae coordinate. The origin
+is the lower left corner of the interface and axis x and y are rotated
+using the interface rotation. This data is read-only. It is passed to
+the shader, therefore you can use it optionally in visual effects.
 
 The `background_color`, `foregound_color` and `integer` are values
 that are passed to shaders. If you create a custom shader, you can use
@@ -274,26 +281,17 @@ To create custom shaders, you should write using GLSL language. You
 could begin changing the following model taken from the default shader:
 
 ```
- #version 100
- 
- #if GL_FRAGMENT_PRECISION_HIGH == 1
- precision highp float;
- precision highp int;
- #else
- precision mediump float;
- precision mediump int;
- #endif
- precision lowp sampler2D;
- precision lowp samplerCube;
- 
- attribute vec3 vertex_position; 
- uniform vec4 foreground_color, background_color;
- uniform mat4 model_view_matrix;
- uniform float time; // In seconds, modulus 1 hour
- uniform int integer;
- uniform sampler2D texture1;
- uniform vec2 interface_size; // In pixels
- varying mediump vec2 texture_coordinate;
+/* LIST OF PREDEFINED VARIABLES: */
+/* attribute vec3 vertex_position; 
+   uniform vec4 foreground_color, background_color;
+   uniform mat4 model_view_matrix;
+   uniform float time; // In seconds, modulus 1 hour
+   uniform int integer;
+   uniform sampler2D texture1;
+   uniform vec2 interface_size; // In pixels
+   uniform vec2 mouse_coordinate; // Origin: interface lower left corner
+   varying mediump vec2 texture_coordinate;
+*/
  
  #if defined(VERTEX_SHADER)
  void main(){

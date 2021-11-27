@@ -562,6 +562,7 @@ struct shader {
   GLint uniform_foreground_color, uniform_background_color; // Cor de frente/fundo
   GLint uniform_model_view_matrix; // Matriz com tamanho, rotação e translação
   GLint uniform_interface_size; // Tamanho em píxels do objeto renderizado
+  GLint uniform_mouse_coordinate; // Coordenadas do mouse (referencial: interface)
   GLint uniform_time; // Contador de tempo para texturas animadas
   GLint uniform_integer; // Inteiro arbitrário que pode ser passado
   GLint uniform_texture1; // A textura do objeto a ser renderizado
@@ -628,6 +629,7 @@ struct user_interface{
   void *next; // Ponteiro de lista encadeada
   float x, y, _x, _y, z;
   float rotation, _rotation;
+  float mouse_x, mouse_y;
   GLfloat _transform_matrix[16];
   float height, width;
   float background_color[4], foreground_color[4];
@@ -690,6 +692,11 @@ e \monoespaco{\_rotation} armazena as variáveis com os eixos
 trocados. Nos outros casos, se a largura for maior que a altura ou se
 a macro não estiver definida, ambos os tipos de variáveis terão sempre
 o mesmo valor.
+
+Os atributos \monoespaco{mouse\_x} e \monoespaco{mouse\_y} são
+reservados para armazenar a coordenada do mouse usando como
+referencial não o canto interior esquerdo da tela, mas o canto
+inferior esquerdo da interface.
 
 O atributo de cor de frente e de fundo representa cores no formato
 RGBA onde cada valor individua é entre 0 e 1. Basicamente tais cores
@@ -1369,6 +1376,7 @@ interface e também sua textura:
 "uniform vec4 foreground_color, background_color;\n"
 "uniform mat4 model_view_matrix;\n"
 "uniform vec2 interface_size;\n"
+"uniform vec2 mouse_coordinate;\n"
 "uniform float time;\n"
 "uniform int integer;\n"
 "uniform sampler2D texture1;\n"
@@ -1757,6 +1765,8 @@ static struct shader *new_shader(char *shader_source){
                                                             "model_view_matrix");
     new -> uniform_interface_size = glGetUniformLocation(new -> program,
                                                          "interface_size");
+    new -> uniform_mouse_coordinate = glGetUniformLocation(new -> program,
+                                                         "mouse_coordinate");
     new -> uniform_time = glGetUniformLocation(new -> program, "time");
     new -> uniform_integer = glGetUniformLocation(new -> program, "integer");
     new -> uniform_texture1 = glGetUniformLocation(new -> program, "texture1");
@@ -2312,6 +2322,8 @@ void _Wrender_interface(unsigned long long time){
                          z_list[i] -> _transform_matrix);
       glUniform2f(z_list[i] -> shader_program -> uniform_interface_size,
                   z_list[i] -> width, z_list[i] -> height);
+      glUniform2f(z_list[i] -> shader_program -> uniform_mouse_coordinate,
+                  z_list[i] -> mouse_x, z_list[i] -> mouse_y);
       // O shader recebe contagem de tempo em segundos módulo 1 hora
       glUniform1f(z_list[i] -> shader_program -> uniform_time,
                   ((double) (time % 3600000000ull)) / (double) (1000000.0)); 
@@ -2537,10 +2549,11 @@ void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
   for(i = z_list_size - 1; i >= 0; i --){
     float x, y;
     @<Converter Coordenadas do Mouse para x e y@>
-    if(current == NULL && z_list[i] -> x - (z_list[i] -> width / 2) < x &&
-       z_list[i] -> x + (z_list[i] -> width / 2) > x &&
-       z_list[i] -> y - (z_list[i] -> height / 2) < y &&
-       z_list[i] -> y + (z_list[i] -> height / 2) > y)
+    z_list[i] -> mouse_x = x - z_list[i] -> x + (z_list[i] -> width / 2);
+    z_list[i] -> mouse_y = y - z_list[i] -> y + (z_list[i] -> height / 2);
+    if(current == NULL &&
+       z_list[i] -> mouse_x  > 0 && z_list[i] -> mouse_x < z_list[i] -> width &&
+       z_list[i] -> mouse_y  > 0 && z_list[i] -> mouse_y < z_list[i] -> height)
       current = z_list[i];
     else{
       if(z_list[i] -> _mouse_over){

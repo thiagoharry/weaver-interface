@@ -19,7 +19,7 @@ extern"C"{
 #include <windows.h> 
 #endif
 /*:20*//*26:*/
-#line 576 "weaver-interface.tex"
+#line 577 "weaver-interface.tex"
 
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h> 
@@ -50,13 +50,14 @@ extern"C"{
 #line 375 "weaver-interface.tex"
 
 /*28:*/
-#line 625 "weaver-interface.tex"
+#line 626 "weaver-interface.tex"
 
 struct user_interface{
 int type;
 void*next;
 float x,y,_x,_y,z;
 float rotation,_rotation;
+float mouse_x,mouse_y;
 GLfloat _transform_matrix[16];
 float height,width;
 float background_color[4],foreground_color[4];
