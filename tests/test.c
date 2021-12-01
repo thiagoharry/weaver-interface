@@ -232,8 +232,15 @@ void rendering_test(void){
 		   malloc, free, malloc, free, NULL, NULL,
 		   "animate", animated_loading_function,
 		   NULL);
+  int interface_width = window_width / 2, interface_height = window_height / 2;
+#if defined(W_FORCE_LANDSCAPE)
+  if(window_height > window_width){
+    interface_width = window_height / 2;
+    interface_height = window_width / 2;
+  } 
+#endif
   i = _Wnew_interface(".animate", NULL, window_width / 4, window_height / 4, 0.0,
-		      window_width / 2, window_height / 2);
+		      interface_width, interface_height);
   j = _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 1.0,
 		      100, 100);
   j -> on_mouse_over = set_integer;
