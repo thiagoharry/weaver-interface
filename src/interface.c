@@ -926,8 +926,8 @@ i->x= i->_x= new_x;
 i->y= i->_y= new_y;
 #if defined(W_FORCE_LANDSCAPE)
 if(*window_height> *window_width){
-i->_x= y;
-i->_y= x;
+i->_x= new_y;
+i->_y= new_x;
 }
 #endif
 /*60:*/
