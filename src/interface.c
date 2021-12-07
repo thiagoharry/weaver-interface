@@ -667,7 +667,7 @@ new_interface->y= new_interface->_y= y;
 new_interface->rotation= new_interface->_rotation= 0;
 #if defined(W_FORCE_LANDSCAPE)
 if(*window_height> *window_width){
-new_interface->_x= y;
+new_interface->_x= *window_width-y;
 new_interface->_y= x;
 new_interface->_rotation+= M_PI_2;
 }
@@ -926,7 +926,7 @@ i->x= i->_x= new_x;
 i->y= i->_y= new_y;
 #if defined(W_FORCE_LANDSCAPE)
 if(*window_height> *window_width){
-i->_x= new_y;
+i->_x= *window_width-new_y;
 i->_y= new_x;
 }
 #endif
