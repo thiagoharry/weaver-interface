@@ -56,7 +56,7 @@ struct user_interface{
 int type;
 void*next;
 float x,y,_x,_y,z;
-float rotation,_rotation;
+float rotation;
 float mouse_x,mouse_y;
 GLfloat _transform_matrix[16];
 float height,width;

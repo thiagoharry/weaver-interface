@@ -602,7 +602,7 @@ struct user_interface{
   int type;
   void *next; // Pointer for linked list
   float x, y, _x, _y, z;
-  float rotation, _rotation;
+  float rotation;
   float mouse_x, mouse_y;
   float height, width;
   float background_color[4], foreground_color[4];
@@ -650,16 +650,16 @@ shaders really represent these informations. And the z-index must also
 be updated in anoother list, where we will store the correct order to
 render each element.
 
-Notice that in fact we have two variables to store position $xx$, $y$
-and rotation. We do this because when the
-macro \monoespaco{W\_FORCE\_LANDSCAPE} is set, and if the window
-height is greater than window width, we swap the axis $x$ and $y$. In
-this case, the variables \monoespaco{\_x}, \monoespaco{\_y}
-and \monoespaco{\_rotation} will store the real value, as if the axis
-were not swapped and the variables \monoespaco{x}, \monoespaco{y}
-and \monoespaco{rotation} store the values with the swapped axis. When
-the height is not greater than the width or when the macro is not set,
-then both kind of variables will store the same value.
+Notice that in fact we have two variables to store position $xx$ and
+$y$. We do this because when the
+macro \monoespaco{W\_FORCE\_LANDSCAPE} is defined, and if the window
+height is greater than window width, we rotate the axis $x$ and
+$y$. In this case, the variables \monoespaco{\_x} and \monoespaco{\_y}
+will store the real value, as if the axis were not swapped and the
+variables \monoespaco{x} and \monoespaco{y} store the values with the
+rotated axis. When the height is not greater than the width or when
+the macro is not defined, then both kind of variables will store the
+same value.
 
 The attributes \monoespaco{mouse\_x} and \monoespaco{mouse\_y} are
 reserved to store the mouse coordinates not using as origin the lower
@@ -1247,14 +1247,20 @@ coordinate is associated with each vertex.
 
 To understand the code, you need to consider that all interfaces will
 have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
-0)$. They are declared below:
+0)$. Each vertex have as argument the texture coordinate. They are
+declared below:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static const float interface_vertices[12] = {0.0, 0.0, 0.0,
-                                             1.0, 0.0, 0.0,
-                                             1.0, 1.0, 0.0,
-                                             0.0, 1.0, 0.0 };
+static const float interface_vertices[20] = {
+  0.0, 0.0, 0.0, // First Vertice
+  0.0, 0.0,     // Texture coordinate
+  1.0, 0.0, 0.0, // Second vertice
+  1.0, 0.0,     // Texture coordinate
+  1.0, 1.0, 0.0,  // Third Vertice
+  1.0, 1.0,      // Texture coordinate
+  0.0, 1.0, 0.0, // Fourth vertice
+  0.0, 1.0};    // Texture coordinate
 static GLuint interface_vbo;
 @
 \fimcodigo
@@ -1617,8 +1623,8 @@ matrix for the first time with the function below:
 static void initialize_model_view_matrix(struct user_interface *i){
   GLfloat x, y, w, h;
   @<Conversão de Coordenadas e Tamanho@>
-  GLfloat cos_theta = cos(i -> _rotation);
-  GLfloat sin_theta = sin(i -> _rotation);
+  GLfloat cos_theta = cos(i -> rotation);
+  GLfloat sin_theta = sin(i -> rotation);
   /* Primeira Coluna */
   i -> _transform_matrix[0] = w * cos_theta;
   i -> _transform_matrix[1] = h * sin_theta;
@@ -1730,8 +1736,9 @@ static struct shader *new_shader(char *shader_source){
       new -> program = compile_shader(default_shader_source);
     else
       new -> program = compile_shader_from_file(shader_source);
-    new -> attribute_vertex_position = glGetAttribLocation(new -> program,
-                                                           "vertex_position");
+    // Binding attributes
+    glBindAttribLocation(new -> program, 0, "vertex_position");
+    // Getting uniforms
     new -> uniform_foreground_color =  glGetUniformLocation(new -> program,
                                                             "foreground_color");
     new -> uniform_background_color =  glGetUniformLocation(new -> program,
@@ -1822,12 +1829,11 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> next = NULL;
     new_interface-> x = new_interface-> _x = x;
     new_interface -> y = new_interface-> _y = y;
-    new_interface -> rotation = new_interface -> _rotation = 0;
+    new_interface -> rotation = 0;
 #if defined(W_FORCE_LANDSCAPE)
    if(*window_height > *window_width){
       new_interface-> _x = *window_width - y;
       new_interface -> _y = x;
-      new_interface -> _rotation += M_PI_2;
    }
 #endif
     new_interface -> z = z;
@@ -2271,7 +2277,7 @@ void _Wrender_interface(unsigned long long time){
     // Carregando os vértices do VBO:
     glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
     // Especificando como os dados estão representados no VBO:
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0,
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                           (void *) 0);
     glEnableVertexAttribArray(0);
     MUTEX_WAIT(&z_list_mutex);
@@ -2347,8 +2353,8 @@ is \monoespaco{\_Wmove\_interface} and we define the function as:
 void _Wmove_interface(struct user_interface *i,
                       float new_x, float new_y, float new_z){
   GLfloat x, y, w, h;
-  GLfloat cos_theta = cos(i -> _rotation);
-  GLfloat sin_theta = sin(i -> _rotation);
+  GLfloat cos_theta = cos(i -> rotation);
+  GLfloat sin_theta = sin(i -> rotation);
   MUTEX_WAIT(&(i -> interface_mutex));
   i -> x = i -> _x = new_x;
   i -> y = i -> _y = new_y;
@@ -2399,11 +2405,7 @@ void _Wrotate_interface(struct user_interface *i, float rotation){
   GLfloat cos_theta = cos(rotation);
   GLfloat sin_theta = sin(rotation);
   MUTEX_WAIT(&(i -> interface_mutex));
-  i -> rotation = i -> _rotation = rotation;
-#if defined(W_FORCE_LANDSCAPE)
-  if(*window_height > *window_width)
-     i -> _rotation = i -> rotation + M_PI_2;
-#endif
+  i -> rotation = rotation;
   @<Conversão de Coordenadas e Tamanho@>
   i -> _transform_matrix[0] = w * cos_theta;
   i -> _transform_matrix[1] = h * sin_theta;
@@ -2429,8 +2431,8 @@ The code to resize interfaces is:
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height){
   GLfloat x, y, w, h;
-  GLfloat cos_theta = cos(i -> _rotation);
-  GLfloat sin_theta = sin(i -> _rotation);
+  GLfloat cos_theta = cos(i -> rotation);
+  GLfloat sin_theta = sin(i -> rotation);
   MUTEX_WAIT(&(i -> interface_mutex));
   i -> width = new_width;
   i -> height = new_height;
