@@ -874,12 +874,12 @@ glBindBuffer(GL_ARRAY_BUFFER,interface_vbo);
 
 glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,7*sizeof(float),
 (void*)0);
-glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,7*sizeof(float),
-(void*)3);
+glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,7*sizeof(float),
+(void*)(3*sizeof(float)));
 #if defined(W_FORCE_LANDSCAPE)
 if(*window_height> *window_width)
-glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,7*sizeof(float),
-(void*)5);
+glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,7*sizeof(float),
+(void*)(5*sizeof(float)));
 #endif
 glEnableVertexAttribArray(0);
 glEnableVertexAttribArray(1);
