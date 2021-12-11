@@ -15,7 +15,7 @@
 
 #include <stdio.h> 
 /*:43*//*62:*/
-#line 1677 "weaver-interface.tex"
+#line 1690 "weaver-interface.tex"
 
 #include <math.h> 
 /*:62*/
@@ -172,13 +172,14 @@ static char*shader_library= "";
 
 static const char default_shader_source[]= ""
 /*53:*/
-#line 1364 "weaver-interface.tex"
+#line 1376 "weaver-interface.tex"
 
 "#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
+"attribute vec2 vertex_texture_coordinate;\n"
 "#endif\n"
 /*:53*//*54:*/
-#line 1379 "weaver-interface.tex"
+#line 1392 "weaver-interface.tex"
 
 "uniform vec4 foreground_color, background_color;\n"
 "uniform mat4 model_view_matrix;\n"
@@ -188,7 +189,7 @@ static const char default_shader_source[]= ""
 "uniform int integer;\n"
 "uniform sampler2D texture1;\n"
 /*:54*//*55:*/
-#line 1396 "weaver-interface.tex"
+#line 1409 "weaver-interface.tex"
 
 "varying mediump vec2 texture_coordinate;\n"
 /*:55*/
@@ -196,18 +197,18 @@ static const char default_shader_source[]= ""
 
 "#if defined(VERTEX_SHADER)\n"
 /*51:*/
-#line 1336 "weaver-interface.tex"
+#line 1347 "weaver-interface.tex"
 
 "void main(){\n"
 "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
-"  texture_coordinate = vec2(vertex_position.x, vertex_position.y);\n"
+"  texture_coordinate = vertex_texture_coordinate;\n"
 "}\n"
 /*:51*/
 #line 1260 "weaver-interface.tex"
 
 "#else\n"
 /*52:*/
-#line 1348 "weaver-interface.tex"
+#line 1359 "weaver-interface.tex"
 
 "void main(){\n"
 "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
@@ -219,44 +220,48 @@ static const char default_shader_source[]= ""
 "#endif\n"
 "";
 /*:47*//*48:*/
-#line 1281 "weaver-interface.tex"
+#line 1282 "weaver-interface.tex"
 
-static const float interface_vertices[20]= {
+static const float interface_vertices[28]= {
 0.0,0.0,0.0,
 0.0,0.0,
+0.0,1.0,
 1.0,0.0,0.0,
 1.0,0.0,
+0.0,0.0,
 1.0,1.0,0.0,
 1.0,1.0,
+1.0,0.0,
 0.0,1.0,0.0,
-0.0,1.0};
+0.0,1.0,
+1.0,1.0};
 static GLuint interface_vbo;
 /*:48*//*57:*/
-#line 1446 "weaver-interface.tex"
+#line 1459 "weaver-interface.tex"
 
 static GLuint default_texture;
 /*:57*//*63:*/
-#line 1697 "weaver-interface.tex"
+#line 1710 "weaver-interface.tex"
 
 static void*last_structure= NULL;
 static struct marking*last_marking= NULL;
 _STATIC_MUTEX_DECLARATION(linked_list_mutex);
 /*:63*//*65:*/
-#line 1737 "weaver-interface.tex"
+#line 1750 "weaver-interface.tex"
 
 struct shader*default_shader;
 /*:65*//*77:*/
-#line 2145 "weaver-interface.tex"
+#line 2159 "weaver-interface.tex"
 
 static struct user_interface**z_list= NULL;
 static unsigned z_list_size= 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 /*:77*//*82:*/
-#line 2262 "weaver-interface.tex"
+#line 2276 "weaver-interface.tex"
 
 static unsigned long long previous_time= 0;
 /*:82*//*88:*/
-#line 2499 "weaver-interface.tex"
+#line 2521 "weaver-interface.tex"
 
 static bool mouse_last_left_click= false,mouse_last_middle_click= false,
 mouse_last_right_click= false;
@@ -369,7 +374,7 @@ glDeleteShader(fragment_shader);
 return program;
 }
 /*:44*//*56:*/
-#line 1414 "weaver-interface.tex"
+#line 1427 "weaver-interface.tex"
 
 static GLuint compile_shader_from_file(const char*filename){
 char*buffer;
@@ -394,19 +399,19 @@ if(temporary_free!=NULL)temporary_free(buffer);
 return shader_program;
 }
 /*:56*//*61:*/
-#line 1643 "weaver-interface.tex"
+#line 1656 "weaver-interface.tex"
 
 static void initialize_model_view_matrix(struct user_interface*i){
 GLfloat x,y,w,h;
 /*60:*/
-#line 1631 "weaver-interface.tex"
+#line 1644 "weaver-interface.tex"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 w= 2.0*(i->width)/(*window_width);
 h= 2.0*(i->height)/(*window_height);
 /*:60*/
-#line 1646 "weaver-interface.tex"
+#line 1659 "weaver-interface.tex"
 
 GLfloat cos_theta= cos(i->rotation);
 GLfloat sin_theta= sin(i->rotation);
@@ -432,7 +437,7 @@ i->_transform_matrix[14]= 0.0;
 i->_transform_matrix[15]= 1.0;
 }
 /*:61*//*66:*/
-#line 1752 "weaver-interface.tex"
+#line 1765 "weaver-interface.tex"
 
 static struct shader*new_shader(char*shader_source){
 struct shader*new= (struct shader*)permanent_alloc(sizeof(struct shader));
@@ -445,6 +450,7 @@ else
 new->program= compile_shader_from_file(shader_source);
 
 glBindAttribLocation(new->program,0,"vertex_position");
+glBindAttribLocation(new->program,1,"vertex_texture_coordinate");
 
 new->uniform_foreground_color= glGetUniformLocation(new->program,
 "foreground_color");
@@ -470,7 +476,7 @@ MUTEX_SIGNAL(&linked_list_mutex);
 return new;
 }
 /*:66*//*68:*/
-#line 1811 "weaver-interface.tex"
+#line 1825 "weaver-interface.tex"
 
 static void destroy_shader(struct shader*shader_struct){
 glDeleteProgram(shader_struct->program);
@@ -478,7 +484,7 @@ if(permanent_free!=NULL)
 permanent_free(shader_struct);
 }
 /*:68*//*71:*/
-#line 1939 "weaver-interface.tex"
+#line 1953 "weaver-interface.tex"
 
 static void destroy_interface(struct user_interface*interface_struct){
 if(interface_struct->_texture1!=NULL){
@@ -538,7 +544,7 @@ va_arg(args,pointer_to_interface_function*);
 }
 }
 /*49:*/
-#line 1310 "weaver-interface.tex"
+#line 1321 "weaver-interface.tex"
 
 glGenBuffers(1,&interface_vbo);
 glBindBuffer(GL_ARRAY_BUFFER,interface_vbo);
@@ -546,7 +552,7 @@ glBindBuffer(GL_ARRAY_BUFFER,interface_vbo);
 glBufferData(GL_ARRAY_BUFFER,sizeof(interface_vertices),interface_vertices,
 GL_STATIC_DRAW);
 /*:49*//*58:*/
-#line 1456 "weaver-interface.tex"
+#line 1469 "weaver-interface.tex"
 
 {
 GLubyte pixels[3]= {255,255,255};
@@ -556,29 +562,29 @@ glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,1,1,0,GL_RGB,GL_UNSIGNED_BYTE,
 pixels);
 }
 /*:58*//*64:*/
-#line 1708 "weaver-interface.tex"
+#line 1721 "weaver-interface.tex"
 
 MUTEX_INIT(&linked_list_mutex);
 /*:64*//*67:*/
-#line 1800 "weaver-interface.tex"
+#line 1814 "weaver-interface.tex"
 
 default_shader= new_shader(NULL);
 /*:67*//*74:*/
-#line 2024 "weaver-interface.tex"
+#line 2038 "weaver-interface.tex"
 
 _Wmark_history_interface();
 /*:74*//*78:*/
-#line 2156 "weaver-interface.tex"
+#line 2170 "weaver-interface.tex"
 
 MUTEX_INIT(&z_list_mutex);
 z_list_size= 0;
 z_list= NULL;
 /*:78*//*83:*/
-#line 2272 "weaver-interface.tex"
+#line 2286 "weaver-interface.tex"
 
 previous_time= 0;
 /*:83*//*89:*/
-#line 2509 "weaver-interface.tex"
+#line 2531 "weaver-interface.tex"
 
 mouse_last_left_click= false;
 mouse_last_middle_click= false;
@@ -596,19 +602,19 @@ void _Wfinish_interface(void){
 
 shader_library= "";
 /*:42*//*50:*/
-#line 1322 "weaver-interface.tex"
+#line 1333 "weaver-interface.tex"
 
 glDeleteBuffers(1,&interface_vbo);
 /*:50*//*59:*/
-#line 1470 "weaver-interface.tex"
+#line 1483 "weaver-interface.tex"
 
 glDeleteTextures(1,&default_texture);
 /*:59*//*69:*/
-#line 1823 "weaver-interface.tex"
+#line 1837 "weaver-interface.tex"
 
 destroy_shader(default_shader);
 /*:69*//*75:*/
-#line 2030 "weaver-interface.tex"
+#line 2044 "weaver-interface.tex"
 
 
 while(last_marking->previous_marking!=NULL){
@@ -623,7 +629,7 @@ last_marking= NULL;
 last_structure= NULL;
 MUTEX_DESTROY(&linked_list_mutex);
 /*:75*//*79:*/
-#line 2168 "weaver-interface.tex"
+#line 2182 "weaver-interface.tex"
 
 MUTEX_DESTROY(&z_list_mutex);
 if(z_list!=NULL&&permanent_free!=NULL)
@@ -650,7 +656,7 @@ void _Wset_interface_shader_library(char*source){
 shader_library= source;
 }
 /*:41*//*70:*/
-#line 1837 "weaver-interface.tex"
+#line 1851 "weaver-interface.tex"
 
 struct user_interface*_Wnew_interface(char*filename,char*shader_filename,
 float x,float y,float z,float width,
@@ -735,7 +741,7 @@ after_loading_interface,filename,new_interface);
 return new_interface;
 }
 /*:70*//*72:*/
-#line 1966 "weaver-interface.tex"
+#line 1980 "weaver-interface.tex"
 
 struct user_interface*_Wlink_interface(struct user_interface*i){
 struct link*new_link= permanent_alloc(sizeof(struct link));
@@ -753,7 +759,7 @@ MUTEX_SIGNAL(&linked_list_mutex);
 return i;
 }
 /*:72*//*73:*/
-#line 1997 "weaver-interface.tex"
+#line 2011 "weaver-interface.tex"
 
 void _Wmark_history_interface(void){
 struct marking*new_marking= permanent_alloc(sizeof(struct marking));
@@ -772,7 +778,7 @@ MUTEX_SIGNAL(&linked_list_mutex);
 }
 }
 /*:73*//*76:*/
-#line 2072 "weaver-interface.tex"
+#line 2086 "weaver-interface.tex"
 
 void _Wrestore_history_interface(void){
 struct marking*to_be_removed;
@@ -803,7 +809,7 @@ permanent_free(to_be_removed);
 else
 to_be_removed->number_of_interfaces= 0;
 /*80:*/
-#line 2182 "weaver-interface.tex"
+#line 2196 "weaver-interface.tex"
 
 MUTEX_WAIT(&z_list_mutex);
 if(z_list!=NULL&&permanent_free!=NULL)
@@ -812,16 +818,16 @@ z_list= NULL;
 z_list_size= 0;
 MUTEX_SIGNAL(&z_list_mutex);
 /*:80*/
-#line 2101 "weaver-interface.tex"
+#line 2115 "weaver-interface.tex"
 
 MUTEX_SIGNAL(&linked_list_mutex);
 }
 /*:76*//*84:*/
-#line 2298 "weaver-interface.tex"
+#line 2312 "weaver-interface.tex"
 
 void _Wrender_interface(unsigned long long time){
 /*81:*/
-#line 2202 "weaver-interface.tex"
+#line 2216 "weaver-interface.tex"
 
 if(z_list_size!=last_marking->number_of_interfaces){
 void*p;
@@ -855,7 +861,7 @@ j= j-1;
 MUTEX_SIGNAL(&z_list_mutex);
 }
 /*:81*/
-#line 2300 "weaver-interface.tex"
+#line 2314 "weaver-interface.tex"
 
 {
 int i,elapsed_time;
@@ -866,9 +872,17 @@ elapsed_time= 0;
 
 glBindBuffer(GL_ARRAY_BUFFER,interface_vbo);
 
-glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,5*sizeof(float),
+glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,7*sizeof(float),
 (void*)0);
+glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,7*sizeof(float),
+(void*)3);
+#if defined(W_FORCE_LANDSCAPE)
+if(*window_height> *window_width)
+glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,7*sizeof(float),
+(void*)5);
+#endif
 glEnableVertexAttribArray(0);
+glEnableVertexAttribArray(1);
 MUTEX_WAIT(&z_list_mutex);
 for(i= 0;i<z_list_size;i++){
 if(!(z_list[i]->_loaded_texture)||!(z_list[i]->visible))
@@ -919,7 +933,7 @@ glBindTexture(GL_TEXTURE_2D,0);
 previous_time= time;
 }
 /*:84*//*85:*/
-#line 2382 "weaver-interface.tex"
+#line 2404 "weaver-interface.tex"
 
 void _Wmove_interface(struct user_interface*i,
 float new_x,float new_y,float new_z){
@@ -936,14 +950,14 @@ i->_y= new_x;
 }
 #endif
 /*60:*/
-#line 1631 "weaver-interface.tex"
+#line 1644 "weaver-interface.tex"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 w= 2.0*(i->width)/(*window_width);
 h= 2.0*(i->height)/(*window_height);
 /*:60*/
-#line 2397 "weaver-interface.tex"
+#line 2419 "weaver-interface.tex"
 
 i->_transform_matrix[12]= -w/2*cos_theta+w/2*sin_theta+x;
 i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
@@ -970,7 +984,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:85*//*86:*/
-#line 2432 "weaver-interface.tex"
+#line 2454 "weaver-interface.tex"
 
 void _Wrotate_interface(struct user_interface*i,float rotation){
 GLfloat x,y,w,h;
@@ -979,14 +993,14 @@ GLfloat sin_theta= sin(rotation);
 MUTEX_WAIT(&(i->mutex));
 i->rotation= rotation;
 /*60:*/
-#line 1631 "weaver-interface.tex"
+#line 1644 "weaver-interface.tex"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 w= 2.0*(i->width)/(*window_width);
 h= 2.0*(i->height)/(*window_height);
 /*:60*/
-#line 2439 "weaver-interface.tex"
+#line 2461 "weaver-interface.tex"
 
 i->_transform_matrix[0]= w*cos_theta;
 i->_transform_matrix[1]= h*sin_theta;
@@ -997,7 +1011,7 @@ i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:86*//*87:*/
-#line 2463 "weaver-interface.tex"
+#line 2485 "weaver-interface.tex"
 
 void _Wresize_interface(struct user_interface*i,
 float new_width,float new_height){
@@ -1008,14 +1022,14 @@ MUTEX_WAIT(&(i->mutex));
 i->width= new_width;
 i->height= new_height;
 /*60:*/
-#line 1631 "weaver-interface.tex"
+#line 1644 "weaver-interface.tex"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 w= 2.0*(i->width)/(*window_width);
 h= 2.0*(i->height)/(*window_height);
 /*:60*/
-#line 2472 "weaver-interface.tex"
+#line 2494 "weaver-interface.tex"
 
 i->_transform_matrix[0]= w*cos_theta;
 i->_transform_matrix[1]= h*sin_theta;
@@ -1026,7 +1040,7 @@ i->_transform_matrix[13]= -h/2*sin_theta-h/2*cos_theta+y;
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:87*//*90:*/
-#line 2543 "weaver-interface.tex"
+#line 2565 "weaver-interface.tex"
 
 void _Winteract_interface(int mouse_x,int mouse_y,bool left_click,
 bool middle_click,bool right_click){
@@ -1036,7 +1050,7 @@ MUTEX_WAIT(&z_list_mutex);
 for(i= z_list_size-1;i>=0;i--){
 float x,y;
 /*91:*/
-#line 2622 "weaver-interface.tex"
+#line 2644 "weaver-interface.tex"
 
 if(z_list[i]->rotation==0.0){
 x= mouse_x;
@@ -1053,7 +1067,7 @@ x+= z_list[i]->x;
 y+= z_list[i]->y;
 }
 /*:91*/
-#line 2551 "weaver-interface.tex"
+#line 2573 "weaver-interface.tex"
 
 z_list[i]->mouse_x= x-z_list[i]->x+(z_list[i]->width/2);
 z_list[i]->mouse_y= y-z_list[i]->y+(z_list[i]->height/2);

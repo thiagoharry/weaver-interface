@@ -1275,19 +1275,24 @@ associada a cada vértice.
 Para entender o código, considere que iremos representar toda
 interface usando sempre a mesma sequência de vértices: $(0, 0, 0), (1,
 0, 0), (1, 1, 0), (0, 1, 0)$. Cada vértice também possui como atributo
-coordenadas de textura. Eles são declarados abaixo:
+coordenadas de textura em sua versão normal e rotatcionada. Eles são
+declarados abaixo:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static const float interface_vertices[20] = {
-  0.0, 0.0, 0.0, // First Vertice
-  0.0, 0.0,     // Texture coordinate
-  1.0, 0.0, 0.0, // Second vertice
-  1.0, 0.0,     // Texture coordinate
-  1.0, 1.0, 0.0,  // Third Vertice
-  1.0, 1.0,      // Texture coordinate
-  0.0, 1.0, 0.0, // Fourth vertice
-  0.0, 1.0};    // Texture coordinate
+static const float interface_vertices[28] = {
+  0.0, 0.0, 0.0, // Primeiro vértice
+  0.0, 0.0,     // Coordenada de textura
+  0.0, 1.0,    // Coordenada de textura rotacionada
+  1.0, 0.0, 0.0, // Segundo vértice
+  1.0, 0.0,     // Textura
+  0.0, 0.0,    // Textura rotacionada
+  1.0, 1.0, 0.0,  // Terceiro vértice
+  1.0, 1.0,      // Textura
+  1.0, 0.0,     // Textura rotacionada 
+  0.0, 1.0, 0.0, // Quarto vértice
+  0.0, 1.0,     // Textura
+  1.0, 1.0};   // Textura rotacionada 
 static GLuint interface_vbo;
 @
 \fimcodigo
@@ -1300,6 +1305,12 @@ estar preparados para caso o usuário confiure o OpenGL para não
 mostrar a parte traseira dos vértices, uma otimização bastante comum e
 necessária em muitos contextos. Especificando esta ordem garante que
 nossa interface estará visível mesmo neste caso.
+
+É importante armazenarmos as texturas rotacionadas para o caso de
+termos a macro \monoespaco{W\_FORCE\_LANDSCAPE} definida e termos a
+janela com maior altura que largura. Em tais casos nós rotacionamos
+nossas interfaces trocando suas larguras por altura e usando a textura
+rotacionada.
 
 Estes vértices serão carregados na placa de vídeo a à partir daí
 poderão ser acessados por meio do VBO, ou ``vertex buffer object''
@@ -1336,7 +1347,7 @@ diferente para cada interface.
 @<Shader de Vértice Padrão@>=
 "void main(){\n"
 "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
-"  texture_coordinate = vec2(vertex_position.x, vertex_position.y);\n"
+"  texture_coordinate = vertex_texture_coordinate;\n"
 "}\n"
 @
 \fimcodigo
@@ -1355,15 +1366,17 @@ pixel da textura associado à esta posição.
 
 Agora temos que definir para os shaders seus atributos, uniformes e
 variantes. Os atributos são variáveis somente-leitura especificados
-para cada vértice. O único atributo que teremos é a posição do
-vértice, em coordenada $(x, y, z)$. A coordenada $x$ e $y$ irá variar
-entre 0 e 1 enquanto $z=0$ como descrito antes. Atributos só podem ser
+para cada vértice. Os únicos atributos que teremos é a posição do
+vértice, em coordenada $(x, y, z)$ e a coordenada da textura na forma
+$(x, y)$. Nos dois casos as coordenadas $x$ e $y$ irão variar entre 0
+e 1 e assumiremos $z=0$ como descrito antes. Atributos só podem ser
 declarados no shader de vértice.
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>=
 "#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
+"attribute vec2 vertex_texture_coordinate;\n"
 "#endif\n"
 @
 \fimcodigo
@@ -1389,7 +1402,7 @@ interface e também sua textura:
 
 Por fim, temos as variantes. Estas variáveis podem ser modificadas e
 preenchidas pelo shader de vértice. Seu valor interpolado será passado
-parao shader de fragmento. É aqui que declaramos a coordenada em
+para o shader de fragmento. É aqui que declaramos a coordenada em
 textura que iremos usar.
 
 \iniciocodigo
@@ -1761,6 +1774,7 @@ static struct shader *new_shader(char *shader_source){
       new -> program = compile_shader_from_file(shader_source);
     // Estabelecendo atributos
     glBindAttribLocation(new -> program, 0, "vertex_position");
+    glBindAttribLocation(new -> program, 1, "vertex_texture_coordinate");
     // Obtendo uniformes:
     new -> uniform_foreground_color =  glGetUniformLocation(new -> program,
                                                             "foreground_color");
@@ -2307,9 +2321,17 @@ void _Wrender_interface(unsigned long long time){
     // Carregando os vértices do VBO:
     glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
     // Especificando como os dados estão representados no VBO:
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
                           (void *) 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
+                          (void *) 3);
+#if defined(W_FORCE_LANDSCAPE)
+    if(*window_height > *window_width)
+      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
+                            (void *) 5);
+#endif
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     MUTEX_WAIT(&z_list_mutex);
     for(i = 0; i < z_list_size; i ++){
       if(!(z_list[i] -> _loaded_texture) || !(z_list[i] -> visible))

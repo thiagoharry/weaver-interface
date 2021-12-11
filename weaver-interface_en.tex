@@ -534,7 +534,6 @@ struct shader {
   void *next; // Ponteiro de lista encadeada
   GLuint program; // O programa em si
   /* Aqui começam as variáveis modificáveis de shader */
-  GLint attribute_vertex_position; // Posição de cada vértice
   GLint uniform_foreground_color, uniform_background_color; // Cor de frente/fundo
   GLint uniform_model_view_matrix; // Matriz com tamanho, rotação e translação
   GLint uniform_interface_size; // Tamanho em píxels do objeto renderizado
@@ -1247,20 +1246,24 @@ coordinate is associated with each vertex.
 
 To understand the code, you need to consider that all interfaces will
 have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
-0)$. Each vertex have as argument the texture coordinate. They are
-declared below:
+0)$. Each vertex have as argument the texture coordinate in the usual
+case and if the texture is rotated. They are declared below:
 
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
-static const float interface_vertices[20] = {
+static const float interface_vertices[28] = {
   0.0, 0.0, 0.0, // First Vertice
   0.0, 0.0,     // Texture coordinate
+  0.0, 1.0,    // Rotated texture coordinate
   1.0, 0.0, 0.0, // Second vertice
   1.0, 0.0,     // Texture coordinate
+  0.0, 0.0,    // Rotated texture
   1.0, 1.0, 0.0,  // Third Vertice
   1.0, 1.0,      // Texture coordinate
+  1.0, 0.0,     // Rotated texture
   0.0, 1.0, 0.0, // Fourth vertice
-  0.0, 1.0};    // Texture coordinate
+  0.0, 1.0,     // Texture coordinate
+  1.0, 1.0};   // Rotated texture
 static GLuint interface_vbo;
 @
 \fimcodigo
@@ -1273,6 +1276,12 @@ prepared for if the user configures OpenGL to do not show the back of
 geometric figures. This is a very common optimization and a necessary
 one in lots of contexts. Specifying this order guarantees that the
 interface will be visible even with this option enabled.
+
+The rotated textures coordinates will be used if the
+macro \monoespaco{W\_FORCE\_LANDSCAPE} is defined and if the window
+height is greater than window width. In this case we swap the
+interface width and height and also rotate the texture. This rotates
+our interfaces.
 
 These vertices will be loaded in the video card and after this we
 could render them asking to render the corresponding VBO (``vertex
@@ -1308,7 +1317,7 @@ matrix.
 @<Shader de Vértice Padrão@>=
 "void main(){\n"
 "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
-"  texture_coordinate = vec2(vertex_position.x, vertex_position.y);\n"
+"  texture_coordinate = vertex_texture_coordinate;\n"
 "}\n"
 @
 \fimcodigo
@@ -1328,15 +1337,16 @@ associated with the texture in a given position:
 
 Now we need to define in the shaders its attributes, uniforms and
 varyings. The attributes are read-only data specified for each vertex.
-The sole attribute that we will define is the vertex position, in
-coordinates $(x, y, z)$. The coordinates $x$ and $y$ will be between 0
-and 1 and $z=0$, as described previously. Attributes are declared only
-in vertex shaders.
+The attributes that we will define are the vertex position in format
+$(x, y, z)$ and texture coordinate in format $(x, y)$. The coordinates
+$x$ and $y$ will be between 0 and 1 and $z=0$, as described
+previously. Attributes are declared only in vertex shaders.
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>=
 "#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
+"attribute vec2 vertex_texture_coordinate;\n"
 "#endif\n"
 @
 \fimcodigo
@@ -1360,10 +1370,9 @@ associated with each interface and its texture:
 @
 \fimcodigo
 
-Finally, varyings are variables that can be changed by the vertex
-shader and will be given to the fragment vertice, that interpolates
-using values from neighbor vertices. It is as a varying that we
-declare the texture coordinate:
+Finally we have varying variables. They can be modified and set on the
+vertex shader and its interpolated value will be given to the fragment
+shader. Here we put the texture coordinate.
 
 \iniciocodigo
 @<Atributos, Uniformes e Variantes de Shader@>+=
@@ -1738,6 +1747,7 @@ static struct shader *new_shader(char *shader_source){
       new -> program = compile_shader_from_file(shader_source);
     // Binding attributes
     glBindAttribLocation(new -> program, 0, "vertex_position");
+    glBindAttribLocation(new -> program, 1, "vertex_texture_coordinate");
     // Getting uniforms
     new -> uniform_foreground_color =  glGetUniformLocation(new -> program,
                                                             "foreground_color");
@@ -2277,9 +2287,17 @@ void _Wrender_interface(unsigned long long time){
     // Carregando os vértices do VBO:
     glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
     // Especificando como os dados estão representados no VBO:
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
                           (void *) 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
+                          (void *) 3);
+#if defined(W_FORCE_LANDSCAPE)
+    if(*window_height > *window_width)
+      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float),
+                            (void *) 5);
+#endif
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     MUTEX_WAIT(&z_list_mutex);
     for(i = 0; i < z_list_size; i ++){
       if(!(z_list[i] -> _loaded_texture) || !(z_list[i] -> visible))
