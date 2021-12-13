@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #if defined(_WIN32)
 #include <Windows.h>
 #else
@@ -117,18 +118,24 @@ void animated_loading_function(void *(*permanent_alloc)(size_t),
 		      void *(*before_loading_interface)(void),
 		      void *(*after_loading_interface)(void),
 		      char *source_filename, struct user_interface *target){
-  GLubyte frame1[3] = {255, 0, 0};
-  GLubyte frame2[3] = {0, 255, 0};
+  GLubyte frame1[16] = {255, 0, 0, 255, 255, 0, 0, 255,
+			0, 0, 255, 255, 255, 0, 0, 255};
+  GLubyte frame2[16] = {0, 255, 0, 255, 0, 255, 0, 255,
+			0, 255, 0, 255, 0, 255, 0, 255};
   if(before_loading_interface != NULL)
     before_loading_interface();
   target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint) * 2);
   glGenTextures(2, target -> _texture1);
   glBindTexture(GL_TEXTURE_2D, target -> _texture1[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
-               frame1);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA,
+	       GL_UNSIGNED_BYTE, frame1);
   glBindTexture(GL_TEXTURE_2D, target -> _texture1[1]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
-               frame2);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA,
+	       GL_UNSIGNED_BYTE, frame2);
   glBindTexture(GL_TEXTURE_2D, 0);
   target -> animate = true;
   target -> number_of_frames = 2;
@@ -232,17 +239,27 @@ void rendering_test(void){
 		   malloc, free, malloc, free, NULL, NULL,
 		   "animate", animated_loading_function,
 		   NULL);
-  int interface_width = window_width / 2, interface_height = window_height / 2;
+  int interface_width = window_width / 2,
+    interface_height = window_height / 2,
+    interface_x = window_width / 4,
+    interface_y = window_height / 4;
 #if defined(W_FORCE_LANDSCAPE)
   if(window_height > window_width){
-    interface_width = window_height / 2;
-    interface_height = window_width / 2;
+    //interface_width = window_height / 2;
+    //interface_height = window_width / 2;
+    interface_x = window_height / 4;
+    interface_y = window_width / 4;
   } 
 #endif
-  i = _Wnew_interface(".animate", NULL, window_width / 4, window_height / 4, 0.0,
+  i = _Wnew_interface(".animate", NULL, interface_x, interface_y, 0.0,
 		      interface_width, interface_height);
-  j = _Wnew_interface(NULL, NULL, window_width / 4, window_height / 4, 1.0,
+  j = _Wnew_interface(NULL, NULL, interface_x, interface_y, 1.0,
 		      100, 100);
+  //_Wrotate_interface(i, M_PI_2);
+  //_Wrotate_interface(j, M_PI_2);
+  //printf("i: (%f, %f | %f, %f) width: %d, height: %d\n", i -> x, i -> y,
+  //	 i -> _x, i -> _y, window_width, window_height);
+  //printf("j: (%f, %f | %f, %f)\n", j -> x, j -> y, j -> _x, j -> _y);
   j -> on_mouse_over = set_integer;
   j -> on_mouse_out = unset_integer;
   j -> on_mouse_left_down = width_up;
