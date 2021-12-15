@@ -1552,22 +1552,27 @@ $$ \left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
 $$
 
 Para formar a matriz de modelo-visualização nós iremos multiplicar
-essas três matrizes dependendo dos valores exator que precisamos
+matrizes como estas três, dependendo dos valores exator que precisamos
 ajustar o tamanho, posição e rotação de cada interface. Contudo, a
 ordem em que a multiplicação de matrizes ocorre faz diferença no
 resultado. A ordem correta na qual devemos fazer as operações é:
 
 1. Devemos centralizar o quadrado na origem do OpenGL. (Matriz A)
 
-2. Rotacionamos ela o ângulo necessário. (Matriz B)
+2. Aumentamos ou diminuimos o tamanho da interface de acordo com seu
+tamanho em pixels. (Matriz B)
 
-2. Aumentamos ou diminuimos o tamanho da interface. (Matriz C)
+3. Rotacionamos ela o ângulo necessário. (Matriz C)
 
-4. Fazemos a translação dela para a posição desejada, levando em conta
- medimos nossas coordenadas de modo diferente que o OpenGL. (Matrix D)
+4. Redimencionamos ela novamente, desta vez para estar de acordo com
+as proporções da nossa área de desenho. Isso muda as coordenadas de
+pixels para coordenadas OpenGL. (Matriz D)
+
+5. Fazemos a translação dela para a posição desejada de acordo com a
+coordenada OpenGL. (Matriz E)
 
 $$
-D(C(B(A v))) = (((DC)B)A)v
+E(D(C(B(A v)))) = ((((ED)C)B)A)v
 $$
 
 Se usarmos outra ordem, coisas podem dar errado. Por exemplo, ao invés
@@ -1577,31 +1582,57 @@ seu canto inferior direito ou alguma outra posição como eixo.
 Ao invés de toda vez termos que multiplicar toda vez essas quatro
 matrizes, podemos calcular agora qual vai ser o formato da matriz que
 resulta de toda essa multiplicação. Essa matriz será a matriz de
-modelo-visualização final. Por exemplo, multiplicar as matrizes $D$ e
-$C$ resulta em:
+modelo-visualização final. Por exemplo, se $w_w$ é a largura da tela e
+$h_w$ é a altura, multiplicar as matrizes $E$ e $D$ resulta em:
 
-$$ DC=\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
+$$ ED=\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{x \atop y}\atop{0\atop
-      1}}\right]\left[{{w
-      \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop 0}}{{0\atop
-      0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
-\left[{{w \atop 0}\atop {0\atop 0}}
-  {{0 \atop h}\atop {0 \atop 0}}
+      1}}\right]\left[{{2/w_w \atop 0}\atop {0\atop 0}}{{0 \atop
+      2/h_w}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop
+      0}\atop{0\atop 1}}\right]=
+\left[{{2/w_w \atop 0}\atop {0\atop 0}}
+  {{0 \atop 2/h_w}\atop {0 \atop 0}}
   {{0\atop 0}\atop{1 \atop 0}}
   {{x \atop y}\atop{0\atop 1}}\right]
 $$
 
-Agora se multiplicarmos este resultado pela matriz $B$, obtemos:
+Note que estamos usando $2/w_w$ e $2/h_w$ porque assumimos que a
+altura e largura de uma janela em OpenGL é sempre 2. Dessa forma, um
+objeto com largura igual a $w_w$ deve passar a ter largura 2 para
+ocupar a tela inteira. O mesmo ocorre com a altura.
 
-$$ DCB = \left[{{w \atop 0}\atop {0\atop 0}} {{0 \atop h}\atop
+Se multiplicarmos pela matriz C, obtemos:
+
+$$
+EDC = \left[{{2/w_w \atop 0}\atop {0\atop 0}} {{0 \atop 2/h_w}\atop
   {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop
   1}}\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
   0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}{{0\atop
-  0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right]=
-\left[{{w\cdot cos(\theta) \atop h\cdot sin(\theta)}\atop {0\atop 0}}
-  {{-w\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
-  {{0\atop 0}\atop{1 \atop 0}}
-  {{x \atop y}\atop{0\atop 1}}\right]
+  0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop 1}}\right] =
+\left[{{2/w_w\cdot cos(\theta) \atop 2/h_w\cdot sin(\theta)}
+\atop {0\atop 0}}
+  {{-2/w_w\cdot sin(\theta) \atop 2/h_w\cdot cos(\theta)}\atop
+  {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop
+  1}}\right]
+$$
+
+Agora se multiplicarmos este resultado pela matriz $B$, levando em
+conta que $h_p$ é a altura em pixels e $w_p$ é a largura em pixels,
+obtemos:
+
+$$ EDCB =
+\left[{{2/w_w\cdot cos(\theta) \atop 2/h_w\cdot sin(\theta)}
+\atop {0\atop 0}}
+  {{-2/w_w\cdot sin(\theta) \atop 2/h_w\cdot cos(\theta)}\atop
+  {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop
+  1}}\right]\left[{{w_p \atop 0}\atop {0\atop 0}}{{0 \atop h_p}\atop
+  {0 \atop 0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+  1}}\right]=
+\left[{{2w_p/w_w\cdot cos(\theta) \atop 2w_p/h_w\cdot sin(\theta)}
+\atop {0\atop 0}}
+  {{-2h_p/w_w\cdot sin(\theta) \atop 2h_p/h_w\cdot cos(\theta)}\atop
+  {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop
+  1}}\right]
 $$
 
 E finalmente, multiplicamos este resultado pela matriz $A$, que
@@ -1612,30 +1643,33 @@ uma matriz de translação com valores constantes deslocando 1/2 para a
 esquerda e 1/2 para baixo:
 
 $$
-\left[{{w\cdot cos(\theta) \atop h\cdot sin(\theta)}\atop {0\atop 0}}
-  {{-w\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
-  {{0\atop 0}\atop{1 \atop 0}}
-  {{x \atop y}\atop{0\atop 1}}\right]
+\left[{{2w_p/w_w\cdot cos(\theta) \atop 2w_p/h_w\cdot sin(\theta)}
+\atop {0\atop 0}}
+  {{-2h_p/w_w\cdot sin(\theta) \atop 2h_p/h_w\cdot cos(\theta)}\atop
+  {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x \atop y}\atop{0\atop
+  1}}\right]
 \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{-1/2 \atop -1/2}\atop{0\atop
       1}}\right]=
-\left[{{w\cdot cos(\theta) \atop h\cdot sin(\theta)}\atop {0\atop 0}}
-  {{-w\cdot sin(\theta) \atop h\cdot cos(\theta)}\atop {0 \atop 0}}
-  {{0\atop 0}\atop{1 \atop 0}} {{-w/2\cdot cos(\theta) + w/2\cdot
-  sin(\theta)+x \atop -h/2\cdot sin(\theta)-h/2\cdot
-  cos(\theta)+y}\atop{0\atop 1}}\right]
+
+\left[{{2w_p/w_w\cdot cos(\theta) \atop 2w_p/h_w\cdot sin(\theta)}
+\atop {0\atop 0}}
+  {{-2h_p/w_w\cdot sin(\theta) \atop 2h_p/h_w\cdot cos(\theta)}\atop
+  {0 \atop 0}} {{0\atop 0}\atop{1 \atop 0}} {{x+h_p/w_w\cdot
+  sin(\theta)-w_p/w_w\cdot cos(\theta) \atop y-w_p/h_w\cdot
+  sin(\theta)-h_p/h_w\cdot cos(\theta)}\atop{0\atop 1}}\right]
 $$
 
 O formato acima então é a forma final da matriz de modelo-visualização
 de toda interface que iremos armazenar.
 
-Entretanto, os valores $(x, y)$ e $(w, h)$ acima são valores nas
-coordenadas OpenGL. Mas nós medimos as coordenadas de forma
-difeente. Para nós a origem não é o centro da tela, mas o canto
-esquerdo inferior da tela. Par nós, a altura e largura da nossa área é
-o valor em píxels, e não sempre o mesmo valor constante de 2 como para
-o OpenGL. Então a função que irá preencher esta matriz precisa também
-realizar a conversão.
+Entretanto, os valores $(x, y)$ acima são valores nas coordenadas
+OpenGL. Mas nós medimos as coordenadas de forma difeente. Para nós a
+origem não é o centro da tela, mas o canto esquerdo inferior da
+tela. Para nós a posição na tela é medida também em píxels, e não
+sempre o mesmo tamanho constante de 2 como para o OpenGL. Então a
+função que irá preencher esta matriz precisa também realizar a
+conversão.
 
 No caso, se temos um ponteiro para uma interface
 chamado \monoespaco{i}, a conversão segue as seguintes regras:
@@ -1644,8 +1678,6 @@ chamado \monoespaco{i}, a conversão segue as seguintes regras:
 @<Conversão de Coordenadas e Tamanho@>=
 x = 2.0 * (i -> _x) / (*window_width) - 1.0;
 y = 2.0 * (i -> _y) / (*window_height) - 1.0;
-w = 2.0 * (i -> width) / (*window_width);
-h = 2.0 * (i -> height) / (*window_height);
 @
 \fimcodigo
 
@@ -1655,18 +1687,22 @@ modelo-visualização pela primeira vez:
 \iniciocodigo
 @<Funções Auxiliares Locais (interface.c)@>=
 static void initialize_model_view_matrix(struct user_interface *i){
-  GLfloat x, y, w, h;
+  GLfloat x, y;
   @<Conversão de Coordenadas e Tamanho@>
   GLfloat cos_theta = cos(i -> rotation);
   GLfloat sin_theta = sin(i -> rotation);
   /* Primeira Coluna */
-  i -> _transform_matrix[0] = w * cos_theta;
-  i -> _transform_matrix[1] = h * sin_theta;
+  i -> _transform_matrix[0] = (2 * i -> width / (*window_width)) *
+    cos_theta;
+  i -> _transform_matrix[1] = (2 * i -> width / (*window_height)) *
+    sin_theta;
   i -> _transform_matrix[2] = 0.0;
   i -> _transform_matrix[3] = 0.0;
   /* Segunda Coluna */
-  i -> _transform_matrix[4] = -w * sin_theta;
-  i -> _transform_matrix[5] = h * cos_theta;
+  i -> _transform_matrix[4] = -(2 * i -> height / (*window_width)) *
+     sin_theta;
+  i -> _transform_matrix[5] = (2 * i -> height / (*window_height)) *
+    cos_theta;
   i -> _transform_matrix[6] = 0.0;
   i -> _transform_matrix[7] = 0.0;
   /* Terceira Coluna */
@@ -1675,8 +1711,12 @@ static void initialize_model_view_matrix(struct user_interface *i){
   i -> _transform_matrix[10] = 1.0;
   i -> _transform_matrix[11] = 0.0;
   /* Quarta Coluna */
-  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
-  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[12] = x +
+    (i -> height / (*window_width)) * sin_theta -
+    (i -> width / (*window_width)) * cos_theta;
+  i -> _transform_matrix[13] = y -
+    (i -> width / (*window_height)) * sin_theta -
+    (i -> height / (*window_height)) * cos_theta;
   i -> _transform_matrix[14] = 0.0;
   i -> _transform_matrix[15] = 1.0;
 }
@@ -2404,7 +2444,7 @@ A função que move interfaces em nossa API
 @<Definição de Funções da API (interface.c)@>+=
 void _Wmove_interface(struct user_interface *i,
                       float new_x, float new_y, float new_z){
-  GLfloat x, y, w, h;
+  GLfloat x, y;
   GLfloat cos_theta = cos(i -> rotation);
   GLfloat sin_theta = sin(i -> rotation);
   MUTEX_WAIT(&(i -> mutex));
@@ -2417,8 +2457,12 @@ void _Wmove_interface(struct user_interface *i,
   }
 #endif
   @<Conversão de Coordenadas e Tamanho@>
-  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
-  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[12] = x +
+    (i -> height / (*window_width)) * sin_theta -
+    (i -> width / (*window_width)) * cos_theta;
+  i -> _transform_matrix[13] = y -
+    (i -> width / (*window_height)) * sin_theta -
+    (i -> height / (*window_height)) * cos_theta;
   if(new_z != i -> z){ // Atualizando lista ordenada de interfaces
     int j;
     i -> z = new_z;
@@ -2453,18 +2497,26 @@ modelo-visualização. O código para isso segue abaixo:
 \iniciocodigo
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation){
-  GLfloat x, y, w, h;
+  GLfloat x, y;
   GLfloat cos_theta = cos(rotation);
   GLfloat sin_theta = sin(rotation);
   MUTEX_WAIT(&(i -> mutex));
   i -> rotation = rotation;
   @<Conversão de Coordenadas e Tamanho@>
-  i -> _transform_matrix[0] = w * cos_theta;
-  i -> _transform_matrix[1] = h * sin_theta;
-  i -> _transform_matrix[4] = -w * sin_theta;
-  i -> _transform_matrix[5] = h * cos_theta;
-  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
-  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[0] = (2 * i -> width / (*window_width)) *
+    cos_theta;
+  i -> _transform_matrix[1] = (2 * i -> width / (*window_height)) *
+    sin_theta;
+  i -> _transform_matrix[4] = -(2 * i -> height / (*window_width)) *
+     sin_theta;
+  i -> _transform_matrix[5] = (2 * i -> height / (*window_height)) *
+    cos_theta;
+  i -> _transform_matrix[12] = x +
+    (i -> height / (*window_width)) * sin_theta -
+    (i -> width / (*window_width)) * cos_theta;
+  i -> _transform_matrix[13] = y -
+    (i -> width / (*window_height)) * sin_theta -
+    (i -> height / (*window_height)) * cos_theta;
   MUTEX_SIGNAL(&(i -> mutex));
 }
 @
@@ -2485,19 +2537,27 @@ A função que redimenciona interfaces é:
 @<Definição de Funções da API (interface.c)@>+=
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height){
-  GLfloat x, y, w, h;
+  GLfloat x, y;
   GLfloat cos_theta = cos(i -> rotation);
   GLfloat sin_theta = sin(i -> rotation);
   MUTEX_WAIT(&(i -> mutex));
   i -> width = new_width;
   i -> height = new_height;
   @<Conversão de Coordenadas e Tamanho@>
-  i -> _transform_matrix[0] = w * cos_theta;
-  i -> _transform_matrix[1] = h * sin_theta;
-  i -> _transform_matrix[4] = -w * sin_theta;
-  i -> _transform_matrix[5] = h * cos_theta;
-  i -> _transform_matrix[12] = -w/2 * cos_theta + w/2 * sin_theta + x;
-  i -> _transform_matrix[13] = -h/2 * sin_theta - h/2 * cos_theta + y;
+  i -> _transform_matrix[0] = (2 * i -> width / (*window_width)) *
+    cos_theta;
+  i -> _transform_matrix[1] = (2 * i -> width / (*window_height)) *
+    sin_theta;
+  i -> _transform_matrix[4] = -(2 * i -> height / (*window_width)) *
+     sin_theta;
+  i -> _transform_matrix[5] = (2 * i -> height / (*window_height)) *
+    cos_theta;
+  i -> _transform_matrix[12] = x +
+    (i -> height / (*window_width)) * sin_theta -
+    (i -> width / (*window_width)) * cos_theta;
+  i -> _transform_matrix[13] = y -
+    (i -> width / (*window_height)) * sin_theta -
+    (i -> height / (*window_height)) * cos_theta;
   MUTEX_SIGNAL(&(i -> mutex));
 }
 @

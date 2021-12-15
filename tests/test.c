@@ -247,8 +247,8 @@ void rendering_test(void){
   if(window_height > window_width){
     //interface_width = window_height / 2;
     //interface_height = window_width / 2;
-    interface_x = window_height / 4;
-    interface_y = window_width / 4;
+    //interface_x = window_height / 3;
+    //interface_y = window_width / 4;
   } 
 #endif
   i = _Wnew_interface(".animate", NULL, interface_x, interface_y, 0.0,
@@ -257,6 +257,8 @@ void rendering_test(void){
 		      100, 100);
   //_Wrotate_interface(i, M_PI_2);
   //_Wrotate_interface(j, M_PI_2);
+  printf("i: (%f x %f)\n", i -> width, i -> height);
+  printf("window: (%d x %d)\n", window_width, window_height);
   //printf("i: (%f, %f | %f, %f) width: %d, height: %d\n", i -> x, i -> y,
   //	 i -> _x, i -> _y, window_width, window_height);
   //printf("j: (%f, %f | %f, %f)\n", j -> x, j -> y, j -> _x, j -> _y);
@@ -298,6 +300,7 @@ void rendering_test(void){
       }
       if(j -> integer == 0)
 	_Wrotate_interface(j, j -> rotation + 0.1);
+      _Wrotate_interface(i, i -> rotation + 0.01);
       _Wrender_interface((unsigned long long) elapsed);
       if(i -> current_frame != (elapsed / 1000000) % 2)
 	testing = false;
