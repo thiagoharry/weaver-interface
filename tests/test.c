@@ -254,8 +254,6 @@ void rendering_test(void){
 		      interface_width, interface_height);
   j = _Wnew_interface(NULL, NULL, interface_x, interface_y, 1.0,
 		      100, 100);
-  printf("i: (%f x %f)\n", i -> width, i -> height);
-  printf("window: (%d x %d)\n", window_width, window_height);
   j -> on_mouse_over = set_integer;
   j -> on_mouse_out = unset_integer;
   j -> on_mouse_left_down = width_up;
