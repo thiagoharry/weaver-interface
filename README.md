@@ -362,10 +362,11 @@ in pixels.
   void _Wrender_interface(unsigned long long time);
 ```
 
-This renders all active interfaces. You should pass as parameter the
-time in microseconds. The time parameter is important because this is
-used by animated interfaces to determine when they should change and
-update their frames.
+This renders all active interfaces. You should pass as parameter a
+positive number representing the absolute time in microseconds. The
+time parameter is important because this is used by animated
+interfaces to determine when they should change and update their
+frames.
 
 Not all interfaces are active. Only interfaces created after the last
 history marking are active. See the next function

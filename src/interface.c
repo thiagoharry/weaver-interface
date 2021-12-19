@@ -909,7 +909,7 @@ if(z_list[i]->animate&&z_list[i]->number_of_frames> 1&&
 z_list[i]->max_repetition!=0){
 z_list[i]->_t+= elapsed_time;
 z_list[i]->current_frame%= z_list[i]->number_of_frames;
-while(z_list[i]->_t> 
+while(z_list[i]->_t>=
 z_list[i]->frame_duration[z_list[i]->current_frame]){
 z_list[i]->_t-= 
 z_list[i]->frame_duration[z_list[i]->current_frame];

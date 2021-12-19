@@ -272,10 +272,11 @@ void rendering_test(void){
     gettimeofday(&initial_time, NULL);
 #endif
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    elapsed = 0;
+    elapsed = 1;
     while(elapsed < 3000000){
       _Wget_window_input(elapsed);
-      _Winteract_interface(_Wmouse.x, _Wmouse.y, _Wmouse.button[W_MOUSE_LEFT],
+      _Winteract_interface(_Wmouse.x, _Wmouse.y,
+			   _Wmouse.button[W_MOUSE_LEFT],
 			   _Wmouse.button[W_MOUSE_MIDDLE],
 			   _Wmouse.button[W_MOUSE_RIGHT]);
       glClear(GL_COLOR_BUFFER_BIT);
@@ -290,7 +291,7 @@ void rendering_test(void){
       if(j -> integer == 0)
 	_Wrotate_interface(j, j -> rotation + 0.1);
       _Wrender_interface((unsigned long long) elapsed);
-      if(i -> current_frame != (elapsed / 1000000) % 2)
+      if(i -> current_frame != ((elapsed-1) / 1000000) % 2)
 	testing = false;
 #if defined(_WIN32)
       QueryPerformanceCounter(&current_time);
@@ -309,6 +310,7 @@ void rendering_test(void){
   assert("Testing rendering of animated interface", testing);
   _Wfinish_interface(); 
 }
+
 
 int main(int argc, char **argv){
   _Wcreate_window();
