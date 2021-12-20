@@ -2218,7 +2218,7 @@ our ordered list. The code that perform this can be seen below:
 @<Generating Ordered List of interfaces@>=
 if(z_list_size != last_marking -> number_of_interfaces){
   void *p;
-  int i, j;
+  unsigned i, j;
   MUTEX_WAIT(&z_list_mutex);
   // Realocando
   if(z_list != NULL && permanent_free != NULL)
@@ -2318,7 +2318,7 @@ The implementation for the procedure described above is:
 void _Wrender_interface(unsigned long long time){
   @<Generating Ordered List of interfaces@>
   {
-    int i, elapsed_time;
+    unsigned i, elapsed_time;
     if(previous_time != 0)
       elapsed_time = (int) (time - previous_time);
     else
@@ -2424,7 +2424,7 @@ void _Wmove_interface(struct user_interface *i,
     (i -> width / (*window_height)) * sin_theta -
     (i -> height / (*window_height)) * cos_theta;
   if(new_z != i -> z){ // Atualizando lista ordenada de interfaces
-    int j;
+    unsigned j;
     i -> z = new_z;
     MUTEX_WAIT(&z_list_mutex);
     for(j = 0; j < z_list_size; j ++){

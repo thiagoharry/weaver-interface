@@ -834,7 +834,7 @@ void _Wrender_interface(unsigned long long time){
 
 if(z_list_size!=last_marking->number_of_interfaces){
 void*p;
-int i,j;
+unsigned i,j;
 MUTEX_WAIT(&z_list_mutex);
 
 if(z_list!=NULL&&permanent_free!=NULL)
@@ -867,7 +867,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 #line 2354 "weaver-interface.tex"
 
 {
-int i,elapsed_time;
+unsigned i,elapsed_time;
 if(previous_time!=0)
 elapsed_time= (int)(time-previous_time);
 else
@@ -962,7 +962,7 @@ i->_transform_matrix[13]= y-
 (i->width/(*window_height))*sin_theta-
 (i->height/(*window_height))*cos_theta;
 if(new_z!=i->z){
-int j;
+unsigned j;
 i->z= new_z;
 MUTEX_WAIT(&z_list_mutex);
 for(j= 0;j<z_list_size;j++){
