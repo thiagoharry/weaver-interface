@@ -16,6 +16,8 @@
 
 
 static int window_width, window_height;
+static struct _Wkeyboard keyboard;
+static struct _Wmouse mouse;
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
@@ -274,11 +276,11 @@ void rendering_test(void){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     elapsed = 1;
     while(elapsed < 3000000){
-      _Wget_window_input(elapsed);
-      _Winteract_interface(_Wmouse.x, _Wmouse.y,
-			   _Wmouse.button[W_MOUSE_LEFT],
-			   _Wmouse.button[W_MOUSE_MIDDLE],
-			   _Wmouse.button[W_MOUSE_RIGHT]);
+      _Wget_window_input(elapsed, &keyboard, &mouse);
+      _Winteract_interface(mouse.x, mouse.y,
+			   mouse.button[W_MOUSE_LEFT],
+			   mouse.button[W_MOUSE_MIDDLE],
+			   mouse.button[W_MOUSE_RIGHT]);
       glClear(GL_COLOR_BUFFER_BIT);
       if((elapsed / 1000000) % 2){
 	_Wmove_interface(j, j -> x + 1.0, j -> y + 1.0, j -> z);
@@ -313,7 +315,7 @@ void rendering_test(void){
 
 
 int main(int argc, char **argv){
-  _Wcreate_window();
+  _Wcreate_window(&keyboard, &mouse);
   _Wget_window_size(&window_width, &window_height);
   test_custom_functions();
   test_structure_history();
