@@ -282,7 +282,8 @@ could begin changing the following model taken from the default shader:
 
 ```
 /* LIST OF PREDEFINED VARIABLES: */
-/* attribute vec3 vertex_position; 
+/* attribute vec3 vertex_position;
+   attribute vec2 vertex_texture_coordinate;
    uniform vec4 foreground_color, background_color;
    uniform mat4 model_view_matrix;
    uniform float time; // In seconds, modulus 1 hour
@@ -296,7 +297,7 @@ could begin changing the following model taken from the default shader:
  #if defined(VERTEX_SHADER)
  void main(){
    gl_Position = model_view_matrix * vec4(vertex_position, 1.0);
-   texture_coordinate = vec2(vertex_position.x, vertex_position.y);
+   texture_coordinate = vertex_texture_coordinate;
  }
  #endif
  #if defined(FRAGMENT_SHADER)
