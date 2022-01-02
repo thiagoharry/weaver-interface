@@ -253,11 +253,11 @@ static struct user_interface**z_list= NULL;
 static unsigned z_list_size= 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 /*:77*//*82:*/
-#line 2316 "weaver-interface.tex"
+#line 2318 "weaver-interface.tex"
 
 static unsigned long long previous_time= 0;
 /*:82*//*88:*/
-#line 2580 "weaver-interface.tex"
+#line 2582 "weaver-interface.tex"
 
 static bool mouse_last_left_click= false,mouse_last_middle_click= false,
 mouse_last_right_click= false;
@@ -582,11 +582,11 @@ MUTEX_INIT(&z_list_mutex);
 z_list_size= 0;
 z_list= NULL;
 /*:78*//*83:*/
-#line 2326 "weaver-interface.tex"
+#line 2328 "weaver-interface.tex"
 
 previous_time= 0;
 /*:83*//*89:*/
-#line 2590 "weaver-interface.tex"
+#line 2592 "weaver-interface.tex"
 
 mouse_last_left_click= false;
 mouse_last_middle_click= false;
@@ -826,7 +826,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 MUTEX_SIGNAL(&linked_list_mutex);
 }
 /*:76*//*84:*/
-#line 2352 "weaver-interface.tex"
+#line 2354 "weaver-interface.tex"
 
 void _Wrender_interface(unsigned long long time){
 /*81:*/
@@ -847,8 +847,10 @@ p= last_marking->next;
 for(i= 0;i<z_list_size;i++){
 if(((struct user_interface*)p)->type==TYPE_INTERFACE)
 z_list[i]= (struct user_interface*)p;
-else
+else if(((struct user_interface*)p)->type==TYPE_LINK)
 z_list[i]= ((struct link*)p)->linked_interface;
+else if(((struct user_interface*)p)->type==TYPE_SHADER)
+i--;
 p= ((struct user_interface*)p)->next;
 }
 
@@ -864,7 +866,7 @@ j= j-1;
 MUTEX_SIGNAL(&z_list_mutex);
 }
 /*:81*/
-#line 2354 "weaver-interface.tex"
+#line 2356 "weaver-interface.tex"
 
 {
 unsigned i,elapsed_time;
@@ -931,7 +933,7 @@ glBindTexture(GL_TEXTURE_2D,0);
 previous_time= time;
 }
 /*:84*//*85:*/
-#line 2439 "weaver-interface.tex"
+#line 2441 "weaver-interface.tex"
 
 void _Wmove_interface(struct user_interface*i,
 float new_x,float new_y,float new_z){
@@ -953,7 +955,7 @@ i->_y= new_x;
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:60*/
-#line 2454 "weaver-interface.tex"
+#line 2456 "weaver-interface.tex"
 
 i->_transform_matrix[12]= x+
 (i->height/(*window_width))*sin_theta-
@@ -984,7 +986,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:85*//*86:*/
-#line 2493 "weaver-interface.tex"
+#line 2495 "weaver-interface.tex"
 
 void _Wrotate_interface(struct user_interface*i,float rotation){
 GLfloat x,y;
@@ -1002,7 +1004,7 @@ i->_rotation+= M_PI_2;
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:60*/
-#line 2504 "weaver-interface.tex"
+#line 2506 "weaver-interface.tex"
 
 i->_transform_matrix[0]= (2*i->width/(*window_width))*
 cos_theta;
@@ -1021,7 +1023,7 @@ i->_transform_matrix[13]= y-
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:86*//*87:*/
-#line 2536 "weaver-interface.tex"
+#line 2538 "weaver-interface.tex"
 
 void _Wresize_interface(struct user_interface*i,
 float new_width,float new_height){
@@ -1037,7 +1039,7 @@ i->height= new_height;
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:60*/
-#line 2545 "weaver-interface.tex"
+#line 2547 "weaver-interface.tex"
 
 i->_transform_matrix[0]= (2*i->width/(*window_width))*
 cos_theta;
@@ -1056,7 +1058,7 @@ i->_transform_matrix[13]= y-
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:87*//*90:*/
-#line 2624 "weaver-interface.tex"
+#line 2626 "weaver-interface.tex"
 
 void _Winteract_interface(int mouse_x,int mouse_y,bool left_click,
 bool middle_click,bool right_click){
@@ -1066,7 +1068,7 @@ MUTEX_WAIT(&z_list_mutex);
 for(i= z_list_size-1;i>=0;i--){
 float x,y;
 /*91:*/
-#line 2703 "weaver-interface.tex"
+#line 2705 "weaver-interface.tex"
 
 if(z_list[i]->rotation==0.0){
 x= mouse_x;
@@ -1083,7 +1085,7 @@ x+= z_list[i]->x;
 y+= z_list[i]->y;
 }
 /*:91*/
-#line 2632 "weaver-interface.tex"
+#line 2634 "weaver-interface.tex"
 
 z_list[i]->mouse_x= x-z_list[i]->x+(z_list[i]->width/2);
 z_list[i]->mouse_y= y-z_list[i]->y+(z_list[i]->height/2);

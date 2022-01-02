@@ -2231,8 +2231,10 @@ if(z_list_size != last_marking -> number_of_interfaces){
   for(i = 0; i < z_list_size; i ++){
     if(((struct user_interface *) p) -> type == TYPE_INTERFACE)
       z_list[i] = (struct user_interface *) p;
-    else
+    else if(((struct user_interface *) p) -> type == TYPE_LINK)
       z_list[i] = ((struct link *) p) -> linked_interface;
+    else if(((struct user_interface *) p) -> type == TYPE_SHADER)
+      i --; // Not an interface
     p = ((struct user_interface *) p) -> next;
   }
   // Ordenando lista (insertion sort):
