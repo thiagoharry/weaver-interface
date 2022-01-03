@@ -1121,6 +1121,19 @@ shader_library = "";
 @
 \fimcodigo
 
+A lista de variáveis e atributos à disposição de nosso shader será
+definida mais adiante. Mas ela também precisa fazer parte do
+código-fonte do shader:
+
+\iniciocodigo
+@<Variáveis Locais (interface.c)@>+=
+static const char shader_variables[] = ""
+@<Atributos, Uniformes e Variantes de Shader@>
+"";
+@
+\fimcodigo
+
+
 Agora vejamos como compilar um shader completo por meio
 disso. Primeiro vamos inserir o cabeçalho de entrada e saída padrão
 para podermos imprimir mensagens de erro na tela. Os cabeçalhos OpenGL
@@ -1143,17 +1156,18 @@ em um único programa.
 @<Funções para Checar Erros de Compilação@>
 static GLuint compile_shader(const char *source_code){
   GLuint vertex_shader, fragment_shader, program;
-  const char *list_of_source_code[5];
+  const char *list_of_source_code[6];
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   list_of_source_code[0] = W_GLSL_VERSION;
   list_of_source_code[1] = vertex_shader_macro;
   list_of_source_code[2] = precision_qualifier;
   list_of_source_code[3] = shader_library;
-  list_of_source_code[4] = source_code;
-  glShaderSource(vertex_shader, 5, list_of_source_code, NULL);
+  list_of_source_code[4] = shader_variables;
+  list_of_source_code[5] = source_code;
+  glShaderSource(vertex_shader, 6, list_of_source_code, NULL);
   list_of_source_code[1] = fragment_shader_macro;
-  glShaderSource(fragment_shader, 5, list_of_source_code, NULL);
+  glShaderSource(fragment_shader, 6, list_of_source_code, NULL);
   glCompileShader(vertex_shader);
   if(check_compiling_error(vertex_shader))
     return 0;
@@ -1257,7 +1271,6 @@ O código-fonte do shader padrão será armazendado em uma constante:
 \iniciocodigo
 @<Variáveis Locais (interface.c)@>+=
 static const char default_shader_source[] = ""
-@<Atributos, Uniformes e Variantes de Shader@>
 "#if defined(VERTEX_SHADER)\n"
 @<Shader de Vértice Padrão@>
 "#else\n"

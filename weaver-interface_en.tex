@@ -1083,6 +1083,18 @@ shader_library = "";
 @
 \fimcodigo
 
+The list of default variables and attributes passed to the shader also
+must be part of the source code. We will define them later, but for
+now we show that they will be in this variable:
+
+\iniciocodigo
+@<Local Variables (interface.c)@>+=
+static const char shader_variables[] = ""
+@<Shader Attributes, Uniforms and Varyings@>
+"";
+@
+\fimcodigo
+
 Now we will see how to compile a shader given these informations and a
 string with its source code. First we will include the standard
 input/output library to print in the screen error messages if there
@@ -1115,17 +1127,18 @@ single program.
 @<Functions to Check Compiling Errors@>
 static GLuint compile_shader(const char *source_code){
   GLuint vertex_shader, fragment_shader, program;
-  const char *list_of_source_code[5];
+  const char *list_of_source_code[6];
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   list_of_source_code[0] = W_GLSL_VERSION;
   list_of_source_code[1] = vertex_shader_macro;
   list_of_source_code[2] = precision_qualifier;
   list_of_source_code[3] = shader_library;
-  list_of_source_code[4] = source_code;
-  glShaderSource(vertex_shader, 5, list_of_source_code, NULL);
+  list_of_source_code[4] = shader_variables;
+  list_of_source_code[5] = source_code;
+  glShaderSource(vertex_shader, 6, list_of_source_code, NULL);
   list_of_source_code[1] = fragment_shader_macro;
-  glShaderSource(fragment_shader, 5, list_of_source_code, NULL);
+  glShaderSource(fragment_shader, 6, list_of_source_code, NULL);
   glCompileShader(vertex_shader);
   if(check_compiling_error(vertex_shader))
     return 0;
@@ -1229,7 +1242,6 @@ constant:
 \iniciocodigo
 @<Local Variables (interface.c)@>+=
 static const char default_shader_source[] = ""
-@<Shader Attributes, Uniforms and Varyings@>
 "#if defined(VERTEX_SHADER)\n"
 @<Default Vertex Shader@>
 "#else\n"
