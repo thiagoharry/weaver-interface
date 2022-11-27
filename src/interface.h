@@ -23,7 +23,7 @@ extern"C"{
 
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h> 
-#include <GLES2/gl2.h> 
+#include <GLES3/gl3.h> 
 #endif
 #if defined(_WIN32)
 #pragma comment(lib, "Opengl32.lib")
