@@ -589,6 +589,8 @@ minus\dimen0\relax\fi}}
 
 \def\chomp&#1{\relax}
 \gdef\<#1@>#2{%
+  \lineskip=0pt\parskip=0pt%
+
   \linha\espaco{1mm}\noindent\negrito{Section: #1%
   \if#2+
     (continuação)%
@@ -2954,6 +2956,7 @@ minus\dimen0\relax\fi}}
   @if@comentario& 1@special{color pop}@gdef@comentario&{0}@fi%
   @if@macro& 1@special{color pop}@gdef@macro&{0}@fi%
   @gdef@<##1@>##2{%
+  @lineskip=0pt@parskip=0pt%
   @linha@espaco{1mm}@noindent@negrito{Section: ##1%
   @if##2+
     (continuation)%

@@ -17,8 +17,6 @@
 \def\negrito#1{{\twelvebold#1}}
 \def\italico#1{{\twelveit#1}}
 \def\monoespaco#1{{\monodoze#1}}
-\def\iniciocodigo{\lineskip=0pt\parskip=0pt}
-\def\fimcodigo{\twelve\parskip=0pt plus 1pt\lineskip=1pt}
 
 \long\def\abstract#1{\parshape 10 0.8cm 13.4cm 0.8cm 13.4cm
 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
@@ -100,13 +98,11 @@ deste mundo, que de outra forma seriam difíceis de serem expressadas.
 O nosso objetivo aqui será criar uma API onde o usuário pode criar uma
 nova interface de usuário invocando a função:
 
-\iniciocodigo
 @<Declaração de Função (interface.h)@>=
 struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                                       float x, float y, float z, float width,
                                       float height);
 @
-\fimcodigo
 
 Onde o primeiro argumento é o nome de um arquivo que será aberto e
 interpretado descrevendo a textura da interface (pode ser um arquivo
@@ -122,19 +118,15 @@ própria biblioteca com definições de funções para o código GLSL. Para
 isso, podemos passar uma string com código de funções para a função
 abaixo:
 
-\iniciocodigo
 @<Declaração de Função (interface.h)@>+=
 void _Wset_interface_shader_library(char *source);
 @
-\fimcodigo
 
 Uma vez que tenhamos uma interface, poderemos movê-la com a função:
 
-\iniciocodigo
 @<Declaração de Função (interface.h)@>+=
 void _Wmove_interface(struct user_interface *i, float x, float y, float z);
 @
-\fimcodigo
 
 Assumimos que a posição de uma interface é a coordenada em pixels de
 seu centro. O eixo $x$ e $y$ representa a posição horizontal e
@@ -143,32 +135,26 @@ se estiverem ocupando as mesmas posições no espaço.
 
 Podemos também rotacioná-la com a função:
 
-\iniciocodigo
 @<Declaração de Função (interface.h)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation);
 @
-\fimcodigo
 
 A função acima recebe o quanto a imagem será rotacionada em relação à
 orientação padrão usando radianos como medida.
 
 Podemos redimencionar a interface com a função abaixo:
 
-\iniciocodigo
 @<Declaração de Função (interface.h)@>+=
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height);
 @
-\fimcodigo
 
 A função abaixo renderiza na tela todas as interfaces disponíveis, sem
 precisarmos manualmente indicá-las:
 
-\iniciocodigo
 @<Declaração de Função (interface.h)@>+=
 void _Wrender_interface(unsigned long long time);
 @
-\fimcodigo
 
 O parâmetro de tempo passado é para que a função tenha noção de quanto
 tempo em microsegundos se passaram. Isso é útil para renderizar
@@ -181,33 +167,33 @@ função abaixo cria uma marcação no nosso histórico de criação de
 interfaces. E toda vez que pedimos para renderizar, somente as
 interfaces criadas depois da marcação serão rendrizadas:
 
-\iniciocodigo
+
 @<Declaração de Função (interface.h)@>+=
 void _Wmark_history_interface(void);
 @
-\fimcodigo
+
 
 Mas e se queremos renderizar somente algumas das interfaces criadas
 antes da marcação? Neste caso, podemos simplismente criar uma nova
 interface que na verdade é uma ligação para uma anterior:
 
-\iniciocodigo
+
 @<Declaração de Função (interface.h)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i);
 @
-\fimcodigo
+
 
 Já para interagir com todas as interfaces criadas no passado até a
 última marcação, usamos a função abaixo. Ela irá executar as ações
 programadas quando um usuário passa o mouse sobre uma interface,
 retira o mouse sobre uma interface ou clica nela:
 
-\iniciocodigo
+
 @<Declaração de Função (interface.h)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click);
 @
-\fimcodigo
+
 
 
 Mas como apagar iterfaces uma vez que não precisamos mais delas? Para
@@ -218,11 +204,11 @@ como eraimediatamente antes de tal marcação ser criada. As interfaces
 qu existirem antes de tal marcação, se existirem, serão novamente
 renderizadas.
 
-\iniciocodigo
+
 @<Declaração de Função (interface.h)@>+=
 void _Wrestore_history_interface(void);
 @
-\fimcodigo
+
 
 Tudo isso vai requerer que gerenciemos nosso histórico de interfaces,
 suas marcações e seus shaders. E isso vai requerer que aloquemos e
@@ -231,14 +217,14 @@ coisas permanentes que ficarão alocadas por possivelmente um bom tempo
 e coisas temporárias que serão rapidamente desalocadas. Vamos então
 armazenar a função de alocação e desalocação para estes dois casos:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>=
 static void *(*permanent_alloc)(size_t) = malloc;
 static void *(*temporary_alloc)(size_t) = malloc;
 static void (*permanent_free)(void *) = free;
 static void (*temporary_free)(void *) = free;
 @
-\fimcodigo
+
 
 Por padrão, usaremos simplesmente a função de alocação e desalocação
 da biblioteca padrão. Mas o usuário pode personalizar cada uma destas
@@ -247,17 +233,17 @@ que serão executadas imediatamente antes e depois que formos carregar
 uma nova interface. Inicialmente tais funções serão nulas, mas elas
 podem ser depois ajustadas pelo usuário:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>=
 static void (*before_loading_interface)(void) = NULL;
 static void (*after_loading_interface)(void) = NULL;
 @
-\fimcodigo
+
 
 A ideia é que todas as funções persnalizáveis serão definidas durante
 a inicialização da nossa API:
 
-\iniciocodigo
+
 @<Declaração de Função (interface.h)@>+=
 #include <stdlib.h> // Define tipo 'size_t'
 void _Winit_interface(int *window_width, int *window_height,
@@ -269,7 +255,7 @@ void _Winit_interface(int *window_width, int *window_height,
                       void (*after_loading_interface)(void),
                       ...);
 @
-\fimcodigo
+
 
 
 É possível inicializar as funções de desalocação como
@@ -283,11 +269,11 @@ argumentos. Primeiro dois ponteiros indicando onde podemos consultar
 de forma atualizada a largura e altura de nossa janela. Eles serão
 armazenados aqui:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>=
 static int *window_width = NULL, *window_height = NULL;
 @
-\fimcodigo
+
 
 Depois, as seis funções personalizáveis vistas acima. Depois delas, os
 argumentos adicionais serão uma lista terminada em NULL de uma string
@@ -295,14 +281,14 @@ seguida de uma função geradora de interfaces. A string representa uma
 extensão (por exemplo ``gif'', ``jpg'' ou outras) e a função que a
 sucede é representada pela seguinte definição de tipo:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 typedef void pointer_to_interface_function(void *(*)(size_t), void (*)(void *),
                                           void *(*)(size_t), void (*)(void *),
                                           void (*)(void), void (*)(void),
                                           char *, struct user_interface *);
 @
-\fimcodigo
+
 
 Ela recebe como argumento as funções de alocação e desalocação, um
 nome de arquivo e um ponteiro para a interface que deve ser atualizada
@@ -315,11 +301,11 @@ de arquivos de diferentes formatos.
 Como apresentamos uma função de inicialização, vamos precisar também
 da função de finalização:
 
-\iniciocodigo
+
 @<Declaração de Função (interface.h)@>+=
 void _Wfinish_interface(void);
 @
-\fimcodigo
+
 
 E isso termina a nossa descrição de todas as funções que
 suportaremos.
@@ -360,7 +346,7 @@ dentro de um arquivo chamado \monoespaco{interface.h}.
 Podemos apresentar aqui a estrutura do arquivo
 \monoespaco{interface.h}:
 
-\iniciocodigo
+
 @(src/interface.h@>=
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
@@ -380,7 +366,7 @@ extern "C" {
 #endif
 #endif
 @
-\fimcodigo
+
 
 O código acima mostra a burocracia padrão para definir um cabeçalho
 para nossa API em C. As duas primeiras linhas mais a última são macros
@@ -402,7 +388,7 @@ ainda iremos definir nas seções seguintes.
 Caso queira observar o que irá no arquivo \monoespaco{interface.c}
 associado a este cabeçaho, o código será este:
 
-\iniciocodigo
+
 @(src/interface.c@>=
 #include "interface.h"
 @<Cabeçalhos Locais (interface.c)@>
@@ -412,7 +398,7 @@ associado a este cabeçaho, o código será este:
 @<Funções Auxiliares Locais (interface.c)@>
 @<Definição de Funções da API (interface.c)@>
 @
-\fimcodigo
+
 
 Todo o código que definiremos e explicaremos a seguir será posicionado
 nestes dois arquivos. Além deles, nenhum outro arquivo será criado.
@@ -435,7 +421,7 @@ No Linux e BSD, o Mutex é definido pela biblioteca
 Mutex é chamado de ``seção critica''. No Web Assembly não usaremos
 Mutex, pois o cóigo não usará múltiplas threads.
 
-\iniciocodigo
+
 @<Macros Gerais (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
@@ -448,13 +434,13 @@ Mutex, pois o cóigo não usará múltiplas threads.
 #define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
 @
-\fimcodigo
+
 
 Isso significa que no Linux e BSD nós precisamos inserir o cabeçalho
 da biblioteca \monoespaco{pthread}. No Windows, basta inserir o
 cabeçalho padrão do windows.
 
-\iniciocodigo
+
 @<Inclui Cabeçalhos Gerais (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h>
@@ -462,12 +448,12 @@ cabeçalho padrão do windows.
 #include <windows.h>
 #endif
 @
-\fimcodigo
+
 
 No nosso código vamos precisar inicializar cada Mutex que
 declararmos. Para isso, usaremos a seguinte macro:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
@@ -477,12 +463,12 @@ declararmos. Para isso, usaremos a seguinte macro:
 #define MUTEX_INIT(mutex)
 #endif
 @
-\fimcodigo
+
 
 Para finalizar um Mutex quando não precisarmos mais, usamos a seguinte
 macro:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
@@ -492,14 +478,14 @@ macro:
 #define MUTEX_DESTROY(mutex)
 #endif
 @
-\fimcodigo
+
 
 Tendo um Mutex, há duas operações que podemos fazer com ele. A
 primeira é requerer o uso do Mutex. Neste momento, se algum outro
 processo está usando ele, iremos esperar até que o Mutex esteja livre
 novamente:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
@@ -509,12 +495,12 @@ novamente:
 #define MUTEX_WAIT(mutex)
 #endif
 @
-\fimcodigo
+
 
 E finalmente, depois de deixarmos de usar o recurso guardado pelo
 Mutex, podemos liberar ele com o código abaixo:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
@@ -524,7 +510,7 @@ Mutex, podemos liberar ele com o código abaixo:
 #define MUTEX_SIGNAL(mutex)
 #endif
 @
-\fimcodigo
+
 
 \secao{2. Estruturas de Dados}
 
@@ -551,7 +537,7 @@ ajustá-las.
 
 Um shader então terá a seguinte forma:
 
-\iniciocodigo
+
 @<Estrutura de Dados Locais (interface.c)@>=
 struct shader {
   int type;
@@ -568,12 +554,12 @@ struct shader {
   GLint uniform_texture1; // A textura do objeto a ser renderizado
 };
 @
-\fimcodigo
+
 
 Como usamos declarações do OpenGL, como \monoespaco{GLuint}, vamos
 inserir o cabeçalho OpenGL:
 
-\iniciocodigo
+
 @<Inclui Cabeçalhos Gerais (interface.h)@>+=
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h>
@@ -585,7 +571,7 @@ inserir o cabeçalho OpenGL:
 #include <GL/gl.h>
 #endif
 @
-\fimcodigo
+
 
 
 As duas primeiras variáveis na estrutura de dados existem porque
@@ -599,14 +585,14 @@ No caso de uma estrutura de shader, o tipo, primeira variável, terá
 sempre o valor de \monoespaco{TYPE\_SHADER}. Todos os tipos diferentes
 que podem ser armazenados na lista encadeada são:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 #define TYPE_INTERFACE 1 // Uma interface, ou seja, objeto a ser renderizado
 #define TYPE_LINK      2 // Ligação para interface anterior
 #define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
 #define TYPE_SHADER    4 // Shader para renderizar interface
 @
-\fimcodigo
+
 
 A variável \monoespaco{program} é a representação do programa de
 shader compilado. E tudo o que vem depois são variáveis indicando onde
@@ -622,7 +608,7 @@ algumas coisas mais.
 A principal estrutura de dados deste documento é a que armazena
 informações sobre a interface de usuário. A descrição dela é:
 
-\iniciocodigo
+
 @<Estrutura de Dados (interface.h)@>=
 struct user_interface{
   int type;
@@ -656,9 +642,12 @@ struct user_interface{
   unsigned *frame_duration;
   unsigned long _t;
   int max_repetition;
+  /* Dados adicionais para texturas vetoriais ou animações procedurais */
+  void *_internal_data;
+  void (*_free_internal_data)(void *);
+  void (*_reload_texture)(struct user_interface *);
 };
 @
-\fimcodigo
 
 Vamos agora descrever o que significa cada elemento desta estrutura. O
 tipo e o ponteiro para o próximo elemento já foram descritos e são os
@@ -733,7 +722,9 @@ desta API.
 Primeiro temos um ponteiro para a textura OpenGL que é passada para o
 shader. Pode não ter somente uma textura, mas várias. Quando por
 exemplo temos uma interface obtida através de um GIF animado, por
-exemplo. Cada frame de animação será uma textura diferente.
+exemplo. Cada frame de animação será uma textura diferente. Depois que
+a textura for carregada, a próxima variável deve ser ajustada para
+verdadeiro.
 
 Caso exista mais de uma textura, a próxima variável booleana determina
 se a interface deve ser animada ou não. A variável pode ser modificada
@@ -756,12 +747,26 @@ termina de ser carregada. Depois seguiremos incrementando o contador
 automaticamente para assim sabermos quando o frame atual precisa ser
 modificado ou não, a depender da duração de cada frame.
 
-Por fim, o último atributo é, para o caso de termos uma interface
-animada, quantas vezes devemos repetir até o final sua animação. O
-valor de 0 significa que ela deverá ser repetida para sempre. Um valor
-positivo coloca u limite no número de repetições. Quando repetirmos a
-animação pela última vez permitida, ela ficará estacionada no último
-frame sem voltar novamente para o primeiro.
+O atributo \monoespaco{max\_repetition} é para o caso de termos uma
+interface animada, quantas vezes devemos repetir até o final sua
+animação. O valor de 0 significa que ela deverá ser repetida para
+sempre. Um valor positivo coloca u limite no número de
+repetições. Quando repetirmos a animação pela última vez permitida,
+ela ficará estacionada no último frame sem voltar novamente para o
+primeiro.
+
+Os atributos \monoespaco{\_internal\_data},
+\monoespaco{\_free\_internal\_data} e \monoespaco{\_reload\_texture}
+devem ser opcionalmente inicializados pela função de carregamento. O
+primeiro valor é um ponteiro para qualquer estrututra de dados
+arbitrária. O segundo é uma função usada para finalizar tal estrutura
+caso a interface seja destruída. O terceiro é um ponteiro para função
+que será chamada sobre a interface toda vez que ela mudar de tamanho,
+ou a cada frame de animação caso a interface seja animada, mas tiver
+somente uma textura. Com isso torna-se possível usar texturas
+vetoriais que são recomputadas quando a interface muda de tamanho, e
+também oferecer animações procedurais, onde cada frame de animação é
+computado na hora ao invés de armazenado.
 
 \subsecao{2.3. Marcações no Histórico}
 
@@ -783,7 +788,7 @@ disso, faremos cada marcação saber também a quantidade de interfaces
 que foi criada depois dela. É o número de interfaces que estão ativas
 e existirão enquanto a marcação existir.
 
-\iniciocodigo
+
 @<Estrutura de Dados Locais (interface.c)@>+=
 struct marking {
   int type;
@@ -793,7 +798,7 @@ struct marking {
   unsigned number_of_interfaces;
 };
 @
-\fimcodigo
+
 
 Note que declaramos essa estrutura de dados internamente no arquivo
 \monoespaco{interface.c}. Isso porque essa é uma estrutura que será
@@ -812,7 +817,7 @@ conta como se fosse uma nova interfae recém-criada e desta forma a
 interface antiga volta a estar acessível. Criar uma nova ligação
 significa criar e colocar na lista encadeada a seguinte estrutura:
 
-\iniciocodigo
+
 @<Estrutura de Dados Locais (interface.c)@>=
 struct link {
   int type;
@@ -820,7 +825,7 @@ struct link {
   struct user_interface *linked_interface;
 };
 @
-\fimcodigo
+
 
 Além das informações necessárias para a lista encadeada como o tipo
 que identifica a estrutura e o ponteiro que apontará para o elemento
@@ -844,7 +849,7 @@ extensão.
 Para armazenar cada uma destas funções que vai na lista de tamanho
 variável, precisamos da seguinte estrutura:
 
-\iniciocodigo
+
 @<Estrutura de Dados Locais (interface.c)@>=
 struct file_function {
   char *extension;
@@ -859,7 +864,7 @@ struct file_function {
 static unsigned number_of_file_functions_in_the_list = 0;
 static struct file_function *list_of_file_functions = NULL;
 @
-\fimcodigo
+
 
 A estrutura basicamente é um par formado por uma função que extrai
 texturas de um arquivo (e é informada sobre todas as funções
@@ -872,7 +877,7 @@ Depois que esta lista não estiver mais vazia, isto é, depois da
 inicialização, nós poderemos percorrê-la para extrair a função correta
 dada uma extensão por meio da função auxiliar:
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>=
 static inline void (*get_loading_function(char *ext))
                           (void *(*permanent_alloc)(size_t),
@@ -891,7 +896,7 @@ static inline void (*get_loading_function(char *ext))
   return NULL;
 }
 @
-\fimcodigo
+
 
 O código acima é verboso porque é de uma função que retorna um
 ponteiro para outra função que tem muitos parâmetros. Mas a função
@@ -901,11 +906,11 @@ procurada na lista.
 Como usamos a função de comparar strings, vamos inserir o cabeçalho
 padrão com funções envolvendo strings:
 
-\iniciocodigo
+
 @<Cabeçalhos Locais (interface.c)@>=
 #include <string.h>
 @
-\fimcodigo
+
 
 Podemos agora definir a função de inicialização. O que esta função
 fará será preencher as seis funções personalizáveis básicas, contar
@@ -913,7 +918,7 @@ quantas outras funções temos que irão interpretar arquivos, alocar o
 espaço necessário em nossa lista acima (usando as funções de alocação
 informadas) e preencher a lista recém-alocada:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>=
 void _Winit_interface(int *window_width_p, int *window_height_p,
                       void *(*new_permanent_alloc)(size_t),
@@ -956,7 +961,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
   @<Inicialização da API de Interface@>
 }
 @
-\fimcodigo
+
 
 A função acima ficou verbosa graças ao fato de termos um número
 variável de argumentos contendo ponteiros para funções com mais
@@ -970,11 +975,11 @@ adicionais que ainda serão definidas sejam feitas.
 O uso de alguns recursos como o acesso aos argumentos por meio da
 \monoespaco{va\_list} requer a inclusão do cabeçalho abaixo:
 
-\iniciocodigo
+
 @<Cabeçalhos Locais (interface.c)@>+=
 #include <stdarg.h>
 @
-\fimcodigo
+
 
 \subsecao{3.2. Finalização}
 
@@ -986,7 +991,7 @@ começamos ajustanto as seis funções personalizadas básicas, na
 finalização terminaremos retornando tais funções para seus valores
 padrão.
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wfinish_interface(void){
   @<Finalização da API de Interface@>
@@ -1001,7 +1006,7 @@ void _Wfinish_interface(void){
   after_loading_interface = NULL;
 }
 @
-\fimcodigo
+
 
 Note que deixamos um espaço acima em vermelho para código adicional
 que precisarmos colocar na finalização à medida que a API for ficando
@@ -1035,13 +1040,13 @@ shader usará a linguagem de shader OpenGL ES v1.00. Faremos esse
 ajuste de macros bem no início de nosso arquivo com a definição das
 funções:
 
-\iniciocodigo
+
 @<Macros Locais (interface.c)@>=
 #if !defined(W_GLSL_VERSION)
 #define W_GLSL_VERSION "#version 100\n"
 #endif
 @
-\fimcodigo
+
 
 Há ao menos dois tipos de shaders que precisaremos definir para cada
 uma das interfaces diferentes. O primeiro é o shader de vértice, que
@@ -1057,12 +1062,12 @@ podemos definir macros diferentes se estamos compilando um shader de
 vértice ou se estamos compilando um shader de fragmento. Isso será
 feito definindo em cada um dos casos as seguintes macros:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static const char vertex_shader_macro[] = "#define VERTEX_SHADER\n";
 static const char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
 @
-\fimcodigo
+
 
 No código-fonte do shader, poderemos então verificar qual das duas
 macros acima estará definida. Dependendo do caso, simplesmente
@@ -1079,35 +1084,35 @@ tipo e variável. Na dúvida vamos deixar tudo na precisão mais
 alta. Nas variáveis menos importantes, podemos modificar a precisão
 para valores menores para obter mais performance.
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static const char precision_qualifier[] = "precision highp float;\n"
                                           "precision highp int;\n";
 @
-\fimcodigo
+
 
 A próxima coisa que será de nosso interesse será inserir bibliotecas
 GLSL. O usuário poderá definir funções adicionais para facilitar o
 código GLSL de seus shaders. As bibliotecas ficarão armazenadas na
 seguinte variável que iniciará como sendo uma string vazia:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static char *shader_library = "";
 @
-\fimcodigo
+
 
 A variável será modificada por meio da função que vimos na Introdução
 para incrementar o GLSL com novas funções. Tal função é extremamente
 simples e somente irá realizar uma atribuição:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wset_interface_shader_library(char *source){
   shader_library = source;
 }
 @
-\fimcodigo
+
 
 Mas não poderemos nos esquecer que na função de finalização
 precisaremos desfazer esta mudança. Do contrário, a API pode ser
@@ -1115,23 +1120,23 @@ finalizada e inicializada novamente de modo que a segunda
 inicialização fique com as mesmas definições de função feitas na
 primeira:
 
-\iniciocodigo
+
 @<Finalização da API de Interface@>=
 shader_library = "";
 @
-\fimcodigo
+
 
 A lista de variáveis e atributos à disposição de nosso shader será
 definida mais adiante. Mas ela também precisa fazer parte do
 código-fonte do shader:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static const char shader_variables[] = ""
 @<Atributos, Uniformes e Variantes de Shader@>
 "";
 @
-\fimcodigo
+
 
 
 Agora vejamos como compilar um shader completo por meio
@@ -1139,11 +1144,11 @@ disso. Primeiro vamos inserir o cabeçalho de entrada e saída padrão
 para podermos imprimir mensagens de erro na tela. Os cabeçalhos OpenGL
 já foram inseridos em \monoespaco{interface.h}.
 
-\iniciocodigo
+
 @<Cabeçalhos Locais (interface.c)@>+=
 #include <stdio.h>
 @
-\fimcodigo
+
 
 Uma vez que tenhamos o cabeçalho adequado, vamos definir a função, que
 dado um código-fonte de um shader OpenGL, a compila para um programa
@@ -1151,7 +1156,7 @@ de shader completo. Compilar um shader significa criar no OpenGL os
 dois tipos de shaders (vértice e fragmento), compilar ambos, e ligá-os
 em um único programa.
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>+=
 @<Funções para Checar Erros de Compilação@>
 static GLuint compile_shader(const char *source_code){
@@ -1185,7 +1190,7 @@ static GLuint compile_shader(const char *source_code){
   return program;
 }
 @
-\fimcodigo
+
 
 A parte que não é mostrada acima é como fazemos a verificação de que
 um shader foi compilado com sucesso. Para isso usamos a função
@@ -1196,7 +1201,7 @@ usamos as funções temporárias de alocação e desalocação para termos
 espaço para a mensagem de erro. E a função retorna se achou ou não um
 erro.
 
-\iniciocodigo
+
 @<Funções para Checar Erros de Compilação@>=
 static bool check_compiling_error(GLuint shader){
   GLint status;
@@ -1215,7 +1220,7 @@ static bool check_compiling_error(GLuint shader){
   return false;
 }
 @
-\fimcodigo
+
 
 Checar se houve um erro quando ligamos os dois shaders funciona de
 maneira semehante. Entretanto, podemos fazer ainda melhor. Podemos
@@ -1224,7 +1229,7 @@ adicionais. Contudo, como isso é uma operação demorada e cara, faremos
 isso só se a macro \monoespaco{W\_DEBUG\_INTERFACE} esteja
 definida. Neste caso, assumiremos estar em modo de depuração:
 
-\iniciocodigo
+
 @<Funções para Checar Erros de Compilação@>+=
 static bool check_linking_error(GLuint program){
   GLint status;
@@ -1256,7 +1261,7 @@ static bool check_linking_error(GLuint program){
   return false;  
 }
 @
-\fimcodigo
+
 
 E isso termina a descrição de como compilamos um novo shader e
 imprimimos erros caso hajam problemas no código-fonte.
@@ -1268,7 +1273,7 @@ uma textura.
 
 O código-fonte do shader padrão será armazendado em uma constante:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static const char default_shader_source[] = ""
 "#if defined(VERTEX_SHADER)\n"
@@ -1278,7 +1283,7 @@ static const char default_shader_source[] = ""
 "#endif\n"
                                            "";
 @
-\fimcodigo
+
 
 O código-fonte serão literais strings aramazenadas na variável
 constante acima. No caso do shader de vértice, tudo o que faremos por
@@ -1292,7 +1297,7 @@ interface usando sempre a mesma sequência de vértices: $(0, 0, 0), (1,
 0, 0), (1, 1, 0), (0, 1, 0)$. Cada vértice também possui como atributo
 suas coordenadas de textura. Eles são declarados abaixo:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static const float interface_vertices[20] = {
   0.0, 0.0, 0.0, // Primeiro vértice
@@ -1305,7 +1310,7 @@ static const float interface_vertices[20] = {
   0.0, 1.0};    // Textura
 static GLuint interface_vbo;
 @
-\fimcodigo
+
 
 A ordem em que declaramos eles é importante. Se seguirmos os vértices
 na ordem em que são declarados, percorremos um quadrado no sentido
@@ -1327,23 +1332,23 @@ poderão ser acessados por meio do VBO, ou ``vertex buffer object''
 correspondente. Carregar os vértices para a placa de vídeo é feito na
 inicialização:
 
-\iniciocodigo
-@<Inicialização da API de Interface@>+=
+
+@<Inicialização da API de Interface@>=
 glGenBuffers(1, &interface_vbo);
 glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
 // Enviando os vértices para a placa de vídeo:
 glBufferData(GL_ARRAY_BUFFER, sizeof(interface_vertices), interface_vertices,
              GL_STATIC_DRAW);
 @
-\fimcodigo
+
 
 Na finalização devemos destruir o VBO que criamos:
 
-\iniciocodigo
+
 @<Finalização da API de Interface@>+=
 glDeleteBuffers(1, &interface_vbo);
 @
-\fimcodigo
+
 
 De qualquer forma, isso significa que a interface originalmente será
 sempre um retângulo que irá cobrir a tela inteira, pois no OpenGL o
@@ -1353,26 +1358,26 @@ posições e rotações nós usamos diferentes matrizes de modelo e
 visualização e multiplicamos a posição fixa pela matriz que será
 diferente para cada interface.
 
-\iniciocodigo
+
 @<Shader de Vértice Padrão@>=
 "void main(){\n"
 "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
 "  texture_coordinate = vertex_texture_coordinate;\n"
 "}\n"
 @
-\fimcodigo
+
 
 No shader de fragmento, o que faremos para cada pixel é desenhar o
 pixel da textura associado à esta posição.
 
-\iniciocodigo
+
 @<Shader de Fragmento Padrão@>=
 "void main(){\n"
 "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
 "  gl_FragData[0] = texture;\n"
 "}\n"
 @
-\fimcodigo
+
 
 Agora temos que definir para os shaders seus atributos, uniformes e
 variantes. Os atributos são variáveis somente-leitura especificados
@@ -1382,14 +1387,14 @@ $(x, y)$. Nos dois casos as coordenadas $x$ e $y$ irão variar entre 0
 e 1 e assumiremos $z=0$ como descrito antes. Atributos só podem ser
 declarados no shader de vértice.
 
-\iniciocodigo
+
 @<Atributos, Uniformes e Variantes de Shader@>=
 "#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
 "attribute vec2 vertex_texture_coordinate;\n"
 "#endif\n"
 @
-\fimcodigo
+
 
 Uniformes são variáveis que também são passadas para vértices, mas
 eles não irão nunca mudar entre um vértice e outro e nunca precisarão
@@ -1398,7 +1403,7 @@ e de fundo, ma matriz de modelo e visualização, o tamanho do objeto em
 pixels, o tempo atual em segundos, o inteiro associado a cada
 interface e também sua textura:
 
-\iniciocodigo
+
 @<Atributos, Uniformes e Variantes de Shader@>+=
 "uniform vec4 foreground_color, background_color;\n"
 "uniform mat4 model_view_matrix;\n"
@@ -1408,18 +1413,18 @@ interface e também sua textura:
 "uniform int integer;\n"
 "uniform sampler2D texture1;\n"
 @
-\fimcodigo
+
 
 Por fim, temos as variantes. Estas variáveis podem ser modificadas e
 preenchidas pelo shader de vértice. Seu valor interpolado será passado
 para o shader de fragmento. É aqui que declaramos a coordenada em
 textura que iremos usar.
 
-\iniciocodigo
+
 @<Atributos, Uniformes e Variantes de Shader@>+=
 "varying mediump vec2 texture_coordinate;\n"
 @
-\fimcodigo
+
 
 Note que nós não usamos todas as variáveis definidas no shader
 padrão. Durante a compilação muitas delas serão simplesmente ignoradas
@@ -1433,7 +1438,7 @@ o nome do arquivo em que ela estará. Para tal caso, vamos também
 fornecer uma função que cria um novo shader à partir do conteúdo de um
 arquivo cujo caminho é passado como argumento:
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>=
 static GLuint compile_shader_from_file(const char *filename){
   char *buffer;
@@ -1458,24 +1463,24 @@ static GLuint compile_shader_from_file(const char *filename){
   return shader_program;
 }
 @
-\fimcodigo
+
 
 
 Uma última preocupação que teremos aqui é o que renderizar como textura
 padrão quando um shader não tem textura alguma. Para isso, vamos criar
 uma textura de apenas 1 pixel branco:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static GLuint default_texture;
 @
-\fimcodigo
+
 
 Criamos tal textura branca na inicialização. Isso é feito gerando a
 textura no OpenGL, a associando à textura bidimensional atual e
 especificando seu único pixel branco.
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 {
   GLubyte pixels[3] = {255, 255, 255};
@@ -1485,15 +1490,15 @@ especificando seu único pixel branco.
                pixels);
 }
 @
-\fimcodigo
+
 
 E na finalização descartamos a textura:
 
-\iniciocodigo
+
 @<Finalização da API de Interface@>+=
 glDeleteTextures(1, &default_texture);
 @
-\fimcodigo
+
 
 \secao{5. A Matriz de Modelo-Visualização}
 
@@ -1686,17 +1691,17 @@ conversão.
 No caso, se temos um ponteiro para uma interface
 chamado \monoespaco{i}, a conversão segue as seguintes regras:
 
-\iniciocodigo
+
 @<Conversão de Coordenadas e Tamanho@>=
 x = 2.0 * (i -> _x) / (*window_width) - 1.0;
 y = 2.0 * (i -> _y) / (*window_height) - 1.0;
 @
-\fimcodigo
+
 
 Usando a conversão acima, a função abaixo preenche a matriz de
 modelo-visualização pela primeira vez:
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>=
 static void initialize_model_view_matrix(struct user_interface *i){
   GLfloat x, y;
@@ -1733,16 +1738,16 @@ static void initialize_model_view_matrix(struct user_interface *i){
   i -> _transform_matrix[15] = 1.0;
 }
 @
-\fimcodigo
+
 
 O uso das funções de seno e cosseno requer que coloquemos o cabeçalho
 de funções matemáticas:
 
-\iniciocodigo
+
 @<Cabeçalhos Locais (interface.c)@>+=
 #include <math.h>
 @
-\fimcodigo
+
 
 \secao{6. Gerenciando as Estruturas de Dados}
 
@@ -1758,22 +1763,22 @@ segundo apontará para a última marcação no hstórico criada. Também
 iremos usar um mutex para garantir que somente uma thread possa
 modificar a lista encadeada:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static void *last_structure = NULL;
 static struct marking *last_marking = NULL;
 _STATIC_MUTEX_DECLARATION(linked_list_mutex);
 @
-\fimcodigo
+
 
 O mutex que controla acesso à lista encadeada precisa ser criado na
 inicialização:
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 MUTEX_INIT(&linked_list_mutex);
 @
-\fimcodigo
+
 
 Deixaremos para definir a finalização deste mutex junto com a
 finalização de toda a lista encadeada nas próximas seções.
@@ -1798,11 +1803,11 @@ apresentamos na Seção 4.
 
 O shader padrão será armazenado no seguinte ponteiro:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 struct shader *default_shader;
 @
-\fimcodigo
+
 
 Vamos definir agora uma função interna que irá gerar uma nova
 estrutura de shader. Ela recebe como argumento a string com nome de
@@ -1813,7 +1818,7 @@ for \monoespaco{NULL}. Neste caso, nós apenas geramos uma estrutura à
 partir do código-fonte do shader padrão definido na Seção 4. Ele não é
 armazenado na lista encadeada.
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>+=
 static struct shader *new_shader(char *shader_source){
   struct shader *new = (struct shader *) permanent_alloc(sizeof(struct shader));
@@ -1852,7 +1857,7 @@ static struct shader *new_shader(char *shader_source){
   return new;
 }
 @
-\fimcodigo
+
 
 Basicamente o código acima usa a função da Seção 4 para compilar o
 shader, e uma vez que tem o shader compilado, armazena na estrutura de
@@ -1862,18 +1867,18 @@ podem ser modificadas antes de executar o shader.
 Lembrando que o shader padrão precisa ser compilado e criado na
 Inicialização. O código para isso é:
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 default_shader = new_shader(NULL);
 @
-\fimcodigo
+
 
 Para destruir um shader criado, só precisamos informar que não
 usaremos mais o programa de shader compilado e que ele deve ser
 apagado. Em seguida, desalocamos a estrutura de shader que o
 armazenava:
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>+=
 static void destroy_shader(struct shader *shader_struct){
   glDeleteProgram(shader_struct -> program);
@@ -1881,15 +1886,15 @@ static void destroy_shader(struct shader *shader_struct){
     permanent_free(shader_struct);
 }
 @
-\fimcodigo
+
 
 O shader padrão deve ser destruído na finalização da API:
 
-\iniciocodigo
+
 @<Finalização da API de Interface@>+=
 destroy_shader(default_shader);
 @
-\fimcodigo
+
 
 \subsecao{6.2. Criando e Destruindo Interface}
 
@@ -1899,7 +1904,7 @@ interface, executar as funções adequadas para inicializá-la e
 incluí-la na lista encadeada atualizando os ponteiros de maneira
 adequada. A função será definida como:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                                   float x, float y, float z, float width,
@@ -1962,6 +1967,9 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> on_mouse_middle_up = NULL;
     new_interface -> on_mouse_right_down = NULL;
     new_interface -> on_mouse_right_up = NULL;
+    new_interface -> _internal_data = NULL;
+    new_interface -> _free_internal_data = NULL;
+    new_interface -> _reload_texture = NULL;
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
       ((struct user_interface *) last_structure)-> next = (void *) new_interface;
@@ -1985,7 +1993,7 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
   return new_interface;
 }
 @
-\fimcodigo
+
 
 Apesar de longa, tudo o que a função acima faz é alocar a interface
 com a função de alocação permanente configurada, inicializar os
@@ -2002,7 +2010,7 @@ destruição de interfaces desaloca primeiro essas coisas antes de
 desalocar a estrutura de interface em si. Ela também deve finalizar o
 mutex da interface.
 
-\iniciocodigo
+
 @<Funções Auxiliares Locais (interface.c)@>+=
 static void destroy_interface(struct user_interface *interface_struct){
   if(interface_struct -> _texture1 != NULL){
@@ -2014,11 +2022,15 @@ static void destroy_interface(struct user_interface *interface_struct){
   if(interface_struct -> frame_duration != NULL && permanent_free != NULL)
     permanent_free(interface_struct -> frame_duration);
   MUTEX_DESTROY(&(interface_struct -> mutex));
+  if(interface_struct -> _free_internal_data != NULL &&
+     interface_struct -> _internal_data != NULL){
+    interface_struct -> _free_internal_data(interface_struct -> _internal_data);
+  }
   if(permanent_free != NULL)
     permanent_free(interface_struct);
 }
 @
-\fimcodigo
+
 
 \subsecao{6.3. Criando e Destruindo Ligação para Interface Existente}
 
@@ -2029,7 +2041,7 @@ apenas um ponteiro para outra interface em nossa lista encadeada. E
 elas são criadas com a função \monoespaco{\_Wlink\_interface}. A
 definição da função é:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i){
   struct link *new_link = permanent_alloc(sizeof(struct link));
@@ -2047,7 +2059,7 @@ struct user_interface *_Wlink_interface(struct user_interface *i){
   return i;
 }
 @
-\fimcodigo
+
 
 Destruir uma interface de ligação significa apenas executar a função
 de desalocação e por isso não criaremos uma função auxiliar para isso.
@@ -2060,7 +2072,7 @@ deve usar a função \monoespaco{\_Wmark\_history\_interface}. Depois da
 marcação, todas as interfaces criadas antes ficarão inacessíveis até
 que a marcação seja removida.
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wmark_history_interface(void){
   struct marking *new_marking = permanent_alloc(sizeof(struct marking));
@@ -2079,7 +2091,7 @@ void _Wmark_history_interface(void){
   }
 }
 @
-\fimcodigo
+
 
 Como é importante existir uma última marcação no hstórico para termos
 uma contagem de quantas interfaces estão ativas em um dado momento,
@@ -2087,13 +2099,13 @@ vamos criar a primeira marcação durante a inicialização da API. Esta
 primeira marcação nunca será apagada, exceto na finalização da
 API. Mesmo que o usuário tente removê-la antes por meio de funções.
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 _Wmark_history_interface();
 @
-\fimcodigo
 
-\iniciocodigo
+
+
 @<Finalização da API de Interface@>+=
 // Apaga todas as marcações, menos a primeira:
 while(last_marking -> previous_marking != NULL){
@@ -2108,7 +2120,7 @@ last_marking = NULL;
 last_structure = NULL;
 MUTEX_DESTROY(&linked_list_mutex);
 @
-\fimcodigo
+
 
 A função \monoespaco{\_Wrestore\_history\_interface} é uma das funções
 de API que ainda não definimos. Ela destrói e remove todas as
@@ -2135,7 +2147,7 @@ interfaces (e ligações) que estiverem depois dela na lista.
 
 A implementação da função é:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrestore_history_interface(void){
   struct marking *to_be_removed;
@@ -2169,7 +2181,7 @@ void _Wrestore_history_interface(void){
   MUTEX_SIGNAL(&linked_list_mutex);
 }
 @
-\fimcodigo
+
 
 Basicamente a função acima primeiro remove todas as estruturas de
 dados criadas após a última marcação. Só depois de fazer isso que a
@@ -2208,30 +2220,30 @@ $z$, elas poderão ser desenhadas em qualquer ordem.
 
 O ponteiro que aponta para a lista ordenada de interfaces será este:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>+=
 static struct user_interface **z_list = NULL;
 static unsigned z_list_size = 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 @
-\fimcodigo
+
 
 Na inicialização de nossa interface, devemos sempre inicializar as
 variáveis acima:
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 MUTEX_INIT(&z_list_mutex);
 z_list_size = 0;
 z_list = NULL;
 @
-\fimcodigo
+
 
 Ao finalizar a nossa API, se a lista de interfaces foi alocada e
 portanto tem um valor diferente de nulo, precisamos desalocar e
 ajustar o valor para nulo novamente:
 
-\iniciocodigo
+
 @<Finalização da API de Interface@>+=
 MUTEX_DESTROY(&z_list_mutex);
 if(z_list != NULL && permanent_free != NULL)
@@ -2239,13 +2251,13 @@ if(z_list != NULL && permanent_free != NULL)
 z_list = NULL;
 z_list_size = 0;
 @
-\fimcodigo
+
 
 Da mesma forma que na finalização, quando restauramos o histórico de
 interfaces, removendo uma marcação e todas as interfaces depois dela,
 teremos que reiniciar nossa lista deixando-a vazia novamente.
 
-\iniciocodigo
+
 @<Restauração de Histórico@>=
 MUTEX_WAIT(&z_list_mutex);
 if(z_list != NULL && permanent_free != NULL)
@@ -2254,7 +2266,7 @@ z_list = NULL;
 z_list_size = 0;
 MUTEX_SIGNAL(&z_list_mutex);
 @
-\fimcodigo
+
 
 A inicialização desta lista ordenada de interfaces se dará na função
 de renderização \monoespaco{\_Wrender\_interface}. Dentro desta
@@ -2265,7 +2277,7 @@ interfaces novas foram criadas e devemos gerar novamente nossa lista
 ordenada com as interfaces que temos. O código que faz isso é mostrado
 abaixo:
 
-\iniciocodigo
+
 @<Gerar Lista Ordenada de Interfaces@>=
 if(z_list_size != last_marking -> number_of_interfaces){
   void *p;
@@ -2301,7 +2313,7 @@ if(z_list_size != last_marking -> number_of_interfaces){
   MUTEX_SIGNAL(&z_list_mutex);
 }
 @
-\fimcodigo
+
 
 Note que este cenário no qual a lista deve ser reconstruída é para ser
 incomum. Tipicamente ele irá ocorrer na primeira vez que formos
@@ -2327,21 +2339,21 @@ entre uma renderização e outra, precisamos armazenar a nossa última
 medida de tempo. Faremos isso na seguinte variável que começará
 valendo zero quando nenhuma medida de tempo foi feita:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>=
 static unsigned long long previous_time = 0;
 @
-\fimcodigo
+
 
 A variável sempre precisa ser inicializada para este valor na
 inicialização da API. Ou podemos obter valores incorretos se a API for
 finalizada e inicializada novamente:
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 previous_time = 0;
 @
-\fimcodigo
+
 
 E eis abaixo nossa função que itera sobre a lista ordenada de
 interface e renderiza cada uma delas, atualizando também o tempo
@@ -2363,7 +2375,7 @@ tempo atual como sendo o tempo anterior para a próxima execução.
 
 A implementação do que foi descrito acima é:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrender_interface(unsigned long long time){
   @<Gerar Lista Ordenada de Interfaces@>
@@ -2406,16 +2418,22 @@ void _Wrender_interface(unsigned long long time){
       glUniform1i(z_list[i] -> shader_program -> uniform_integer,
                  z_list[i] -> integer);
       // Animating texture
-      if(z_list[i] -> animate && z_list[i] -> number_of_frames > 1 &&
+      if(z_list[i] -> animate &&
          z_list[i] -> max_repetition != 0){
         z_list[i] -> _t += elapsed_time;
         z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
         while(z_list[i] -> _t >=
-                     z_list[i] -> frame_duration[z_list[i] -> current_frame]){
+                     z_list[i] -> frame_duration[z_list[i] -> current_frame] &&
+              z_list[i] -> max_repetition != 0){
           z_list[i] -> _t -=
             z_list[i] -> frame_duration[z_list[i] -> current_frame];
           z_list[i] -> current_frame ++;
           z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
+          if(z_list[i] -> number_of_frames == 1 &&
+             z_list[i] -> _reload_texture != NULL)
+            z_list[i] -> _reload_texture(z_list[i]); // Textura procedural
+          else if(z_list[i] -> current_frame == 0 && z_list[i] -> max_repetition > 0)
+	    z_list[i] -> max_repetition --;
         }
       }
       // Rendering:
@@ -2432,7 +2450,7 @@ void _Wrender_interface(unsigned long long time){
   previous_time = time;
 }
 @
-\fimcodigo
+
 
 \secao{8. Movendo, Rotacionando e Redimencionando Interfaces}
 
@@ -2450,7 +2468,7 @@ da função não se sobreponham.
 A função que move interfaces em nossa API
 é \monoespaco{\_Wmove\_interface} e definimos ela assim:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wmove_interface(struct user_interface *i,
                       float new_x, float new_y, float new_z){
@@ -2496,7 +2514,7 @@ void _Wmove_interface(struct user_interface *i,
   MUTEX_SIGNAL(&(i -> mutex));
 }
 @
-\fimcodigo
+
 
 \subsecao{8.2. Rotacionando Interfaces}
 
@@ -2504,7 +2522,7 @@ Rotacionar interfaces envolve apenas reservar o mutex da interface,
 atualizar sua variável de rotação e também atualizar sua matriz de
 modelo-visualização. O código para isso segue abaixo:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation){
   GLfloat x, y;
@@ -2534,7 +2552,7 @@ void _Wrotate_interface(struct user_interface *i, float rotation){
   MUTEX_SIGNAL(&(i -> mutex));
 }
 @
-\fimcodigo
+
 
 \subsecao{8.3. Redimensionando Interfaces}
 
@@ -2547,7 +2565,7 @@ tal limite não existe.
 
 A função que redimenciona interfaces é:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height){
@@ -2557,6 +2575,8 @@ void _Wresize_interface(struct user_interface *i,
   MUTEX_WAIT(&(i -> mutex));
   i -> width = new_width;
   i -> height = new_height;
+  if(i -> _reload_texture != NULL)
+    i -> _reload_texture(i); // Em caso de textura vetorial, a geramos de novo
   @<Conversão de Coordenadas e Tamanho@>
   i -> _transform_matrix[0] = (2 * i -> width / (*window_width)) *
     cos_theta;
@@ -2575,7 +2595,7 @@ void _Wresize_interface(struct user_interface *i,
   MUTEX_SIGNAL(&(i -> mutex));
 }
 @
-\fimcodigo
+
 
 \secao{8. Interagindo com Interfaces}
 
@@ -2591,23 +2611,23 @@ botões do mouse, não apenas lidar com o estado atual. Por causa disso,
 vamos usar as seguintes variáveis estáticas para memorizar o último
 estado dos botões:
 
-\iniciocodigo
+
 @<Variáveis Locais (interface.c)@>=
 static bool mouse_last_left_click = false, mouse_last_middle_click = false,
   mouse_last_right_click = false;
 @
-\fimcodigo
+
 
 Inicializamos tais variáveis com o valor falso na inicialização de
 nossa API:
 
-\iniciocodigo
+
 @<Inicialização da API de Interface@>+=
 mouse_last_left_click = false;
 mouse_last_middle_click = false;
 mouse_last_right_click = false;
 @
-\fimcodigo
+
 
 Sabendo o estado anterior do mouse e o estado atual, somos capazes de
 dizer não apenas se um botão está sendo pressionado, mas também se ele
@@ -2635,7 +2655,7 @@ executamos a função adequada se existir.
 
 O código da função que faz isso é:
 
-\iniciocodigo
+
 @<Definição de Funções da API (interface.c)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click){
@@ -2689,7 +2709,7 @@ void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
   mouse_last_right_click = right_click;
 }
 @
-\fimcodigo
+
 
 A parte que omitimos acima é como obtemos a coordenada $(x, y)$ que
 usamos para comparar com a posição de cada interface à partir das
@@ -2714,7 +2734,7 @@ próprias coordenadas do mouse, sem precisar fazer cálculos adicionais
 de conversão. Se estiver, então obtemos $(x, y)$ fazendo a rotação
 descrita na coordenada do mouse:
 
-\iniciocodigo
+
 @<Converter Coordenadas do Mouse para x e y@>=
 if(z_list[i] -> rotation == 0.0){
   x = mouse_x;
@@ -2731,7 +2751,6 @@ else{
  y +=  z_list[i] -> y;
 }
 @
-\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

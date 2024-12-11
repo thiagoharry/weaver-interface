@@ -242,7 +242,7 @@ be:
 The API will call these functions automatically when it needs to
 interpret a filename with some texture. Our API do not know how to
 interpret any file format. It expects the user to supply the
-functions to interpret the needed file formats in the correct format.
+functions to interpret the needed file formats in the correct way.
 
 #### Finalization
 

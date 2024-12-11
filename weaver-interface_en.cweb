@@ -18,8 +18,6 @@
 \def\negrito#1{{\twelvebold#1}}
 \def\italico#1{{\twelveit#1}}
 \def\monoespaco#1{{\monodoze#1}}
-\def\iniciocodigo{\lineskip=0pt\parskip=0pt}
-\def\fimcodigo{\twelve\parskip=0pt plus 1pt\lineskip=1pt}
 
 \long\def\abstract#1{\parshape 10 0.8cm 13.4cm 0.8cm 13.4cm
 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
@@ -85,13 +83,13 @@ that would be otherwise difficult to express.
 Our objective here will be creating an AP where the user can create a
 new interface using the function:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>=
 struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                                   float x, float y, float z, float width,
                                   float height);
 @
-\fimcodigo
+
 
 Where the first argument is a file that will be open and interpreted
 to get information about our interface texture (it could be an image
@@ -106,20 +104,20 @@ additional library with GLSL functions. This can be done passing to
 this function a string with source code for function definitions in
 GLSL:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wset_interface_shader_library(char *source);
 @
-\fimcodigo
+
 
 
 When we have a interface, we can move it with the function:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wmove_interface(struct user_interface *i, float x, float y, float z);
 @
-\fimcodigo
+
 
 We assume that the position of an interface is the coordinate of its
 center. The axis $x$ and $y$ represents the horizontal and vertical
@@ -128,32 +126,32 @@ if they occupy the same place in the space.
 
 We can also rotate it with the function:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation);
 @
-\fimcodigo
+
 
 The function above gets as argument how much the interface will be
 rotated in radians comparing with its notmal orientation.
 
 We can also resize the interface with the function below:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height);
 @
-\fimcodigo
+
 
 The function below renders in the screen or drawing area all the
 previously created interfaces without needing to list all them:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wrender_interface(unsigned long long time);
 @
-\fimcodigo
+
 
 The time parameter is necessary for when the function needs to know
 how much time in microseconds passed between the function
@@ -167,34 +165,34 @@ marking in our interface history. After this, when we ask to render
 all the interfaces, only the interfaces created after this marking
 will be rendered:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wmark_history_interface(void);
 @
-\fimcodigo
+
 
 But what if we want to render some of the interfaces created before
 the last history marking? In this case, we can create e a new
 interface that in fact is just a link to a previously created
 interface:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i);
 @
-\fimcodigo
+
 
 To interact with all the previously created interfaces until the last
 marking, we use the function below. It executes the programmed
 actions, if they exist, for each interface if the user puts or removes
 the mouse over them or if the user clicks in some interface:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click);
 @
-\fimcodigo
+
 
 
 But how can we erase and destroy some interface when we do not need it
@@ -204,11 +202,11 @@ history. This also erases the last marking, returning the state to
 what it was just before the creation of that marking. The interfaces
 before that marking will be rendered again.
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wrestore_history_interface(void);
 @
-\fimcodigo
+
 
 All this requires that we manage our interface history, its shaders
 and the markings.  And this requires memory allocation and
@@ -217,7 +215,7 @@ for permanent things that will be kept in the memory for a long time
 and for temporary things that will be disallocated soon. We will store
 functions to allocate and disallocate in the two cases:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>=
 #include <stdlib.h>
 static void *(*permanent_alloc)(size_t) = malloc;
@@ -225,7 +223,7 @@ static void *(*temporary_alloc)(size_t) = malloc;
 static void (*permanent_free)(void *) = free;
 static void (*temporary_free)(void *) = free;
 @
-\fimcodigo
+
 
 By default we will use the allocation and disallocation functions from
 the standard library. But the user can choose custom functions to
@@ -234,17 +232,17 @@ functions imediatelly before and after loading a new interfac. These
 functions will be initialized by NULL, but the user later can change
 them to other functions:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>=
 static void (*before_loading_interface)(void) = NULL;
 static void (*after_loading_interface)(void) = NULL;
 @
-\fimcodigo
+
 
 The idea is that all custom functions are chosen during the API
 initialization:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 #include <stdlib.h> // Define  'size_t' type
 void _Winit_interface(int *window_width, int *window_height,
@@ -256,7 +254,7 @@ void _Winit_interface(int *window_width, int *window_height,
                       void (*after_loading_interface)(void),
                       ...);
 @
-\fimcodigo
+
 
 It is possible to initializa the disallocation functions with
 \monoespaco{NULL}. This means that we will not disallocate what we
@@ -267,11 +265,11 @@ The function above accepts a variable number of arguments. First it
 gets pointers to where we store our window width and height. They will
 be stored here:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>=
 static int *window_width = NULL, *window_height = NULL;
 @
-\fimcodigo
+
 
 The window size is followed by custom functions as described before.
 What cames after the six initial functions is a NULL-terminated list
@@ -280,14 +278,14 @@ create a new interface given a file. The string represents a filename
 extension (for example, ``gif'', ``jpg'' or others). The function
 after the file extension have the following type:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 typedef void pointer_to_interface_function(void *(*)(size_t), void (*)(void *),
                                           void *(*)(size_t), void (*)(void *),
                                           void (*)(void), void (*)(void),
                                           char *, struct user_interface *);
 @
-\fimcodigo
+
 
 
 It gets as arguments the functions for allocation and disallocation, a
@@ -301,11 +299,11 @@ able to create interfaces from different file formats.
 As we have an initialization function, we will need also a
 finalization function:
 
-\iniciocodigo
+
 @<Function Declaration (interface.h)@>+=
 void _Wfinish_interface(void);
 @
-\fimcodigo
+
 
 And this ends the description of our API functions.
 
@@ -339,7 +337,7 @@ be positioned in the file \monoespaco{interface.h}.
 
 We can show the structure of the file \monoespaco{interface.h}:
 
-\iniciocodigo
+
 @(src/interface.h@>=
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
@@ -359,7 +357,7 @@ extern "C" {
 #endif
 #endif
 @
-\fimcodigo
+
 
 The cde above shows the default boureaucracy to define a header for
 our C API. The two first lines and the last one are macros that ensure
@@ -379,7 +377,7 @@ represent code that we will define in the next sections.
 If you want to know how is the \monoespaco{interface.c} file related
 with this header, its structure is:
 
-\iniciocodigo
+
 @(src/interface.c@>=
 #include "interface.h"
 @<Local Headers (interface.c)@>
@@ -389,7 +387,7 @@ with this header, its structure is:
 @<Auxiliary Local Functions (interface.c)@>
 @<API Functions Definition (interface.c)@>
 @
-\fimcodigo
+
 
 All the code presented in this document will be placed in one of these
 two files. Besides them, no other file will be created.
@@ -414,7 +412,7 @@ Mutex is called a ``critical section''. On Web Assembly, for now, we
 will not define them because we are not allowing multiple threads in
 this environment.
 
-\iniciocodigo
+
 @<General Macros (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
@@ -427,13 +425,13 @@ this environment.
 #define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
 @
-\fimcodigo
+
 
 This means that on Linux and BSD, we need to include headers for
 \monoespaco{pthread} library. On Windows, we just include the default
 Windows header:
 
-\iniciocodigo
+
 @<Include General Headers (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h>
@@ -441,12 +439,12 @@ Windows header:
 #include <windows.h>
 #endif
 @
-\fimcodigo
+
 
 In our code we will need to initializa each declared Mutex. For this,
 we will ise the following macros:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
@@ -456,11 +454,11 @@ we will ise the following macros:
 #define MUTEX_INIT(mutex)
 #endif
 @
-\fimcodigo
+
 
 To finalize and delete the Mutex, we use the following macros:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
@@ -470,13 +468,13 @@ To finalize and delete the Mutex, we use the following macros:
 #define MUTEX_DESTROY(mutex)
 #endif
 @
-\fimcodigo
+
 
 Once we have a Mutex, there are two operations that we can do. The
 first is ask for Mutex usage. If some other proccess is already using
 it, this means that we wait until the Mutex is available:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
@@ -486,12 +484,12 @@ it, this means that we wait until the Mutex is available:
 #define MUTEX_WAIT(mutex)
 #endif
 @
-\fimcodigo
+
 
 And finally, if we finished to use the resource guarded by the Mutex,
 we signal that other proccesses can now use it:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
 #define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
@@ -501,7 +499,7 @@ we signal that other proccesses can now use it:
 #define MUTEX_SIGNAL(mutex)
 #endif
 @
-\fimcodigo
+
 
 \secao{2. Data Structures}
 
@@ -527,7 +525,7 @@ information we can change their values.
 
 A shader data structure has the following structure:
 
-\iniciocodigo
+
 @<Local Data Structures (interface.c)@>=
 struct shader {
   int type;
@@ -543,12 +541,12 @@ struct shader {
   GLint uniform_texture1; // A textura do objeto a ser renderizado
 };
 @
-\fimcodigo
+
 
 As we are using OpenGL data types, like \monoespaco{GLuint}, we should
 include the OpenGL headers:
 
-\iniciocodigo
+
 @<Include General Headers (interface.h)@>+=
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h>
@@ -560,7 +558,7 @@ include the OpenGL headers:
 #include <GL/gl.h>
 #endif
 @
-\fimcodigo
+
 
 The two first variables in the data structure exist because we will
 store each shader data structure in a linked list that also can store
@@ -572,14 +570,14 @@ In a shader data structure, the type variable always will
 be \monoespaco{TYPE\_SHADER}. All possible values, fo all different
 types of data structures, are:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 #define TYPE_INTERFACE 1 // Uma interface, ou seja, objeto a ser renderizado
 #define TYPE_LINK      2 // Ligação para interface anterior
 #define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
 #define TYPE_SHADER    4 // Shader para renderizar interface
 @
-\fimcodigo
+
 
 The variable \monoespaco{program} in the shader data structure is
 where we will store the compiled shader. And all variables after it
@@ -595,7 +593,7 @@ The most complex data structure in this document is the one that
 stores information about user interfaces. The full definition for this
 data structure is:
 
-\iniciocodigo
+
 @<Data Structures (interface.h)@>=
 struct user_interface{
   int type;
@@ -609,7 +607,7 @@ struct user_interface{
   bool visible;
   GLfloat _transform_matrix[16];
   struct shader *shader_program;
-  _MUTEX_DECLARATION(interface_mutex);
+  _MUTEX_DECLARATION(mutex);
   /* Interacting functions */
   bool _mouse_over;
   void (*on_mouse_over)(struct user_interface *);
@@ -629,9 +627,13 @@ struct user_interface{
   unsigned *frame_duration;
   unsigned long _t;
   int max_repetition;
+  /* Additional data for vector textures or procedural animation */
+  void *_internal_data;
+  void (*_free_internal_data)(void *);
+  void (*_reload_texture)(struct user_interface *);
 };
 @
-\fimcodigo
+
 
 Now we will describe what means each part of this structure. The type
 and ponter for next element already were described and are the same
@@ -667,12 +669,6 @@ left corner of the screen, but the lower left corner of the
 interface. If the interface is rotated, the coordinate system is also
 rotated.
 
-reservados para armazenar a coordenada do mouse usando como
-referencial não o canto interior esquerdo da tela, mas o canto
-inferior esquerdo da interface. Rotacionar a interface rotaciona
-também a coordenada usada.
-
-
 The foreground and background color are colors in RGBA format with
 individual values in the range between 0 and 1. Such values will be
 passed to the shader, but not necessarily it will use these
@@ -704,7 +700,8 @@ In this part first we have a pointer for the OpenGL texture for our
 interface. We can have not a single texture, but several
 textures. This happens if we open a file that can store more than one
 image. Or when we open an animated GIF, for example. Each frame in the
-animation will be a different texture.
+animation will be a different texture. After loading an external
+texture, the next variable should be set to true.
 
 If we have more than one texture, the next variable determines if the
 interface should animate or not. The value can be changed to pause or
@@ -723,18 +720,30 @@ ready. After this, we will increment the variable periodically and
 this will help us to know when we should change the current frame in
 an animated interface.
 
-Finally, the next attribute represents in an animated interface how
-many times we should repeat the animation. If the value is zero, then
-we will repeat forever. If it is a positive value and we repeated the
-animation the allowed number of times, then the interface will stop
-the animation and stay in the last frame.
+Tha attribute \monoespaco{max\_repetition} represents in an animated
+interface how many times we should repeat the animation. If the value
+is zero, then we will repeat forever. If it is a positive value and we
+repeated the animation the allowed number of times, then the interface
+will stop the animation and stay in the last frame.
+
+The attributes \monoespaco{\_internal\_data},
+\monoespaco{\_free\_internal\_data} and \monoespaco{\_reload\_texture}
+must be optionally initialized by the loading function. The first
+value is a pointer to any arbitrary data structure. The second is a
+function used to finalize such a structure if the interface is
+destroyed. The third is a pointer to a function that will be called on
+the interface every time it changes size, or at each animation frame
+if the interface is animated but has only one texture. This makes it
+possible to use vector textures that are recomputed when the interface
+changes size, and also to offer procedural animations, where each
+animation frame is computed on the fly instead of being stored.
 
 \subsecao{2.3. Markings in History}
 
 As mentioned in the Introduction, the logic that determines which
 interfaces are accessible in a given moment uses markings done in our
 interface history. All interfaces created after the last marking
-areaccessible and the ones created before the marking are not
+are accessible and the ones created before the marking are not
 accessible: they will not be rendered and the user cannot interact
 with them. Several markings can be creted. And the most recent marking
 that still exist can be destroyed, which also destroy the interfaces
@@ -748,7 +757,7 @@ the number of interfaces created after it. This is the number of
 interfaces that will be active while this marking is the last created
 and will exist while this marking exists.
 
-\iniciocodigo
+
 @<Local Data Structures (interface.c)@>=
 struct marking {
   int type;
@@ -758,7 +767,7 @@ struct marking {
   unsigned number_of_interfaces;
 };
 @
-\fimcodigo
+
 
 Notice that we declared this as a local data structure in file
 \monoespaco{interface.c}. We did this because this structure will be
@@ -778,7 +787,7 @@ interface acts as a recently created interface and then the older
 interface becames accessible again. Creating a link means create and
 store in the linked list the following struct:
 
-\iniciocodigo
+
 @<Local Data Structures (interface.c)@>=
 struct link{
   int type;
@@ -786,7 +795,7 @@ struct link{
   struct user_interface *linked_interface;
 };
 @
-\fimcodigo
+
 
 Besides the information necessary to the linked list, like the type
 and the pointer to the next element, the only information that we need
@@ -810,7 +819,7 @@ given extension.
 To store the functions from the list with variable size, we need the
 following structure:
 
-\iniciocodigo
+
 @<Local Data Structures (interface.c)@>=
 struct file_function {
   char *extension;
@@ -825,7 +834,7 @@ struct file_function {
 static unsigned number_of_file_functions_in_the_list = 0;
 static struct file_function *list_of_file_functions = NULL;
 @
-\fimcodigo
+
 
 The struct is basically a pair composed by a function that extracts
 textures from a given file (and gets all the custom functions that
@@ -837,7 +846,7 @@ After, when this list is not empty anymore, in other words, after the
 initialization, we will be able to check each element in this list and
 extract the correct loading function using this auxiliary function:
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>=
 static inline void (*get_loading_function(char *ext))
                           (void *(*permanent_alloc)(size_t),
@@ -855,7 +864,7 @@ static inline void (*get_loading_function(char *ext))
   return NULL;
 }
 @
-\fimcodigo
+
 
 The code above is verbose because it is a function that returns a
 function pointer to a function with lots of parameters. But the
@@ -865,11 +874,11 @@ searched in the list.
 As we used a function to compare strings, we should include the
 standard header involving strings:
 
-\iniciocodigo
+
 @<Local Headers (interface.c)@>=
 #include <string.h>
 @
-\fimcodigo
+
 
 
 Now we can define the initialization function. What this function will
@@ -878,7 +887,7 @@ custom functions we have to interpret files, allocate the space
 necessary in the list above (using the custom allocation functions)
 and fill the newly allocated list:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>=
 void _Winit_interface(int *window_width_p, int *window_height_p,
                       void *(*new_permanent_alloc)(size_t),
@@ -921,7 +930,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
   @<Initializing Interface API@>
 }
 @
-\fimcodigo
+
 
 The above function is very verbose because C is verbose when we have
 functions with variable number of parameters and these parameters can
@@ -934,11 +943,11 @@ initialization code that we will define in the next sections.
 The use of some resources, like accessing arguments by
 \monoespaco{va\_list} requires the following header:
 
-\iniciocodigo
+
 @<Local Headers (interface.c)@>=
 #include <stdarg.h>
 @
-\fimcodigo
+
 
 \subsecao{3.2. Finalization}
 
@@ -949,7 +958,7 @@ diallocating this memory. If in the initialization we begin setting
 the six basic custom functions, in the finalization we end setting
 these functions to the default initial values:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wfinish_interface(void){
   @<Finalizing Interface API@>
@@ -964,7 +973,7 @@ void _Wfinish_interface(void){
   after_loading_interface = NULL;
 }
 @
-\fimcodigo
+
 
 Notice that we let additional space in red for additional code that we
 will eventually need in the finalization when we increase the API
@@ -998,13 +1007,13 @@ means that we will use the shading language OpenGL ES v1.00. We eill
 define the macro, if it does not exist, in the beginning of the file
 that defines our functions:
 
-\iniciocodigo
+
 @<Local Macros (interface.c)@>=
 #if !defined(W_GLSL_VERSION)
 #define W_GLSL_VERSION "#version 100\n"
 #endif
 @
-\fimcodigo
+
 
 There is at least two different shaders that we need to define for
 each interface. The first is the vertex shader, that will be processed
@@ -1022,12 +1031,12 @@ custom source code for each environment. For this, we must have two
 different GLSL macros. One that will be defined when we need a vertex
 shader and the other when we need a fragment shader:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static const char vertex_shader_macro[] = "#define VERTEX_SHADER\n";
 static const char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
 @
-\fimcodigo
+
 
 In the shader source code, we just need to check which macro is
 defined and we can include code conditionally depending on this.
@@ -1041,59 +1050,59 @@ default the highest possible precision. For less important variables,
 the user always can lower the precision trying to make the shader more
 efficient.
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static const char precision_qualifier[] = "precision highp float;\n"
                                           "precision highp int;\n";
 @
-\fimcodigo
+
 
 The next thing that we must define is how to support libraries in our
 GLSL code. They can make shader definition easier. The user can
 define additional GLSL functions that will be available in all
 interface shaders storing its source code in the following variable:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static char *shader_library = "";
 @
-\fimcodigo
+
 
 The variable will be changed by the function seen in the Introduction
 to increment GLSL with new functions. Such function is extremely
 simple, it justs assign a string with function source code to the
 variable above:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wset_interface_shader_library(char *source){
   shader_library = source;
 }
 @
-\fimcodigo
+
 
 But we should not forget that when finalizing our API, we need to undo
 the assignment. Otherwise, when a user finalize and initialize again
 the API, the second initialization would get the same function
 definitions assigned in the first initialization:
 
-\iniciocodigo
+
 @<Finalizing Interface API@>=
 shader_library = "";
 @
-\fimcodigo
+
 
 The list of default variables and attributes passed to the shader also
 must be part of the source code. We will define them later, but for
 now we show that they will be in this variable:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static const char shader_variables[] = ""
 @<Shader Attributes, Uniforms and Varyings@>
 "";
 @
-\fimcodigo
+
 
 Now we will see how to compile a shader given these informations and a
 string with its source code. First we will include the standard
@@ -1101,7 +1110,7 @@ input/output library to print in the screen error messages if there
 are errors in the shader source code. The OpenGL headers are already
 included in \monoespaco{interface.h}.
 
-\iniciocodigo
+
 @<Local Headers (interface.c)@>+=
 #if defined(__linux__) || defined(BSD)
 #include <EGL/egl.h>
@@ -1114,7 +1123,7 @@ included in \monoespaco{interface.h}.
 #endif
 #include <stdio.h>
 @
-\fimcodigo
+
 
 Once we have the necessary headers, we can define the function that
 given a shader source code, compiles it to a complete shader
@@ -1122,7 +1131,7 @@ program. Compiling a shader means creating on OpenGL the two kind of
 shaders (vertex and fragment), compile both and link them in a
 single program.
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>=
 @<Functions to Check Compiling Errors@>
 static GLuint compile_shader(const char *source_code){
@@ -1156,7 +1165,7 @@ static GLuint compile_shader(const char *source_code){
   return program;
 }
 @
-\fimcodigo
+
 
 What we are not showing above is hoe we verify if the shader was
 compiled and linked successfully. To do this with shader compilation,
@@ -1166,7 +1175,7 @@ screen. Notice that here we are using the temporary allocation and
 deallocation functions to manage space in the memory for the error
 message. The function also returns if an error was found or not.
 
-\iniciocodigo
+
 @<Functions to Check Compiling Errors@>=
 static bool check_compiling_error(GLuint shader){
   GLint status;
@@ -1185,7 +1194,7 @@ static bool check_compiling_error(GLuint shader){
   return false;
 }
 @
-\fimcodigo
+
 
 Checking if some error happened during the linking stag is
 similar. However, after the linking we can make even better. We can
@@ -1195,7 +1204,7 @@ is an expensive operation, we will do this only if the macro
 \monoespaco{W\_DEBUG\_INTERFACE} is defined. In this case, we assume
 that we are in debug mode.
 
-\iniciocodigo
+
 @<Functions to Check Compiling Errors@>+=
 static bool check_linking_error(GLuint program){
   GLint status;
@@ -1227,7 +1236,7 @@ static bool check_linking_error(GLuint program){
   return false;  
 }
 @
-\fimcodigo
+
 
 And this ends the description of how we compile a new shader and print
 messages in case of errors in the source code.
@@ -1239,7 +1248,7 @@ showing the texture associated with the interface.
 The source code for the default shader will be stored in the following
 constant:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static const char default_shader_source[] = ""
 "#if defined(VERTEX_SHADER)\n"
@@ -1249,7 +1258,7 @@ static const char default_shader_source[] = ""
 "#endif\n"
 "";
 @
-\fimcodigo
+
 
 The source code will be composed by string literals stored in the
 constant variable above. In the case of the vertex shader, it will
@@ -1262,7 +1271,7 @@ have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
 0)$. Each vertex have as argument its texture coordinate. They are
 declared below:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static const float interface_vertices[20] = {
   0.0, 0.0, 0.0, // First Vertice
@@ -1275,7 +1284,7 @@ static const float interface_vertices[20] = {
   0.0, 1.0};    // Texture coordinate
 static GLuint interface_vbo;
 @
-\fimcodigo
+
 
 The order in which we declare these vertices is important. If we
 follow these vertices in the declared order, we draw a square in a
@@ -1297,7 +1306,7 @@ could render them asking to render the corresponding VBO (``vertex
 buffer object''). LOading the vertices in the VBO is done in the
 Initialization:
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 glGenBuffers(1, &interface_vbo);
 glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
@@ -1305,15 +1314,15 @@ glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
 glBufferData(GL_ARRAY_BUFFER, sizeof(interface_vertices), interface_vertices,
              GL_STATIC_DRAW);
 @
-\fimcodigo
+
 
 In the Finalization we need to destroy the VBO:
 
-\iniciocodigo
+
 @<Finalizing Interface API@>+=
 glDeleteBuffers(1, &interface_vbo);
 @
-\fimcodigo
+
 
 Anyway, all interfaces will begin as a rectangle centered in the
 screen which will occupy all the screeen size, as OpenGL defines ``1''
@@ -1322,27 +1331,27 @@ in different sizes, positions and rotations, we will use different
 model-view matrices. Each interface will have its own model-view
 matrix.
 
-\iniciocodigo
+
 @<Default Vertex Shader@>=
 "void main(){\n"
 "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
 "  texture_coordinate = vertex_texture_coordinate;\n"
 "}\n"
 @
-\fimcodigo
+
 
 
 In the fragment shader, for each pixel we will draw the color
 associated with the texture in a given position:
 
-\iniciocodigo
+
 @<Default Fragment Shader@>=
 "void main(){\n"
 "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
 "  gl_FragData[0] = texture;\n"
 "}\n"
 @
-\fimcodigo
+
 
 Now we need to define in the shaders its attributes, uniforms and
 varyings. The attributes are read-only data specified for each vertex.
@@ -1351,14 +1360,14 @@ $(x, y, z)$ and texture coordinate in format $(x, y)$. The coordinates
 $x$ and $y$ will be between 0 and 1 and $z=0$, as described
 previously. Attributes are declared only in vertex shaders.
 
-\iniciocodigo
+
 @<Shader Attributes, Uniforms and Varyings@>=
 "#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
 "attribute vec2 vertex_texture_coordinate;\n"
 "#endif\n"
 @
-\fimcodigo
+
 
 Uniforms are variables that also will be passed to vertices, but they
 will not change between them. Therefore, the fragment shader do not
@@ -1367,7 +1376,7 @@ foreground color, the background color, the model-view matrix, the
 object size in pixels, the current time in seconds, the integer
 associated with each interface and its texture:
 
-\iniciocodigo
+
 @<Shader Attributes, Uniforms and Varyings@>+=
 "uniform vec4 foreground_color, background_color;\n"
 "uniform mat4 model_view_matrix;\n"
@@ -1377,17 +1386,17 @@ associated with each interface and its texture:
 "uniform int integer;\n"
 "uniform sampler2D texture1;\n"
 @
-\fimcodigo
+
 
 Finally we have varying variables. They can be modified and set on the
 vertex shader and its interpolated value will be given to the fragment
 shader. Here we put the texture coordinate.
 
-\iniciocodigo
+
 @<Shader Attributes, Uniforms and Varyings@>+=
 "varying mediump vec2 texture_coordinate;\n"
 @
-\fimcodigo
+
 
 Notice that we did not use all the variables defined in the default
 shader. The unused variables will be discarded during the compilation
@@ -1401,7 +1410,7 @@ specified as a path to a file where the source code is. For this case,
 we will define a function that creates a new shader program from a
 filename given as argument:
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>=
 static GLuint compile_shader_from_file(const char *filename){
   char *buffer;
@@ -1426,7 +1435,7 @@ static GLuint compile_shader_from_file(const char *filename){
   return shader_program;
 }
 @
-\fimcodigo
+
 
 
 The last problem that we will solve in this section is what should we
@@ -1434,18 +1443,18 @@ render as default texture when the user supplies no texture for a
 given interface. For these cases, We will create a texture composed by
 a single white pixel:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static GLuint default_texture;
 @
-\fimcodigo
+
 
 We will create this texture during the initialization. This is done in
 the following code, where we generate the texture in OpenGL, associate
 it as the current 2D-texture and specify the white pixel explaining
 how it is represented.
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 {
   GLubyte pixels[3] = {255, 255, 255};
@@ -1455,15 +1464,15 @@ how it is represented.
                pixels);
 }
 @
-\fimcodigo
+
 
 And in the finalization we discard the created texture:
 
-\iniciocodigo
+
 @<Finalizing Interface API@>+=
 glDeleteTextures(1, &default_texture);
 @
-\fimcodigo
+
 
 \secao{5. The Model-View Matrix}
 
@@ -1659,17 +1668,17 @@ our coordinates and sizes to OpenGL format.
 Assuming that we have a pointer \monoespaco{i} to a given interface,
 this can be done with the following code:
 
-\iniciocodigo
+
 @<Converting Coordinates and Sizes@>=
 x = 2.0 * (i -> _x) / (*window_width) - 1.0;
 y = 2.0 * (i -> _y) / (*window_height) - 1.0;
 @
-\fimcodigo
+
 
 And using the conversion rules above, we can fill the model-view
 matrix for the first time with the function below:
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>=
 static void initialize_model_view_matrix(struct user_interface *i){
   GLfloat x, y;
@@ -1706,16 +1715,16 @@ static void initialize_model_view_matrix(struct user_interface *i){
   i -> _transform_matrix[15] = 1.0;
 }
 @
-\fimcodigo
+
 
 Using sine and cosine functions requires the header for mathematical
 operations:
 
-\iniciocodigo
+
 @<Local Headers (interface.c)@>+=
 #include <math.h>
 @
-\fimcodigo
+
 
 \secao{6. Managing Data Structures}
 
@@ -1730,22 +1739,22 @@ list. The second will point to the last history marking inserted in
 the list. We also will define a mutex to ensure that only one thread
 can update the linked list at a given moment:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static void *last_structure = NULL;
 static struct marking *last_marking = NULL;
 _STATIC_MUTEX_DECLARATION(linked_list_mutex);
 @
-\fimcodigo
+
 
 The mutex that wil control access to the linked list needs to be
 created during the initialization:
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 MUTEX_INIT(&linked_list_mutex);
 @
-\fimcodigo
+
 
 We will put the code to finalize this mutex later, when we define the
 code thatfinalize the entire linked list.
@@ -1769,11 +1778,11 @@ We also need to create an structure for our default shader, whose
 source code is in Section 4. The default shader structure address will
 be stored in this pointer:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 struct shader *default_shader;
 @
-\fimcodigo
+
 
 Now we will define the internal function that generates new shader
 structures. This function will get as argument a string with the
@@ -1784,7 +1793,7 @@ the filename. In this case, we create a new shader structure using the
 default shader source code defined in Section 4. And we do not insert
 it in the linked list.
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>+=
 static struct shader *new_shader(char *shader_source){
   struct shader *new = (struct shader *) permanent_alloc(sizeof(struct shader));
@@ -1823,7 +1832,7 @@ static struct shader *new_shader(char *shader_source){
   return new;
 }
 @
-\fimcodigo
+
 
 Basically the code above uses the functions defined in Section 4 to
 compile the shader and after compiling it, gets the address where we
@@ -1833,17 +1842,17 @@ structure.
 
 Now we can initialize the default shader in the Initialization:
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 default_shader = new_shader(NULL);
 @
-\fimcodigo
+
 
 To destroy a shader, we need to inform that the compiler shader
 program will not be executed anymore and should be deleted. Then, we
 disallocate the allocated memory for the struct:
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>+=
 static void destroy_shader(struct shader *shader_struct){
   glDeleteProgram(shader_struct -> program);
@@ -1851,15 +1860,15 @@ static void destroy_shader(struct shader *shader_struct){
     permanent_free(shader_struct);
 }
 @
-\fimcodigo
+
 
 The default shader should be destroyed in the API finalization:
 
-\iniciocodigo
+
 @<Finalizing Interface API@>+=
 destroy_shader(default_shader);
 @
-\fimcodigo
+
 
 \subsecao{6.2. Creating and Destroying Interfaces}
 
@@ -1869,7 +1878,7 @@ will allocate the new interface, execute the adequate functions to
 initialize it and will include it in the linked list. The function
 definition is:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                                   float x, float y, float z, float width,
@@ -1922,7 +1931,7 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> frame_duration = NULL;
     new_interface -> _t = 0;
     new_interface -> max_repetition = 0;
-    MUTEX_INIT(&(new_interface -> interface_mutex));
+    MUTEX_INIT(&(new_interface -> mutex));
     new_interface -> _mouse_over = false;
     new_interface -> on_mouse_over = NULL;
     new_interface -> on_mouse_out = NULL;
@@ -1932,6 +1941,9 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
     new_interface -> on_mouse_middle_up = NULL;
     new_interface -> on_mouse_right_down = NULL;
     new_interface -> on_mouse_right_up = NULL;
+    new_interface -> _internal_data = NULL;
+    new_interface -> _free_internal_data = NULL;
+    new_interface -> _reload_texture = NULL;
     MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
     if(last_structure != NULL)
       ((struct user_interface *) last_structure)-> next = (void *) new_interface;
@@ -1955,7 +1967,7 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
   return new_interface;
 }
 @
-\fimcodigo
+
 
 Despite being a long function, what it does is just allocate the
 interface with the function set as our permanent allocator, initialize
@@ -1971,7 +1983,7 @@ the list of frame duration for animated textures. The destructor
 function should first disallocate these variables, and then
 disallocate the entire struct:
 
-\iniciocodigo
+
 @<Auxiliary Local Functions (interface.c)@>+=
 static void destroy_interface(struct user_interface *interface_struct){
   if(interface_struct -> _texture1 != NULL){
@@ -1982,12 +1994,16 @@ static void destroy_interface(struct user_interface *interface_struct){
   }
   if(interface_struct -> frame_duration != NULL && permanent_free != NULL)
     permanent_free(interface_struct -> frame_duration);
-  MUTEX_DESTROY(&(interface_struct -> interface_mutex));
+  MUTEX_DESTROY(&(interface_struct -> mutex));
+  if(interface_struct -> _free_internal_data != NULL &&
+     interface_struct -> _internal_data != NULL){
+    interface_struct -> _free_internal_data(interface_struct -> _internal_data);
+  }
   if(permanent_free != NULL)
     permanent_free(interface_struct);
 }
 @
-\fimcodigo
+
 
 \subsecao{6.3. Creating and Destroying Link to an Existing Interface}
 
@@ -1998,7 +2014,7 @@ linking will be just a pointer to another interface in the linked
 list, created using \monoespaco{\_Wlink\_interface}. The function that
 creates it is defined below:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i){
   struct link *new_link = permanent_alloc(sizeof(struct link));
@@ -2016,7 +2032,7 @@ struct user_interface *_Wlink_interface(struct user_interface *i){
   return i;
 }
 @
-\fimcodigo
+
 
 Destroying a link is done just running the disallocation
 function. Because of this, we will not define an auxiliary function to
@@ -2029,7 +2045,7 @@ the function \monoespaco{\_Wmark\_history\_interface}. After this
 marking, all interfaces created before it will became inaccessible
 until the marking is removed.
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wmark_history_interface(void){
   struct marking *new_marking = permanent_alloc(sizeof(struct marking));
@@ -2048,7 +2064,7 @@ void _Wmark_history_interface(void){
   }
 }
 @
-\fimcodigo
+
 
 As it is important to have a last marking in the history to keep track
 of the number of active interfaces, we create the first marking in the
@@ -2056,13 +2072,13 @@ initialization. And it will be destroyed only in the finalization. If
 the user uses the API function to remove the first marking before the
 finalization, we will ignore the action.
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 _Wmark_history_interface();
 @
-\fimcodigo
 
-\iniciocodigo
+
+
 @<Finalizing Interface API@>+=
 // Erases all markings, except the first one:
 while(last_marking -> previous_marking != NULL){
@@ -2077,7 +2093,7 @@ last_marking = NULL;
 last_structure = NULL;
 MUTEX_DESTROY(&linked_list_mutex);
 @
-\fimcodigo
+
 
 The function \monoespaco{\_Wrestore\_history\_interface} is an API
 function that we will define in the next Section. It destroys and
@@ -2102,7 +2118,7 @@ was created.
 
 The function is implemented as below:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wrestore_history_interface(void){
   struct marking *to_be_removed;
@@ -2135,7 +2151,7 @@ void _Wrestore_history_interface(void){
   MUTEX_SIGNAL(&linked_list_mutex);
 }
 @
-\fimcodigo
+
 
 The function first removes all structures created after the last
 marking. Only after this the last marking is removed, except if it is
@@ -2169,30 +2185,30 @@ draw them in any order.
 
 The pointer that stores our ordered list address is this:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>+=
 static struct user_interface **z_list = NULL;
 static unsigned z_list_size = 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 @
-\fimcodigo
+
 
 During the API initialization we should initialize the above
 variables:
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 MUTEX_INIT(&z_list_mutex);
 z_list_size = 0;
 z_list = NULL;
 @
-\fimcodigo
+
 
 After finalizing our API, if this interface list was allocated, we
 need to disallocate it, set this pointer to null again and finalize
 the mutex:
 
-\iniciocodigo
+
 @<Finalizing Interface API@>+=
 MUTEX_DESTROY(&z_list_mutex);
 if(z_list != NULL && permanent_free != NULL)
@@ -2200,14 +2216,14 @@ if(z_list != NULL && permanent_free != NULL)
 z_list = NULL;
 z_list_size = 0;
 @
-\fimcodigo
+
 
 As we did in the finalization, when we restore our interface history,
 we change the list of interfaces that we are viewing, restoring
 previous interfaces. In this case we need to reset our list making it
 empty again.
 
-\iniciocodigo
+
 @<Restoring History@>=
 MUTEX_WAIT(&z_list_mutex);
 if(z_list != NULL && permanent_free != NULL)
@@ -2216,7 +2232,7 @@ z_list = NULL;
 z_list_size = 0;
 MUTEX_SIGNAL(&z_list_mutex);
 @
-\fimcodigo
+
 
 We must initialize this list in the rendering
 function \monoespaco{\_Wrender\_interface}. Inside this function, we
@@ -2226,7 +2242,7 @@ be checked in the last history marking). If we have a different value,
 this means that new interfaces were created and we should regenerate
 our ordered list. The code that perform this can be seen below:
 
-\iniciocodigo
+
 @<Generating Ordered List of interfaces@>=
 if(z_list_size != last_marking -> number_of_interfaces){
   void *p;
@@ -2262,7 +2278,7 @@ if(z_list_size != last_marking -> number_of_interfaces){
   MUTEX_SIGNAL(&z_list_mutex);
 }
 @
-\fimcodigo
+
 
 Notice that the scenario in which the ordered list should be rebuild
 with the code above in uncommon. We run the code above when we are
@@ -2291,21 +2307,21 @@ store the previous time received by the function. We will store this
 previous time in the variable below, that is initialized with zero
 before receiving the first time:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>=
 static unsigned long long previous_time = 0;
 @
-\fimcodigo
+
 
 But we also need to initialize this variable in the
 initialization. Otherwise, the variable would store incorrect values
 if the API is finalized and initialized again:
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 previous_time = 0;
 @
-\fimcodigo
+
 
 And below we show the function that iterates over the ordered list of
 interfaces and render each one, updating also the time variables. The
@@ -2327,7 +2343,7 @@ remember when the last rendering happened.
 
 The implementation for the procedure described above is:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wrender_interface(unsigned long long time){
   @<Generating Ordered List of interfaces@>
@@ -2370,16 +2386,22 @@ void _Wrender_interface(unsigned long long time){
       glUniform1i(z_list[i] -> shader_program -> uniform_integer,
                  z_list[i] -> integer);
       // Animating texture
-      if(z_list[i] -> animate && z_list[i] -> number_of_frames > 1 &&
+      if(z_list[i] -> animate &&
          z_list[i] -> max_repetition != 0){
         z_list[i] -> _t += elapsed_time;
         z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
         while(z_list[i] -> _t >=
-                     z_list[i] -> frame_duration[z_list[i] -> current_frame]){
+                     z_list[i] -> frame_duration[z_list[i] -> current_frame] &&
+              z_list[i] -> max_repetition != 0){
           z_list[i] -> _t -=
             z_list[i] -> frame_duration[z_list[i] -> current_frame];
           z_list[i] -> current_frame ++;
           z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
+          if(z_list[i] -> number_of_frames == 1 &&
+             z_list[i] -> _reload_texture != NULL)
+            z_list[i] -> _reload_texture(z_list[i]); // Procedural texture
+          else if(z_list[i] -> current_frame == 0 && z_list[i] -> max_repetition > 0)
+	    z_list[i] -> max_repetition --;
         }
       }
       // Rendering:
@@ -2396,7 +2418,7 @@ void _Wrender_interface(unsigned long long time){
   previous_time = time;
 }
 @
-\fimcodigo
+
 
 \secao{8. Moving, Rotating and Resizing Interfaces}
 
@@ -2414,14 +2436,14 @@ invocations of this function for the same interface.
 The API function that moves interfaces
 is \monoespaco{\_Wmove\_interface} and we define the function as:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wmove_interface(struct user_interface *i,
                       float new_x, float new_y, float new_z){
   GLfloat x, y;
   GLfloat cos_theta = cos(i -> _rotation);
   GLfloat sin_theta = sin(i -> _rotation);
-  MUTEX_WAIT(&(i -> interface_mutex));
+  MUTEX_WAIT(&(i -> mutex));
   i -> x = i -> _x = new_x;
   i -> y = i -> _y = new_y;
 #if defined(W_FORCE_LANDSCAPE)
@@ -2457,10 +2479,10 @@ void _Wmove_interface(struct user_interface *i,
     }
     MUTEX_SIGNAL(&z_list_mutex);
   }
-  MUTEX_SIGNAL(&(i -> interface_mutex));
+  MUTEX_SIGNAL(&(i -> mutex));
 }
 @
-\fimcodigo
+
 
 \subsecao{8.2. Rotating Interfaces}
 
@@ -2468,13 +2490,13 @@ Rotating an interface involves reserving its mutex, updating the
 rotation variable and also updating its model-view matrix. The code
 for this can be seen below:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation){
   GLfloat x, y;
   GLfloat cos_theta = cos(rotation);
   GLfloat sin_theta = sin(rotation);
-  MUTEX_WAIT(&(i -> interface_mutex));
+  MUTEX_WAIT(&(i -> mutex));
   i -> rotation = i -> _rotation = rotation;
 #if defined(W_FORCE_LANDSCAPE)
   if(*window_height > *window_width)
@@ -2495,10 +2517,10 @@ void _Wrotate_interface(struct user_interface *i, float rotation){
   i -> _transform_matrix[13] = y -
     (i -> width / (*window_height)) * sin_theta -
     (i -> height / (*window_height)) * cos_theta;
-  MUTEX_SIGNAL(&(i -> interface_mutex));
+  MUTEX_SIGNAL(&(i -> mutex));
 }
 @
-\fimcodigo
+
 
 \subsecao{8.3. Resizing Interfaces}
 
@@ -2508,16 +2530,18 @@ matrix.
 
 The code to resize interfaces is:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height){
   GLfloat x, y;
   GLfloat cos_theta = cos(i -> _rotation);
   GLfloat sin_theta = sin(i -> _rotation);
-  MUTEX_WAIT(&(i -> interface_mutex));
+  MUTEX_WAIT(&(i -> mutex));
   i -> width = new_width;
   i -> height = new_height;
+  if(i -> _reload_texture != NULL)
+    i -> _reload_texture(i); // Recreate texture if we have a vector texture
   @<Converting Coordinates and Sizes@>
   i -> _transform_matrix[0] = (2 * i -> width / (*window_width)) *
     cos_theta;
@@ -2533,10 +2557,10 @@ void _Wresize_interface(struct user_interface *i,
   i -> _transform_matrix[13] = y -
     (i -> width / (*window_height)) * sin_theta -
     (i -> height / (*window_height)) * cos_theta;
-  MUTEX_SIGNAL(&(i -> interface_mutex));
+  MUTEX_SIGNAL(&(i -> mutex));
 }
 @
-\fimcodigo
+
 
 \secao{8. Interacting with Interfaces}
 
@@ -2552,23 +2576,23 @@ states. Because we need to know not only the current mouse button
 status, but also the previous status. To memorize this, we will use
 the following variables, one for each mouse button:
 
-\iniciocodigo
+
 @<Local Variables (interface.c)@>=
 static bool mouse_last_left_click = false, mouse_last_middle_click = false,
   mouse_last_right_click = false;
 @
-\fimcodigo
+
 
 We initialize these variables with false during the API
 initialization:
 
-\iniciocodigo
+
 @<Initializing Interface API@>+=
 mouse_last_left_click = false;
 mouse_last_middle_click = false;
 mouse_last_right_click = false;
 @
-\fimcodigo
+
 
 Knowing the previous mouse state and the current state, we are able to
 notice not only that the user is clicking in something, but also if
@@ -2597,7 +2621,7 @@ hovered over it, or clicked on it).
 
 The code to perform this is:
 
-\iniciocodigo
+
 @<API Functions Definition (interface.c)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click){
@@ -2651,7 +2675,7 @@ void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
   mouse_last_right_click = right_click;
 }
 @
-\fimcodigo
+
 
 This is a very direct code, but we ommited the part where we transform
 the mouse coordinates in coordinates $(x, y)$ to compare with each
@@ -2668,7 +2692,7 @@ rotated. If not, no transformation is necessary. If yes, we just make
 some trigonometric calculations to determine the transformed
 coordinate:
 
-\iniciocodigo
+
 @<Converting Mouse Coordinates to x and y@>=
 if(z_list[i] -> rotation == 0.0){
   x = mouse_x;
@@ -2685,8 +2709,6 @@ else{
  y +=  z_list[i] -> y;
 }
 @
-\fimcodigo
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
