@@ -731,7 +731,7 @@ new_interface->_loaded_texture= false;
 else
 new_interface->_loaded_texture= true;
 new_interface->animate= false;
-new_interface->number_of_frames= 0;
+new_interface->number_of_frames= 1;
 new_interface->current_frame= 0;
 new_interface->frame_duration= NULL;
 new_interface->_t= 0;

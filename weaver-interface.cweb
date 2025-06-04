@@ -1952,7 +1952,7 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
     else // Sem textura para ser carregada:
       new_interface -> _loaded_texture = true;
     new_interface -> animate = false;
-    new_interface -> number_of_frames = 0;
+    new_interface -> number_of_frames = 1;
     new_interface -> current_frame = 0;
     new_interface -> frame_duration = NULL;
     new_interface -> _t = 0;
@@ -2001,7 +2001,7 @@ valores iniciais, inseri-la na lista encadeada e executar a função
 adequada para carrega a textura dependendo da extensão do arquivo.
 
 Destruir uma interface significa checar algumas de suas variáveis
-específicas para vcer se tem um valor diferente
+específicas para ver se tem um valor diferente
 de \monoespaco{NULL}. Se for o caso, isso significa que a função de
 carregamento alocou e preencheu alguns de seus valores. Como por
 exemplo, as variáveis que armazenam texturas, que armazenam o tempo
