@@ -2430,8 +2430,14 @@ void _Wrender_interface(unsigned long long time){
           z_list[i] -> current_frame ++;
           z_list[i] -> current_frame %= z_list[i] -> number_of_frames;
           if(z_list[i] -> number_of_frames == 1 &&
-             z_list[i] -> _reload_texture != NULL)
-            z_list[i] -> _reload_texture(z_list[i]); // Textura procedural
+             z_list[i] -> _reload_texture != NULL){
+	    z_list[i] -> _reload_texture(z_list[i]); // Textura procedural
+	    // Pode ser relativamente demorado recarregar uma textura, e isso
+	    // também costuma requerer alocações de memória. Por causa disso,
+	    // limitaremos o número de invocações desta função em 1 por frame:
+	    if(z_list[i] -> _t >= z_list[i] -> frame_duration[0])
+	      z_list[i] -> _t = z_list[i] -> frame_duration[0] - 1;
+	  }
           else if(z_list[i] -> current_frame == 0 && z_list[i] -> max_repetition > 0)
 	    z_list[i] -> max_repetition --;
         }

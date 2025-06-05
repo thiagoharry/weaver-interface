@@ -275,7 +275,7 @@ _STATIC_MUTEX_DECLARATION(z_list_mutex);
 
 static unsigned long long previous_time= 0;
 /*:83*//*89:*/
-#line 2615 "weaver-interface.cweb"
+#line 2621 "weaver-interface.cweb"
 
 static bool mouse_last_left_click= false,mouse_last_middle_click= false,
 mouse_last_right_click= false;
@@ -610,7 +610,7 @@ z_list= NULL;
 
 previous_time= 0;
 /*:84*//*90:*/
-#line 2625 "weaver-interface.cweb"
+#line 2631 "weaver-interface.cweb"
 
 mouse_last_left_click= false;
 mouse_last_middle_click= false;
@@ -947,8 +947,14 @@ z_list[i]->frame_duration[z_list[i]->current_frame];
 z_list[i]->current_frame++;
 z_list[i]->current_frame%= z_list[i]->number_of_frames;
 if(z_list[i]->number_of_frames==1&&
-z_list[i]->_reload_texture!=NULL)
+z_list[i]->_reload_texture!=NULL){
 z_list[i]->_reload_texture(z_list[i]);
+
+
+
+if(z_list[i]->_t>=z_list[i]->frame_duration[0])
+z_list[i]->_t= z_list[i]->frame_duration[0]-1;
+}
 else if(z_list[i]->current_frame==0&&z_list[i]->max_repetition> 0)
 z_list[i]->max_repetition--;
 }
@@ -967,7 +973,7 @@ glBindTexture(GL_TEXTURE_2D,0);
 previous_time= time;
 }
 /*:85*//*86:*/
-#line 2472 "weaver-interface.cweb"
+#line 2478 "weaver-interface.cweb"
 
 void _Wmove_interface(struct user_interface*i,
 float new_x,float new_y,float new_z){
@@ -983,14 +989,14 @@ i->_x= *window_width-new_y;
 i->_y= new_x;
 }
 #endif
-#line 2487 "weaver-interface.cweb"
+#line 2493 "weaver-interface.cweb"
 /*61:*/
 #line 1695 "weaver-interface.cweb"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:61*/
-#line 2487 "weaver-interface.cweb"
+#line 2493 "weaver-interface.cweb"
 
 i->_transform_matrix[12]= x+
 (i->height/(*window_width))*sin_theta-
@@ -1021,7 +1027,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:86*//*87:*/
-#line 2526 "weaver-interface.cweb"
+#line 2532 "weaver-interface.cweb"
 
 void _Wrotate_interface(struct user_interface*i,float rotation){
 GLfloat x,y;
@@ -1033,14 +1039,14 @@ i->rotation= i->_rotation= rotation;
 if(*window_height> *window_width)
 i->_rotation+= M_PI_2;
 #endif
-#line 2537 "weaver-interface.cweb"
+#line 2543 "weaver-interface.cweb"
 /*61:*/
 #line 1695 "weaver-interface.cweb"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:61*/
-#line 2537 "weaver-interface.cweb"
+#line 2543 "weaver-interface.cweb"
 
 i->_transform_matrix[0]= (2*i->width/(*window_width))*
 cos_theta;
@@ -1059,7 +1065,7 @@ i->_transform_matrix[13]= y-
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:87*//*88:*/
-#line 2569 "weaver-interface.cweb"
+#line 2575 "weaver-interface.cweb"
 
 void _Wresize_interface(struct user_interface*i,
 float new_width,float new_height){
@@ -1077,7 +1083,7 @@ i->_reload_texture(i);
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:61*/
-#line 2580 "weaver-interface.cweb"
+#line 2586 "weaver-interface.cweb"
 
 i->_transform_matrix[0]= (2*i->width/(*window_width))*
 cos_theta;
@@ -1096,7 +1102,7 @@ i->_transform_matrix[13]= y-
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:88*//*91:*/
-#line 2659 "weaver-interface.cweb"
+#line 2665 "weaver-interface.cweb"
 
 void _Winteract_interface(int mouse_x,int mouse_y,bool left_click,
 bool middle_click,bool right_click){
@@ -1106,7 +1112,7 @@ MUTEX_WAIT(&z_list_mutex);
 for(i= z_list_size-1;i>=0;i--){
 float x,y;
 /*92:*/
-#line 2738 "weaver-interface.cweb"
+#line 2744 "weaver-interface.cweb"
 
 if(z_list[i]->rotation==0.0){
 x= mouse_x;
@@ -1123,7 +1129,7 @@ x+= z_list[i]->x;
 y+= z_list[i]->y;
 }
 /*:92*/
-#line 2667 "weaver-interface.cweb"
+#line 2673 "weaver-interface.cweb"
 
 z_list[i]->mouse_x= x-z_list[i]->x+(z_list[i]->width/2);
 z_list[i]->mouse_y= y-z_list[i]->y+(z_list[i]->height/2);
