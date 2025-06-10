@@ -2413,6 +2413,15 @@ void _Wrender_interface(unsigned long long time){
           if(z_list[i] -> number_of_frames == 1 &&
              z_list[i] -> _reload_texture != NULL){
 	    z_list[i] -> _reload_texture(z_list[i]); // Textura procedural
+	    // Como a renderização da textura pode ter contaminado o estado
+	    // atual do OpenGL, vamos ajustar ele novamente:
+	    glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                                 (void *) 0);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                                 (void *) (3 * sizeof(float)));
+            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
 	    // Pode ser relativamente demorado recarregar uma textura, e isso
 	    // também costuma requerer alocações de memória. Por causa disso,
 	    // limitaremos o número de invocações desta função em 1 por frame:
