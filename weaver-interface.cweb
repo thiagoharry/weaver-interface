@@ -2398,26 +2398,7 @@ void _Wrender_interface(unsigned long long time){
     for(i = 0; i < z_list_size; i ++){
       if(!(z_list[i] -> _loaded_texture) || !(z_list[i] -> visible))
         continue;
-      // Escolhendo o shader certo:
-      glUseProgram(z_list[i] -> shader_program -> program);
-      // Passando os Uniformes:
-      glUniform4fv(z_list[i] -> shader_program -> uniform_foreground_color, 4,
-                   z_list[i] -> foreground_color);
-      glUniform4fv(z_list[i] -> shader_program -> uniform_background_color, 4,
-                   z_list[i] -> background_color);
-      glUniformMatrix4fv(z_list[i] -> shader_program ->
-                           uniform_model_view_matrix, 1, false,
-                         z_list[i] -> _transform_matrix);
-      glUniform2f(z_list[i] -> shader_program -> uniform_interface_size,
-                  z_list[i] -> width, z_list[i] -> height);
-      glUniform2f(z_list[i] -> shader_program -> uniform_mouse_coordinate,
-                  z_list[i] -> mouse_x, z_list[i] -> mouse_y);
-      // O shader recebe contagem de tempo em segundos módulo 1 hora
-      glUniform1f(z_list[i] -> shader_program -> uniform_time,
-                  ((double) (time % 3600000000ull)) / (double) (1000000.0)); 
-      glUniform1i(z_list[i] -> shader_program -> uniform_integer,
-                 z_list[i] -> integer);
-      // Animating texture
+      // Animando textura
       if(z_list[i] -> animate &&
          z_list[i] -> max_repetition != 0){
         z_list[i] -> _t += elapsed_time;
@@ -2444,6 +2425,25 @@ void _Wrender_interface(unsigned long long time){
 	    break;
         }
       }
+      // Escolhendo o shader certo:
+      glUseProgram(z_list[i] -> shader_program -> program);
+      // Passando os Uniformes:
+      glUniform4fv(z_list[i] -> shader_program -> uniform_foreground_color, 4,
+                   z_list[i] -> foreground_color);
+      glUniform4fv(z_list[i] -> shader_program -> uniform_background_color, 4,
+                   z_list[i] -> background_color);
+      glUniformMatrix4fv(z_list[i] -> shader_program ->
+                           uniform_model_view_matrix, 1, false,
+                         z_list[i] -> _transform_matrix);
+      glUniform2f(z_list[i] -> shader_program -> uniform_interface_size,
+                  z_list[i] -> width, z_list[i] -> height);
+      glUniform2f(z_list[i] -> shader_program -> uniform_mouse_coordinate,
+                  z_list[i] -> mouse_x, z_list[i] -> mouse_y);
+      // O shader recebe contagem de tempo em segundos módulo 1 hora
+      glUniform1f(z_list[i] -> shader_program -> uniform_time,
+                  ((double) (time % 3600000000ull)) / (double) (1000000.0)); 
+      glUniform1i(z_list[i] -> shader_program -> uniform_integer,
+                 z_list[i] -> integer);
       // Rendering:
       if(z_list[i] -> _texture1 != NULL)
         glBindTexture(GL_TEXTURE_2D,
