@@ -46,41 +46,41 @@
 \email{thiago@@bitbitbit.com.br}
 \vskip6pt
 
-\abstract{This article contains the implementation of the user
-  interface used by Weaver Game Engine. The code presented here are
-  intended to be used when creating buttons, text, menus and other
-  user interface elements. It basically manages shaders, create
-  elements that can be moved, rotated, clicked and can react to mouse
-  hovering. The API presented here are intended to be flexible, the
-  user can extend it and change its behavious registering new
-  functions.}
+\abstract{This article presents the implementation of the user
+interface used by the Weaver Game Engine. The code provided is
+intended for creating buttons, text, menus, and other user interface
+elements. It primarily manages shaders and creates elements that can
+be moved, rotated, clicked, and made to respond to mouse
+hovering. Support for adding sound effects is also included. The API
+is designed to be flexible, allowing users to extend it and customize
+its behavior by registering new functions.}
 
 \secao{1. Introduction}
 
-A graphical user interface is how a program communicates and takes
-information from the user. Ina typical program we could have menus,
-buttons, window pop-ups and other typical graphical elements. In games
-the user intrface usually is conceptually simpler, made by some menus
-and some viewing elements with information about the game state. For
-example, a life counter in the corner of the screen.
+A graphical user interface is how a program communicates with and
+receives input from the user. In a typical program, we might have
+menus, buttons, pop-up windows, and other common graphical
+elements. In games, the user interface is usually conceptually
+simpler, consisting of a few menus and visual elements that provide
+information about the game state---for example, a life counter in the
+corner of the screen.
 
-The fact is that in a computer game we cannot assume almost nothing
-about the appearence of the user interface. A strategy game could have
-lots of menus appearing when the user click in some unit. A platform
-game could have only information about equipped items and life
-counter. The appearence and behaviour of such elements can change a
-lot depending on the game style.
+The truth is that in a computer game, we can assume almost nothing
+about the appearance of the user interface. A strategy game might
+include many menus that appear when the player clicks on a unit, while
+a platform game might only display information about equipped items
+and a life counter. The appearance and behavior of such elements can
+vary greatly depending on the game genre.
 
-The sole universal characteristic that we will assume for our
-interface elements is that they appear over the ame scenario, they are
-not obscured by objects that are part of our game world. Typically we
-will render the interfaces after rendering our game world. And
-elements from the game world cannot interact with
-interfaces. Interfaces are not part of the world that the game
-simulates, they are just elements that give to the player information
-that would be otherwise difficult to express.
+The only universal characteristic we assume for our interface elements
+is that they appear on top of the game scene and are not obscured by
+objects from the game world. Typically, we render the interface after
+rendering the game world, and elements from the game world cannot
+interact with the interface. Interfaces are not part of the simulated
+world---they are merely elements that convey information to the player
+that would otherwise be difficult to represent.
 
-Our objective here will be creating an AP where the user can create a
+Our objective here will be creating an API where the user can create a
 new interface using the function:
 
 
@@ -91,130 +91,109 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
 @
 
 
-Where the first argument is a file that will be open and interpreted
-to get information about our interface texture (it could be an image
-filename). The second argument is the file containing the OpenGL
-shader. Both arguments can be NULL> A null shader means that we will
-use some default shader. A null file means that the interface will
-have no texture. The other arguments are the initial position and size
-for our interface.
+The first argument is a file that will be opened and interpreted to
+obtain information about the interface texture (for example, it could
+be an image filename). The second argument is a file containing the
+OpenGL shader. Both arguments can be NULL. A NULL shader means a
+default shader will be used. A NULL texture file means the interface
+will have no texture. The remaining arguments specify the initial
+position and size of the interface.
 
-We could define shaders more easily for them if we pass some
-additional library with GLSL functions. This can be done passing to
-this function a string with source code for function definitions in
-GLSL:
-
+We can define shaders more easily by providing an additional library
+of GLSL functions. This can be done by passing a string containing
+function definitions in GLSL to the following function:
 
 @<Function Declaration (interface.h)@>+=
 void _Wset_interface_shader_library(char *source);
 @
 
-
-
-When we have a interface, we can move it with the function:
-
+We can move interfaces using the function:
 
 @<Function Declaration (interface.h)@>+=
 void _Wmove_interface(struct user_interface *i, float x, float y, float z);
 @
 
-
-We assume that the position of an interface is the coordinate of its
-center. The axis $x$ and $y$ represents the horizontal and vertical
-position. The axis $z$ determines which interface will be in the front
-if they occupy the same place in the space.
+We assume that the position of an interface is given by the
+coordinates of its center. The $x$ and $y$ axes represent the
+horizontal and vertical position, respectively. The $z$ axis
+determines which interface appears in front when multiple interfaces
+occupy the same space.
 
 We can also rotate it with the function:
-
 
 @<Function Declaration (interface.h)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation);
 @
 
-
-The function above gets as argument how much the interface will be
-rotated in radians comparing with its notmal orientation.
+The function above takes as an argument the amount, in radians, by
+which the interface will be rotated relative to its default
+orientation.
 
 We can also resize the interface with the function below:
-
 
 @<Function Declaration (interface.h)@>+=
 void _Wresize_interface(struct user_interface *i,
                         float new_width, float new_height);
 @
 
-
 The function below renders in the screen or drawing area all the
-previously created interfaces without needing to list all them:
-
+previously created interfaces:
 
 @<Function Declaration (interface.h)@>+=
 void _Wrender_interface(unsigned long long time);
 @
 
+The time parameter in the function above is used when the interface
+needs to know how many microseconds have passed since the last
+function call. This is useful for correctly rendering interfaces with
+animated textures.
 
-The time parameter is necessary for when the function needs to know
-how much time in microseconds passed between the function
-invocation. This is useful to reder correctly interfaces with animated
-textures.
-
-But rendering all previous interfaces may not be what the user wants,
-Sometimes, a person want to render just the interfaces created after
-some point of the history. For this, the function below creates a
-marking in our interface history. After this, when we ask to render
-all the interfaces, only the interfaces created after this marking
-will be rendered:
-
+However, rendering all previously created interfaces may not always be
+what the user wants. Sometimes, a developer may want to render only
+the interfaces created after a certain point in time. For this
+purpose, the function below creates a marker in the interface
+history. From that point on, when we request to render all interfaces,
+only those created after the marker will be rendered.
 
 @<Function Declaration (interface.h)@>+=
 void _Wmark_history_interface(void);
 @
 
-
 But what if we want to render some of the interfaces created before
-the last history marking? In this case, we can create e a new
-interface that in fact is just a link to a previously created
-interface:
-
+the last history marker? In this case, we can create a new interface
+that is, in fact, just a reference to a previously created one.
 
 @<Function Declaration (interface.h)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i);
 @
 
-
-To interact with all the previously created interfaces until the last
-marking, we use the function below. It executes the programmed
-actions, if they exist, for each interface if the user puts or removes
-the mouse over them or if the user clicks in some interface:
-
+To interact with all interfaces created up to the last marker, we use
+the function below. It executes the programmed actions, if any, for
+each interface when the user hovers over it, moves the mouse away, or
+clicks on it.
 
 @<Function Declaration (interface.h)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click);
 @
 
-
-
-But how can we erase and destroy some interface when we do not need it
-anymore? For this we use the following function that erases all
-previously created interfaces after the last marking in the
-history. This also erases the last marking, returning the state to
-what it was just before the creation of that marking. The interfaces
-before that marking will be rendered again.
-
+But how can we erase and destroy interfaces that are no longer needed?
+For this purpose, we use the following function, which deletes all
+interfaces created after the last history marker. This function also
+removes the last marker, restoring the state to what it was just
+before the marker was created. Interfaces created before that marker
+will be rendered again.
 
 @<Function Declaration (interface.h)@>+=
 void _Wrestore_history_interface(void);
 @
 
-
-All this requires that we manage our interface history, its shaders
-and the markings.  And this requires memory allocation and
-disallocation. There are two kinds of allocations that we could use:
-for permanent things that will be kept in the memory for a long time
-and for temporary things that will be disallocated soon. We will store
-functions to allocate and disallocate in the two cases:
-
+All of this requires managing our interface history, shaders, and
+markers, which in turn involves memory allocation and
+deallocation. There are two types of allocations we use: for permanent
+data that will remain in memory for a long time, and for temporary
+data that will be deallocated shortly afterward. We will provide
+functions to handle allocation and deallocation in both cases.
 
 @<Local Variables (interface.c)@>=
 #include <stdlib.h>
@@ -224,24 +203,19 @@ static void (*permanent_free)(void *) = free;
 static void (*temporary_free)(void *) = free;
 @
 
-
-By default we will use the allocation and disallocation functions from
-the standard library. But the user can choose custom functions to
-replace them. Besides these four functions, we will also use custom
-functions imediatelly before and after loading a new interfac. These
-functions will be initialized by NULL, but the user later can change
-them to other functions:
-
+By default, we use the allocation and deallocation functions from the
+standard library. However, users can provide custom functions to
+replace them. In addition to these four functions, we also support
+custom functions that are called immediately before and after loading
+a new interface. These functions are initially set to NULL, but users
+can later assign them to other functions:
 
 @<Local Variables (interface.c)@>=
 static void (*before_loading_interface)(void) = NULL;
 static void (*after_loading_interface)(void) = NULL;
 @
 
-
-The idea is that all custom functions are chosen during the API
-initialization:
-
+All custom functions are chosen during the API initialization:
 
 @<Function Declaration (interface.h)@>+=
 #include <stdlib.h> // Define  'size_t' type
@@ -255,67 +229,63 @@ void _Winit_interface(int *window_width, int *window_height,
                       ...);
 @
 
+It is possible to initialize the deallocation functions with
+\monoespaco{NULL}. This means that allocated memory will not be
+deallocated. This can be useful in scenarios where the memory manager
+uses its own garbage collector and does not want interference.
 
-It is possible to initializa the disallocation functions with
-\monoespaco{NULL}. This means that we will not disallocate what we
-allocate. This could be useful in some scenarios where the memory
-manager uses its own garbage collector and do not want interferences.
-
-The function above accepts a variable number of arguments. First it
-gets pointers to where we store our window width and height. They will
-be stored here:
-
+The function above accepts a variable number of arguments. First, it
+receives pointers to variables where the window width and height will
+be stored. These values will be stored at the provided locations:
 
 @<Local Variables (interface.c)@>=
 static int *window_width = NULL, *window_height = NULL;
 @
 
-
-The window size is followed by custom functions as described before.
-What cames after the six initial functions is a NULL-terminated list
-of arguments composed by a string followed by some function that
-create a new interface given a file. The string represents a filename
-extension (for example, ``gif'', ``jpg'' or others). The function
-after the file extension have the following type:
-
+The window size arguments are followed by the custom functions
+described earlier. After the six initial functions comes a
+NULL-terminated list of arguments, each consisting of a string
+followed by a function that creates a new interface given a file. The
+string represents a filename extension (for example, ``gif'', ``jpg'',
+or others). The function corresponding to the file extension has the
+following type:
 
 @<Local Macros (interface.c)@>=
 typedef void pointer_to_interface_function(void *(*)(size_t), void (*)(void *),
                                           void *(*)(size_t), void (*)(void *),
                                           void (*)(void), void (*)(void),
-                                          char *, struct user_interface *);
+                                          char *, void *);
 @
 
+The function receives as arguments the allocation and deallocation
+functions, a filename, and a void pointer to the interface that should
+be populated with information from the file. Each of these functions
+is expected to correctly interpret files with the previously specified
+extensions and fill the given interface with textures extracted from
+the file. In this way, we delegate to the user the responsibility of
+providing functions capable of creating interfaces from different file
+formats. The last argument is a void pointer because these functions
+could be used both for visual user interfaces and for sound
+interfaces. Each type of interface uses different structs.
 
-
-It gets as arguments the functions for allocation and disallocation, a
-filename and a pointer to the interface that should be filled with
-information from the file. It is expected that each of these functions
-can interpret correctly the files with extensions given previously and
-fill the given interface with textures extracted from the file. This
-way, we pass to the user the responsability of provinding functions
-able to create interfaces from different file formats.
-
-As we have an initialization function, we will need also a
-finalization function:
-
+Since we have an initialization function, we also need a finalization
+function:
 
 @<Function Declaration (interface.h)@>+=
 void _Wfinish_interface(void);
 @
 
+This concludes the description of our API functions.
 
-And this ends the description of our API functions.
-
-The API also can have its behaviour changed setting the
-macro \monoespaco{W\_FORCE\_LANDSCAPE}. If we have an environment
-where the width is greater than the height, setting this macro will
-change nothing. But if the window height is greater than the window
-width and this macro is set, then we will rotate 90 degrees
-counter-clockwise our axis $x$ and $y$. This is useful to create more
-consistent user interfaces in mobile devices. In this case, we can
-always assume that we will have more space horizontally than
-vertically and if necessary the user can rotate its device.
+The API behavior can also be modified by defining the macro
+\monoespaco{W\_FORCE\_LANDSCAPE}. In an environment where the width is
+greater than the height, setting this macro has no effect. However, if
+the window height is greater than the width and this macro is defined,
+the $x$ and $y$ axes will be rotated 90 degrees
+counter-clockwise. This feature is useful for creating more consistent
+user interfaces on mobile devices. In such cases, we can always assume
+that there is more horizontal than vertical space, and, if necessary,
+the user can rotate their device.
 
 \subsecao{1.1. Literate Programming}
 
@@ -829,7 +799,7 @@ struct file_function {
                       void (*temporary_free)(void *),
                       void (*before_loading_interface)(void),
                       void (*after_loading_interface)(void),
-                      char *source_filename, struct user_interface *target);
+                      char *source_filename, void *target);
 };
 static unsigned number_of_file_functions_in_the_list = 0;
 static struct file_function *list_of_file_functions = NULL;
@@ -855,7 +825,7 @@ static inline void (*get_loading_function(char *ext))
                            void (*temporary_free)(void *),
                            void (*before_loading_interface)(void),
                            void (*after_loading_interface)(void),
-                           char *source_filename, struct user_interface *target){
+                           char *source_filename, void *target){
   unsigned i;
   for(i = 0; i < number_of_file_functions_in_the_list; i ++){
     if(!strcmp(list_of_file_functions[i].extension, ext))
@@ -1890,7 +1860,7 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                            void (*temporary_free)(void *),
                            void (*before_loading_interface)(void),
                            void (*after_loading_interface)(void),
-                           char *source_filename, struct user_interface *target);
+                           char *source_filename, void *target);
   int i;
   new_interface = permanent_alloc(sizeof(struct user_interface));
   if(new_interface != NULL){

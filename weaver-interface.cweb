@@ -45,14 +45,14 @@
 \email{thiago@@bitbitbit.com.br}
 \vskip6pt
 
-\abstract{This article contains the implementation of the user
-  interface used by Weaver Game Engine. The code presented here are
-  intended to be used when creating buttons, text, menus and other
-  user interface elements. It basically manages shaders, create
-  elements that can be moved, rotated, clicked and can react to mouse
-  hovering. The API presented here are intended to be flexible, the
-  user can extend it and change its behavious registering new
-  functions.}
+\abstract{This article presents the implementation of the user
+interface used by the Weaver Game Engine. The code provided is
+intended for creating buttons, text, menus, and other user interface
+elements. It primarily manages shaders and creates elements that can
+be moved, rotated, clicked, and made to respond to mouse
+hovering. Support for adding sound effects is also included. The API
+is designed to be flexible, allowing users to extend it and customize
+its behavior by registering new functions.}
 
 
 \vskip 0.5cm plus 3pt minus 3pt
@@ -71,16 +71,16 @@
 Uma interface de usuário é como um programa se comunica com o usuário
 e obtém informações dele. Em um programa típico temos menus, botões,
 janelas de pop-up e outros elementos de interface típico. Mas em jogos
-de cmputador a intrface de usuário tende a ser muito mais simples
+de coputador a interface de usuário tende a ser muito mais simples
 conveitualmente, geralmente formada por alguns menus e por elementos
-de visualização que dão informações sobre o estado do jogo. POr
+de visualização que dão informações sobre o estado do jogo. Por
 exemplo, um número no canto da tela indicando quantas vidas o jogador
 tem.
 
 O fato é que no caso de um jogo de computador, não podemos assumir
-nada sobre a aparência dos menus, sobre o que eles vã fazer e sobre o
+nada sobre a aparência dos menus, sobre o que eles vão fazer e sobre o
 que é cada elemento de interface. Um jogo de estratégia poderá ter
-muuitos menus quando alguém clica com o mouse em uma unidade. Um jogo
+muitos menus quando alguém clica com o mouse em uma unidade. Um jogo
 de plataforma pode ter apenas informações sobre itens equipados e
 número de vidas. A aparência de tais elementos pode variar enormemente
 dependendo do estilo do jogo.
@@ -167,34 +167,27 @@ função abaixo cria uma marcação no nosso histórico de criação de
 interfaces. E toda vez que pedimos para renderizar, somente as
 interfaces criadas depois da marcação serão rendrizadas:
 
-
 @<Declaração de Função (interface.h)@>+=
 void _Wmark_history_interface(void);
 @
-
 
 Mas e se queremos renderizar somente algumas das interfaces criadas
 antes da marcação? Neste caso, podemos simplismente criar uma nova
 interface que na verdade é uma ligação para uma anterior:
 
-
 @<Declaração de Função (interface.h)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i);
 @
-
 
 Já para interagir com todas as interfaces criadas no passado até a
 última marcação, usamos a função abaixo. Ela irá executar as ações
 programadas quando um usuário passa o mouse sobre uma interface,
 retira o mouse sobre uma interface ou clica nela:
 
-
 @<Declaração de Função (interface.h)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
                           bool middle_click, bool right_click);
 @
-
-
 
 Mas como apagar iterfaces uma vez que não precisamos mais delas? Para
 isso fornecemos a função abaixo que apaga todas as interfaces criadas
@@ -204,11 +197,9 @@ como eraimediatamente antes de tal marcação ser criada. As interfaces
 qu existirem antes de tal marcação, se existirem, serão novamente
 renderizadas.
 
-
 @<Declaração de Função (interface.h)@>+=
 void _Wrestore_history_interface(void);
 @
-
 
 Tudo isso vai requerer que gerenciemos nosso histórico de interfaces,
 suas marcações e seus shaders. E isso vai requerer que aloquemos e
@@ -217,14 +208,12 @@ coisas permanentes que ficarão alocadas por possivelmente um bom tempo
 e coisas temporárias que serão rapidamente desalocadas. Vamos então
 armazenar a função de alocação e desalocação para estes dois casos:
 
-
 @<Variáveis Locais (interface.c)@>=
 static void *(*permanent_alloc)(size_t) = malloc;
 static void *(*temporary_alloc)(size_t) = malloc;
 static void (*permanent_free)(void *) = free;
 static void (*temporary_free)(void *) = free;
 @
-
 
 Por padrão, usaremos simplesmente a função de alocação e desalocação
 da biblioteca padrão. Mas o usuário pode personalizar cada uma destas
@@ -233,16 +222,13 @@ que serão executadas imediatamente antes e depois que formos carregar
 uma nova interface. Inicialmente tais funções serão nulas, mas elas
 podem ser depois ajustadas pelo usuário:
 
-
 @<Variáveis Locais (interface.c)@>=
 static void (*before_loading_interface)(void) = NULL;
 static void (*after_loading_interface)(void) = NULL;
 @
 
-
 A ideia é que todas as funções persnalizáveis serão definidas durante
 a inicialização da nossa API:
-
 
 @<Declaração de Função (interface.h)@>+=
 #include <stdlib.h> // Define tipo 'size_t'
@@ -255,8 +241,6 @@ void _Winit_interface(int *window_width, int *window_height,
                       void (*after_loading_interface)(void),
                       ...);
 @
-
-
 
 É possível inicializar as funções de desalocação como
 \monoespaco{NULL}. Isso significa que nós não iremos desalocar o que
@@ -274,36 +258,43 @@ armazenados aqui:
 static int *window_width = NULL, *window_height = NULL;
 @
 
-
 Depois, as seis funções personalizáveis vistas acima. Depois delas, os
 argumentos adicionais serão uma lista terminada em NULL de uma string
 seguida de uma função geradora de interfaces. A string representa uma
 extensão (por exemplo ``gif'', ``jpg'' ou outras) e a função que a
 sucede é representada pela seguinte definição de tipo:
 
-
 @<Macros Locais (interface.c)@>=
 typedef void pointer_to_interface_function(void *(*)(size_t), void (*)(void *),
                                           void *(*)(size_t), void (*)(void *),
                                           void (*)(void), void (*)(void),
-                                          char *, struct user_interface *);
+                                          char *, void *);
 @
 
-
 Ela recebe como argumento as funções de alocação e desalocação, um
-nome de arquivo e um ponteiro para a interface que deve ser atualizada
-e preenchida de acordo com o conteúdo do arquivo. Espera-se que a
-função consiga abrir e interpretar o arquivo e gerar uma nova
-interface à partir dele.  Desta forma, deixamos para o usuário a
-responsabilidade de fornecer as funções que criam interfaces à partir
-de arquivos de diferentes formatos.
+nome de arquivo e um ponteiro do tipo \monoespaco{void} para a
+interface que deve ser atualizada e preenchida de acordo com o
+conteúdo do arquivo. Espera-se que a função consiga abrir e
+interpretar o arquivo e gerar uma nova interface à partir dele.  Desta
+forma, deixamos para o usuário a responsabilidade de fornecer as
+funções que criam interfaces à partir de arquivos de diferentes
+formatos. O último argumento é um ponteiro sem tipo para que funções
+do tipo possam também definir interfaces de som, e não apenas
+interfaces visuais. Cada uma delas possui uma estrutura diferente.
 
 Como apresentamos uma função de inicialização, vamos precisar também
 da função de finalização:
 
-
 @<Declaração de Função (interface.h)@>+=
 void _Wfinish_interface(void);
+@
+
+Até agora mostramos as funções e o comportamento para interfaces
+visuais de usuário. Mas há também interfaces sonoras. Uma interface
+sonora é criada pela função abaixo:
+
+@<Function Declaration (interface.h)@>=
+struct sound *_Wnew_sound(char *filename);
 @
 
 
@@ -859,7 +850,7 @@ struct file_function {
                       void (*temporary_free)(void *),
                       void (*before_loading_interface)(void),
                       void (*after_loading_interface)(void),
-                      char *source_filename, struct user_interface *target);
+                      char *source_filename, void *target);
 };
 static unsigned number_of_file_functions_in_the_list = 0;
 static struct file_function *list_of_file_functions = NULL;
@@ -886,7 +877,7 @@ static inline void (*get_loading_function(char *ext))
                            void (*temporary_free)(void *),
                            void (*before_loading_interface)(void),
                            void (*after_loading_interface)(void),
-                           char *source_filename, struct user_interface *target){
+                           char *source_filename, void *target){
   unsigned i;
   for(i = 0; i < number_of_file_functions_in_the_list; i ++){
     if(!strcmp(list_of_file_functions[i].extension, ext)){
@@ -1916,7 +1907,7 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
                            void (*temporary_free)(void *),
                            void (*before_loading_interface)(void),
                            void (*after_loading_interface)(void),
-                           char *source_filename, struct user_interface *target);
+                           char *source_filename, void *target);
   int i;
   new_interface = permanent_alloc(sizeof(struct user_interface));
   if(new_interface != NULL){
