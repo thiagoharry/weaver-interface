@@ -275,6 +275,21 @@ function:
 void _Wfinish_interface(void);
 @
 
+Up to this point, we have presented functions and their behavior for
+visual interfaces. However, you can also create audio interfaces using
+the function below:
+
+@<Function Declaration (interface.h)@>+=
+struct sound *_Wnew_sound(char *filename);
+@
+
+To play the sound loaded by the previous function, we use the function
+below:
+
+@<Function Declaration (interface.h)@>+=
+struct sound *_Wplay_sound(struct sound *snd);
+@
+
 This concludes the description of our API functions.
 
 The API behavior can also be modified by defining the macro
@@ -305,7 +320,7 @@ before this subsection we presented a series of function
 declarations. And how one could deduct by the title, most of them will
 be positioned in the file \monoespaco{interface.h}.
 
-We can show the structure of the file \monoespaco{interface.h}:
+We show below the structure of the file \monoespaco{interface.h}:
 
 
 @(src/interface.h@>=
@@ -328,25 +343,25 @@ extern "C" {
 #endif
 @
 
+The code above shows the default boilerplate for defining a header in
+our C API. The first two lines and the last one are macros that ensure
+the header is not included more than once in a single compilation
+unit. Lines 3, 4, 5, and the three lines before the last one make the
+header compatible with C++ code. These lines tell the compiler that we
+are using C code and, therefore, it can apply optimizations assuming
+that no C++-specific features---such as operator overloading---will be
+used.
 
-The cde above shows the default boureaucracy to define a header for
-our C API. The two first lines and the last one are macros that ensure
-that this header will not be inserted more than once in a single
-compiling unit. The lines 3, 4, 5 and the three lines before the last
-one make the header adequate to be used in C++ code. This tells the
-compiler that we are using C code and that therefore, the compiler is
-free to use optimizations assuming that we will not use C++ exclusive
-techniques, like operator overloading. Next we include a header that
-will let us to use boolean variables. And there are some parts in
-red. Note that one of them is called ``Declaração de Função
-(interface.h)'', the same title used in most of the code declared
-previously. This means that all the previous code with this title will
-be inserted in that position inside this file. The other parts in red
-represent code that we will define in the next sections.
+Next, we include a header that allows us to use boolean variables. You
+may also notice some parts highlighted in red. One of them is labeled
+``Function Declaration (interface.h)'', the same title used for most of
+the code declared earlier. This means that all previously defined code
+blocks with that title will be inserted at this point in the file. The
+other red-highlighted parts represent code that we will define in the
+following sections.
 
-If you want to know how is the \monoespaco{interface.c} file related
-with this header, its structure is:
-
+If you want to understand how the \monoespaco{interface.c} file
+relates to this header, its structure is as follows:
 
 @(src/interface.c@>=
 #include "interface.h"
@@ -358,30 +373,27 @@ with this header, its structure is:
 @<API Functions Definition (interface.c)@>
 @
 
-
 All the code presented in this document will be placed in one of these
-two files. Besides them, no other file will be created.
+two files. No other files will be created.
 
 \subsecao{1.2. Supporting Multiple Threads}
 
-Most code that will be defined in this document is portable. The only
-assumed requeriment is that an OpenGL context was already created and
-is active. However, there is a single non-portable part that we should
-define differently depending on the system and environment: the mutex
-support.
+Most of the code defined in this document is portable. The only
+requirement we assume is that an OpenGL context has already been
+created and is active. However, there is one non-portable component
+that must be defined differently depending on the system and
+environment: mutex support.
 
-A mmutex is a data sctructure that controls the access for multiple
-proccesses to a single common resource. They are treated differently
-depending on the operating system and environment. Because of its
-non-portability, we will introduce them here, separated from the
-remaining of the code.
+A mutex is a data structure that controls access by multiple processes
+to a shared resource. Its implementation varies depending on the
+operating system and environment. Due to its non-portability, we
+introduce it here separately from the rest of the code.
 
-On Linux and BSD a Mutex is defined using the library
-\monoespaco{pthread} and follows its naming convention. On Windows, a
-Mutex is called a ``critical section''. On Web Assembly, for now, we
-will not define them because we are not allowing multiple threads in
-this environment.
-
+On Linux and BSD, a mutex is defined using the \monoespaco{pthread}
+library and follows its naming conventions. On Windows, a mutex is
+called a critical section. In WebAssembly, we do not define mutexes
+for now, as multithreading is currently not supported in this
+environment.
 
 @<General Macros (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
@@ -396,11 +408,9 @@ this environment.
 #endif
 @
 
-
-This means that on Linux and BSD, we need to include headers for
-\monoespaco{pthread} library. On Windows, we just include the default
-Windows header:
-
+This means that on Linux and BSD, we need to include the headers for
+the \monoespaco{pthread} library. On Windows, we simply include the
+default Windows header:
 
 @<Include General Headers (interface.h)@>=
 #if defined(__linux__) || defined(BSD)
@@ -410,10 +420,8 @@ Windows header:
 #endif
 @
 
-
-In our code we will need to initializa each declared Mutex. For this,
-we will ise the following macros:
-
+Each declared mutex must be initialized. For this, we use the
+following macros:
 
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
@@ -425,9 +433,7 @@ we will ise the following macros:
 #endif
 @
 
-
-To finalize and delete the Mutex, we use the following macros:
-
+To finalize and delete a mutex, we use the following macros:
 
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
@@ -439,11 +445,9 @@ To finalize and delete the Mutex, we use the following macros:
 #endif
 @
 
-
-Once we have a Mutex, there are two operations that we can do. The
-first is ask for Mutex usage. If some other proccess is already using
-it, this means that we wait until the Mutex is available:
-
+Once we have a mutex, there are two operations we can perform. The
+first is to request ownership of the mutex. If another process is
+already using it, we must wait until the mutex becomes available:
 
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
@@ -455,10 +459,8 @@ it, this means that we wait until the Mutex is available:
 #endif
 @
 
-
-And finally, if we finished to use the resource guarded by the Mutex,
-we signal that other proccesses can now use it:
-
+And finally, when we are done using the resource protected by the
+mutex, we signal that other processes can now use it:
 
 @<Local Macros (interface.c)@>=
 #if defined(__linux__) || defined(BSD)
@@ -470,52 +472,47 @@ we signal that other proccesses can now use it:
 #endif
 @
 
-
 \secao{2. Data Structures}
 
-In this section we will describe the four main data structures managed
-by this API: the shaders, user interfaces, links for previous user
-interfaces and marks in the history.
+In this section, we describe the four main data structures managed by
+the API: shaders, user interfaces, links to previously created
+interfaces, and history markers.
 
 \subsecao{2.1. Shader Data Structure}
 
-To render any object in the video card, we need to specify the
-rendering rules. In what position should we render the object? What is
-its color? And what about the texture? The rendering should change
-depending on time or the viewing angle? To answer these questions, we
-use special computer programs that are executed in the video
-card. Such programs are the shaders.
+To render any object using the video card, we need to specify a set of
+rendering rules. At what position should the object be drawn? What is
+its color? What texture should be applied? Should the rendering change
+based on time or the viewing angle? To answer these questions, we use
+special programs that run on the GPU, called shaders.
 
-But besides the program, we need to store for each shader additional
-variables. Shader programs check a list of variables while executing
-and we can change the value of such variables before each execution of
-the shader program. For each modifiable variable, we need to store the
-address of such variable in the shader program. Only knowing this
-information we can change their values.
+In addition to the shader program itself, we also need to store
+associated variables. Shader programs access a list of variables
+during execution, and we can update their values before each run. For
+every modifiable variable, we must store its address within the shader
+program. Only with this information can we change the variable’s value
+at runtime.
 
-A shader data structure has the following structure:
-
+A shader data structure has the following layout:
 
 @<Local Data Structures (interface.c)@>=
 struct shader {
   int type;
-  void *next; // Ponteiro de lista encadeada
-  GLuint program; // O programa em si
-  /* Aqui começam as variáveis modificáveis de shader */
-  GLint uniform_foreground_color, uniform_background_color; // Cor de frente/fundo
-  GLint uniform_model_view_matrix; // Matriz com tamanho, rotação e translação
-  GLint uniform_interface_size; // Tamanho em píxels do objeto renderizado
+  void *next; // Linked list pointer
+  GLuint program; // The shader program
+  /* These are the shader variables that users could modify: */
+  GLint uniform_foreground_color, uniform_background_color; // Bg/Fg color
+  GLint uniform_model_view_matrix; // Model-view matrix
+  GLint uniform_interface_size; // Object size in pixels
   GLint uniform_mouse_coordinate; // Mouse coordinate (interface referential)
-  GLint uniform_time; // Contador de tempo
-  GLint uniform_integer; // Inteiro arbitrário que pode ser passado
-  GLint uniform_texture1; // A textura do objeto a ser renderizado
+  GLint uniform_time; // Time counter
+  GLint uniform_integer; // Arbitrary integer
+  GLint uniform_texture1; // Object texture
 };
 @
 
-
-As we are using OpenGL data types, like \monoespaco{GLuint}, we should
-include the OpenGL headers:
-
+Since we are using OpenGL data types such as \monoespaco{GLuint}, we
+need to include the appropriate OpenGL headers:
 
 @<Include General Headers (interface.h)@>+=
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
@@ -529,40 +526,37 @@ include the OpenGL headers:
 #endif
 @
 
+The first two variables in the data structure exist because each
+shader will be stored in a linked list that may also contain other
+types of data structures. The type field indicates which kind of
+structure is stored in the list, and the pointer to the next element
+forms the linked list by linking each element to the following one.
 
-The two first variables in the data structure exist because we will
-store each shader data structure in a linked list that also can store
-other types of data structure. The type stores what type of data
-structure we have in the list and thepointer for the next element is
-what creates the linked list, linking each element to the next one.
-
-In a shader data structure, the type variable always will
-be \monoespaco{TYPE\_SHADER}. All possible values, fo all different
-types of data structures, are:
-
+In a shader data structure, the type field is always set to
+\monoespaco{TYPE\_SHADER}. The possible values, covering all types of
+supported data structures, are:
 
 @<Local Macros (interface.c)@>=
-#define TYPE_INTERFACE 1 // Uma interface, ou seja, objeto a ser renderizado
-#define TYPE_LINK      2 // Ligação para interface anterior
-#define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
-#define TYPE_SHADER    4 // Shader para renderizar interface
+#define TYPE_INTERFACE 1 // A visual interface that could be rendered
+#define TYPE_LINK      2 // Link to a previous interface
+#define TYPE_MARKING   3 // Marker in the interface history
+#define TYPE_SHADER    4 // Shader to render interfaces
+#define TYPE_SOUND     5 // A sound effect for interfaces
 @
 
-
-The variable \monoespaco{program} in the shader data structure is
-where we will store the compiled shader. And all variables after it
-are there to indicate where each configurable variable inside the
-shader program ca be found. Not all these variables necessarily will
-exist in all shaders, but these are the variables supported by our
-API. We have variables that store vertices to be rendered, size,
-position, color, textures and some other things.
+The program variable in the shader data structure stores the compiled
+shader. All the variables that follow it indicate the locations of
+configurable variables within the shader program. Not all of these
+variables will necessarily be present in every shader, but they
+represent the set of variables supported by our API. They include
+variables for vertex data, size, position, color, textures, and other
+related attributes.
 
 \subsecao{2.2. User Interface Data Structure}
 
 The most complex data structure in this document is the one that
-stores information about user interfaces. The full definition for this
-data structure is:
-
+stores information about visual user interfaces. Its full definition
+is as follows:
 
 @<Data Structures (interface.h)@>=
 struct user_interface{
@@ -604,129 +598,122 @@ struct user_interface{
 };
 @
 
+Now we will describe the purpose of each part of this structure. The
+type and next pointer were already described and are the same as those
+presented in the shader data structure.
 
-Now we will describe what means each part of this structure. The type
-and ponter for next element already were described and are the same
-than what was presented in the shader data structure.
+After the type and next fields, we store the position in pixels (for
+axes $x$ and $y$) and the z-index (axis $z$) of the interface. Then we store
+the rotation (in radians) and the width and height (in pixels). These
+values can be read but should not be changed directly. To modify them,
+you must use the designated functions defined in later sections. This
+is necessary because properly updating position, rotation, and size
+requires modifying the transformation matrix, which is how OpenGL and
+our shaders internally represent this information. The z-index must
+also be updated in a separate list that stores the correct rendering
+order for each element.
 
-After the type and the pointer, we store the position in pixels (for
-axis $x$ and $y$) for our interface and its z-index (axis $z$). We
-then store the rotation (in radians) and the width and height (in
-pixels). All these values can be read, but should not be changed
-directly. To change its valies, it is necessary to use the designed
-functions that we will define in the future sections. This is
-necessary because to correctly change the position, rotation and size,
-we must update the transform matrix, which is how OpenGL and our
-shaders really represent these informations. And the z-index must also
-be updated in anoother list, where we will store the correct order to
-render each element.
+Note that we actually have two sets of variables to store position
+($x$, $y$) and rotation. This is because when the
+\monoespaco{W\_FORCE\_LANDSCAPE} macro is defined, and the window
+height is greater than its width, the x and y axes are rotated, and
+the interface is rotated 90 degrees as well. In this case, the
+variables \monoespaco{\_x}, \monoespaco{\_y}, and
+\monoespaco{\_rotation} store the logical (unrotated) values, while
+\monoespaco{x}, \monoespaco{y}, and \monoespaco{rotation} store the
+rotated ones. When the window is wider than it is tall or the macro is
+not defined, both sets of variables will store the same values.
 
-Notice that in fact we have two variables to store position $x$ and
-$y$ and two to store the rotation. We do this because when the
-macro \monoespaco{W\_FORCE\_LANDSCAPE} is defined, and if the window
-height is greater than window width, we rotate the axis $x$ and $y$,
-and the interface also will be rotated 90 degrees. In this case, the
-variables \monoespaco{\_x}, \monoespaco{\_y}
-and \monoespaco{\_rotation} will store the real value, as if the axis
-were not swapped and the variables \monoespaco{x}, \monoespaco{y}
-and \monoespaco{rotation} store the values with the rotated axis. When the
-height is not greater than the width or when the macro is not defined,
-then both kind of variables will store the same value.
+The \monoespaco{mouse\_x} and \monoespaco{mouse\_y} attributes store
+the mouse coordinates relative to the bottom-left corner of the
+interface, rather than the screen. If the interface is rotated, the
+coordinate system is rotated accordingly.
 
-The attributes \monoespaco{mouse\_x} and \monoespaco{mouse\_y} are
-reserved to store the mouse coordinates not using as origin the lower
-left corner of the screen, but the lower left corner of the
-interface. If the interface is rotated, the coordinate system is also
-rotated.
+The foreground and background colors are in RGBA format, with each
+component ranging from 0 to 1. These values are passed to the shader,
+although the shader may or may not use them. Similarly, the integer
+attribute is passed to the shader, and it is up to the shader to
+decide whether to make use of it.
 
-The foreground and background color are colors in RGBA format with
-individual values in the range between 0 and 1. Such values will be
-passed to the shader, but not necessarily it will use these
-informations. Likewise, the integer attribute also is data that will
-be sent to the shader, but the shader can choose to use or not the
-information.
+The visible attribute determines whether the interface should be
+rendered. If set to false, it will not appear on the screen.
 
-The next attribute is if the interface is visible or not. If not, it
-will not be rendered in the screen.
+Next, we have a pointer to the shader data structure associated with
+this interface, which defines the rendering behavior.
 
-Next we put a pointer to the shader data structure associated with
-this interface. It has the rules about how to render this interface.
+The interaction function pointers are usually initialized to
+\monoespaco{NULL}. If not, they are called when the mouse enters or
+leaves the interface, or when a mouse button is pressed or released
+over it. Additionally, we have a boolean flag that indicates whether
+the mouse is currently over this interface.
 
-The interacting functions below are usually initialized
-with \monoespaco{NULL}. If they are not \monoespaco{NULL}, they are
-executed if the mouse hover over the interface, leave the interface,
-or when some mouse button is pressed or released over them. We also
-have a boolean variable that store if the mouse is over this interface
-or not.
+The attributes following the interaction functions are initialized to
+0, false, or NULL. However, the loading function (responsible for
+interpreting the interface’s source file) may change and update these
+values. This loading function is passed to the API’s initialization
+function and interprets files with specific extensions to generate
+textures and other interface-related information.
 
-The attributes after the interacting functions are initialized with 0,
-false and NULL. But while the loading function is interpreting the
-filename, it should change and update the values. The loading function
-is one of the functions that should be passed to the initialization
-function in our API and that interpret files with a given extension to
-produce the textures and other information for our interfaces.
+Next, we have a pointer to the OpenGL texture used by the
+interface. It is possible to have more than one texture---for example,
+if the source file contains multiple images or is an animated GIF. In
+such cases, each animation frame is stored as a separate
+texture. After successfully loading a texture, the
+\monoespaco{texture\_loaded} flag should be set to true.
 
-In this part first we have a pointer for the OpenGL texture for our
-interface. We can have not a single texture, but several
-textures. This happens if we open a file that can store more than one
-image. Or when we open an animated GIF, for example. Each frame in the
-animation will be a different texture. After loading an external
-texture, the next variable should be set to true.
-
-If we have more than one texture, the next variable determines if the
-interface should animate or not. The value can be changed to pause or
+If multiple textures are loaded, the animate flag determines whether
+the interface should animate. This value can be changed to pause or
 resume the animation.
 
-The two next attributes are the number of frames in our animation and
-in which frame we are now. The first frame is number 0.
+The following two attributes store the total number of frames in the
+animation and the index of the current frame. Frame indices start at
+0.
 
-Next we have a pointer that should have allocated a vector with the
-duration for each frame. If the number of frames is 1 or 0, thes can
-point to NULL.
+The \monoespaco{frame\_durations} pointer should point to an array
+with the duration of each frame. If the number of frames is 0 or 1,
+this pointer can be NULL.
 
-The variable \monoespaco{\_t} will count the time elapsed. It should be
-set to zero after the interface is loaded and its texture is
-ready. After this, we will increment the variable periodically and
-this will help us to know when we should change the current frame in
-an animated interface.
+The \monoespaco{\_t} variable keeps track of the elapsed time. It
+should be set to zero after the interface has been fully loaded and
+its texture is ready. It is then incremented periodically to determine
+when to switch to the next animation frame.
 
-Tha attribute \monoespaco{max\_repetition} represents in an animated
-interface how many times we should repeat the animation. If the value
-is zero, then we will repeat forever. If it is a positive value and we
-repeated the animation the allowed number of times, then the interface
-will stop the animation and stay in the last frame.
+The \monoespaco{max\_repetition} attribute defines how many times an
+animated interface should repeat. If the value is zero, the animation
+loops indefinitely. If it is a positive number, the animation will
+stop after reaching the specified repetition count and will remain on
+the last frame.
 
-The attributes \monoespaco{\_internal\_data},
-\monoespaco{\_free\_internal\_data} and \monoespaco{\_reload\_texture}
-must be optionally initialized by the loading function. The first
-value is a pointer to any arbitrary data structure. The second is a
-function used to finalize such a structure if the interface is
-destroyed. The third is a pointer to a function that will be called on
-the interface every time it changes size, or at each animation frame
-if the interface is animated but has only one texture. This makes it
-possible to use vector textures that are recomputed when the interface
-changes size, and also to offer procedural animations, where each
-animation frame is computed on the fly instead of being stored.
+The \monoespaco{\_internal\_data},
+\monoespaco{\_free\_internal\_data}, and
+\monoespaco{\_reload\_texture} fields are optionally initialized by
+the loading function. \monoespaco{\_internal\_data} is a pointer to
+any arbitrary data structure. \monoespaco{\_free\_internal\_data} is a
+function used to deallocate this structure when the interface is
+destroyed. \monoespaco{\_reload\_texture} is a pointer to a function
+called whenever the interface changes size, or on every animation
+frame if the interface is animated but contains a single texture. This
+makes it possible to use vector-based textures that are recalculated
+on resize, as well as procedural animations in which each frame is
+generated dynamically rather than preloaded.
 
-\subsecao{2.3. Markings in History}
+\subsecao{2.3. Markers in History}
 
 As mentioned in the Introduction, the logic that determines which
-interfaces are accessible in a given moment uses markings done in our
-interface history. All interfaces created after the last marking
-are accessible and the ones created before the marking are not
-accessible: they will not be rendered and the user cannot interact
-with them. Several markings can be creted. And the most recent marking
-that still exist can be destroyed, which also destroy the interfaces
-created after it.
+interfaces are accessible at any given moment relies on markers placed
+in the interface history. All interfaces created after the most recent
+marker are accessible, while those created before it are not: they
+will not be rendered, and the user will not be able to interact with
+them. Multiple markers can be created, and the most recent existing
+marker can be deleted, which also removes the interfaces created after
+it.
 
-To make this possible, each marking must store a pointer to the
-previous marking and to the previous structure in the linked
-list. This way, when we erase a marking, we can replace the deleted
-marking with the marking pointed by it. We also store in each marking
-the number of interfaces created after it. This is the number of
-interfaces that will be active while this marking is the last created
-and will exist while this marking exists.
-
+To make this possible, each marker must store a pointer to the
+previous marker and to the previous structure in the linked list. This
+allows us to replace a deleted marker with the one it references. Each
+marker also stores the number of interfaces created after it---this
+corresponds to the number of interfaces that will remain active while
+the marker exists and is the most recent one.
 
 @<Local Data Structures (interface.c)@>=
 struct marking {
@@ -738,25 +725,23 @@ struct marking {
 };
 @
 
-
-Notice that we declared this as a local data structure in file
-\monoespaco{interface.c}. We did this because this structure will be
-useful only internally in our API. The user will not need to
-manipulate directly markings. The user will interact with this data
-structure indirectly, when using functions
+Note that this is declared as a local data structure in the
+\monoespaco{interface.c} file. We did this because the structure is
+intended for internal use only within our API. Users do not need to
+manipulate markers directly. Instead, they interact with this data
+structure indirectly through the functions
 \monoespaco{\_Wmark\_history\_interface} and
-\monoespaco{\_Wrestore\_history\_interface} described in the
+\monoespaco{\_Wrestore\_history\_interface}, as described in the
 Introduction.
 
 \subsecao{2.4. Link to Other Interfaces}
 
-If some interface is inaccessible because is older than the last
-marking in the history, it is possible to create a link to it usinf
-function \monoespaco{\_Wlink\_interface}. The linking to the older
-interface acts as a recently created interface and then the older
-interface becames accessible again. Creating a link means create and
-store in the linked list the following struct:
-
+If an interface is inaccessible because it was created before the last
+history marker, it is possible to create a link to it using the
+\monoespaco{\_Wlink\_interface} function. Linking to the older
+interface makes it act as if it were a newly created one, thereby
+making it accessible again. Creating a link means creating and storing
+the following struct in the linked list:
 
 @<Local Data Structures (interface.c)@>=
 struct link{
@@ -766,29 +751,27 @@ struct link{
 };
 @
 
-
-Besides the information necessary to the linked list, like the type
-and the pointer to the next element, the only information that we need
-to store in a link is a pointer to the older linked interface.
+Besides the information required for the linked list, such as the type
+and the pointer to the next element, the only additional data we need
+to store in a link is a pointer to the previously linked interface.
 
 \secao{3. Initializing and Finalizing the API}
 
-The purpose of initialization in this API is choosing all the custom
-functions that wil be used to allocate, disallocate, and to manage
-interface creation. The finalization disallocates data necessary to
-store information about some of these functions. It also reset all the
-cusatom functions to default values.
+The purpose of initialization in this API is to define all the custom
+functions that will be used for memory allocation, deallocation, and
+interface creation management. Finalization deallocates the data used
+to store information about some of these functions. It also resets all
+custom functions to their default values.
 
 \subsecao{3.1. Initialization}
 
-Here our objecticve is set the six custom functions discussed in the
-Introduction, and also get a list with variable size with all
-functions that will be used to interpret the content of files with a
-given extension.
+Here, our goal is to set the six custom functions discussed in the
+Introduction, as well as to receive a variable-length list of
+functions that will be used to interpret the contents of files with
+specific extensions.
 
-To store the functions from the list with variable size, we need the
+To store the functions from this variable-length list, we use the
 following structure:
-
 
 @<Local Data Structures (interface.c)@>=
 struct file_function {
@@ -805,17 +788,16 @@ static unsigned number_of_file_functions_in_the_list = 0;
 static struct file_function *list_of_file_functions = NULL;
 @
 
+The struct is essentially a pair consisting of a function that
+extracts textures from a given file (and receives all the custom
+functions to be used), and a string representing a file
+extension. After defining this structure, we create a pointer to a
+list of such structures, which initially represents an empty list.
 
-The struct is basically a pair composed by a function that extracts
-textures from a given file (and gets all the custom functions that
-should be used) and by a file extension string. After defining the
-structure, we create a pointer to a list of such structures. Initially
-the pointer represents an empty list.
-
-After, when this list is not empty anymore, in other words, after the
-initialization, we will be able to check each element in this list and
-extract the correct loading function using this auxiliary function:
-
+Later, once this list is no longer empty---that is, after
+initialization---we will be able to iterate over its elements and
+retrieve the appropriate loading function using the following
+auxiliary function:
 
 @<Auxiliary Local Functions (interface.c)@>=
 static inline void (*get_loading_function(char *ext))
@@ -835,28 +817,23 @@ static inline void (*get_loading_function(char *ext))
 }
 @
 
+The code above is verbose because it defines a function that returns a
+function pointer---with many parameters. However, the function itself
+takes only a single argument: \monoespaco{ext}, a file extension to be
+searched for in the list.
 
-The code above is verbose because it is a function that returns a
-function pointer to a function with lots of parameters. But the
-function above gets only a single argument: an extension to be
-searched in the list.
-
-As we used a function to compare strings, we should include the
-standard header involving strings:
-
+Since we use a function to compare strings, we must include the
+standard header for string operations:
 
 @<Local Headers (interface.c)@>=
 #include <string.h>
 @
 
-
-
-Now we can define the initialization function. What this function will
-do os set the six basic custom functions, count how many additional
-custom functions we have to interpret files, allocate the space
-necessary in the list above (using the custom allocation functions)
-and fill the newly allocated list:
-
+Now we can define the initialization function. This function will set
+the six basic custom functions, count how many additional custom
+functions are provided to interpret files, allocate the necessary
+space in the list above (using the custom allocation functions), and
+fill the newly allocated list accordingly:
 
 @<API Functions Definition (interface.c)@>=
 void _Winit_interface(int *window_width_p, int *window_height_p,
@@ -866,7 +843,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
                       void (*new_temporary_free)(void *),
                       void (*new_before_loading_interface)(void),
                       void (*new_after_loading_interface)(void), ...){
-  if(new_permanent_alloc != NULL) /* Parte 1: Pegar 6 Funções + tamanho janela*/
+  if(new_permanent_alloc != NULL) /* Part 1: Get 6 functions + window size*/
     permanent_alloc = new_permanent_alloc;
   if(new_temporary_alloc != NULL)
     temporary_alloc = new_temporary_alloc;
@@ -877,7 +854,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
   window_width = window_width_p;
   window_height = window_height_p;
   {
-    int count = -1, i; /* Parte 2: Contar quantas mais funções existem */
+    int count = -1, i; /* Part 2: How many more functions there are? */
     va_list args;
     char *ext;
     va_start(args, new_after_loading_interface);
@@ -889,7 +866,7 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
     number_of_file_functions_in_the_list = count;
     list_of_file_functions = (struct file_function *)
                                permanent_alloc(sizeof(struct file_function) * 
-                                               count); // Parte 3: Alocar o resto
+                                               count); //Part 3:Allocate others
     va_start(args, new_after_loading_interface);
     for(i = 0; i < count; i ++){
       list_of_file_functions[i].extension = va_arg(args, char *);
@@ -901,33 +878,31 @@ void _Winit_interface(int *window_width_p, int *window_height_p,
 }
 @
 
+The function above is quite verbose because C tends to be verbose when
+dealing with functions that accept a variable number of arguments,
+especially when those arguments are pointers to functions with many
+parameters. Despite the verbosity, the initialization logic is
+straightforward.
 
-The above function is very verbose because C is verbose when we have
-functions with variable number of parameters and these parameters can
-be pointers to functions with lots of parameters. Despite the
-verbosity, the initialization above is very simple.
+At the end, in red, we marked a placeholder where we will insert
+additional initialization code, which will be defined in the following
+sections.
 
-In the end, in red, we marked a place where we will put additional
-initialization code that we will define in the next sections.
-
-The use of some resources, like accessing arguments by
-\monoespaco{va\_list} requires the following header:
-
+The use of certain features---such as accessing arguments via
+\monoespaco{va\_list}---requires the inclusion of the following header:
 
 @<Local Headers (interface.c)@>=
 #include <stdarg.h>
 @
 
-
 \subsecao{3.2. Finalization}
 
 The function that complements our initialization is the finalization
-function. If in the initialization we end allocating memory to store a
-list of functions that interpret files, in finalizagion we begin
-diallocating this memory. If in the initialization we begin setting
-the six basic custom functions, in the finalization we end setting
-these functions to the default initial values:
-
+function. If, during initialization, we allocate memory to store a
+list of functions that interpret files, then during finalization we
+begin by deallocating that memory. Similarly, if initialization
+involves setting the six basic custom functions, finalization resets
+those functions to their default initial values:
 
 @<API Functions Definition (interface.c)@>+=
 void _Wfinish_interface(void){
@@ -944,46 +919,44 @@ void _Wfinish_interface(void){
 }
 @
 
+Note that we have reserved additional space, marked in red, for code
+that may be needed later in the finalization process as the API grows
+in complexity with the addition of new functions in the following
+sections.
 
-Notice that we let additional space in red for additional code that we
-will eventually need in the finalization when we increase the API
-complexity defining new functions in the next sections.
-
-And this undoes everything done in the initialization. It is possible
-to initialize and finalize the API without problems.
+This finalization function undoes everything performed during
+initialization. It is safe to initialize and finalize the API
+repeatedly without issues.
 
 \secao{4. Shaders}
 
-One of the things that we need to define is our default shader to be
-used if the user do not pass a custom shader when creating an
+One of the things we need to define is our default shader to be used
+if the user does not provide a custom shader when creating an
 interface. Defining the custom shader gives us a great opportunity to
-present in more details the requisites for shaders supported by this
+present in more detail the requirements for shaders supported by this
 API. We will require a specific format for shaders.
 
-First, all shader source files must specify in the first line the
-version for the shading language used. We will use the GLSL language,
-but this language have different versions. We will not require that
-the user put this information in all shader sources, we will write
-this automatically.
+First, all shader source files must specify the shading language
+version on the first line. We use the GLSL language, which has
+different versions. We will not require the user to include this
+information in every shader source, as we will insert it
+automatically.
 
-To choose the correct version for the GLSL language that will be used
-in all the shaders, we will check the value in macro
-\monoespaco{W\_GLSL\_VERSION}. This macro is what will be written in
-the first line of each shader source code. The macro can be defined by
-the user passing adequate compilation flags, or including the macro
-definition in the code, but if this is not done, then we will use the
-standard string ``\monoespaco{\#version 100\\n}''. This standard value
-means that we will use the shading language OpenGL ES v1.00. We eill
-define the macro, if it does not exist, in the beginning of the file
-that defines our functions:
-
+To choose the correct GLSL version to use in all shaders, we check the
+value of the macro \monoespaco{W\_GLSL\_VERSION}. This macro will be
+written as the first line of each shader source code. The macro can be
+defined by the user via appropriate compilation flags or by including
+the macro definition in the code. If it is not defined, we will use
+the default string ``\monoespaco{\#version 100\\n}''. This standard
+value corresponds to the OpenGL ES shading language version 1.00. We
+will define the macro at the beginning of the file that contains our
+functions if it does not already exist:
 
 @<Local Macros (interface.c)@>=
 #if !defined(W_GLSL_VERSION)
 #define W_GLSL_VERSION "#version 100\n"
 #endif
 @
-
 
 There is at least two different shaders that we need to define for
 each interface. The first is the vertex shader, that will be processed
@@ -1001,48 +974,41 @@ custom source code for each environment. For this, we must have two
 different GLSL macros. One that will be defined when we need a vertex
 shader and the other when we need a fragment shader:
 
-
 @<Local Variables (interface.c)@>+=
 static const char vertex_shader_macro[] = "#define VERTEX_SHADER\n";
 static const char fragment_shader_macro[] = "#define FRAGMENT_SHADER\n";
 @
 
+In the shader source code, we only need to check which macro is
+defined, allowing us to include code conditionally based on that.
 
-In the shader source code, we just need to check which macro is
-defined and we can include code conditionally depending on this.
-
-Next we need to specify the default precision for each variable type
-if the user do not specify one in variable declaration. This is done
-using the keyword \monoespaco{precision} followed by the precision
-qualifier (\monoespaco{lowp}, \monoespaco{mediump},
-\monoespaco{highp}) and by a variable type. Here we will define as
-default the highest possible precision. For less important variables,
-the user always can lower the precision trying to make the shader more
-efficient.
-
+Next, we need to specify the default precision for each variable type
+if the user does not specify one in the variable declaration. This is
+done using the keyword precision followed by a precision qualifier
+(\monoespaco{lowp}, \monoespaco{mediump}, \monoespaco{highp}) and a
+variable type. Here, we will set the highest possible precision as the
+default. For less critical variables, the user can always lower the
+precision to make the shader more efficient.
 
 @<Local Variables (interface.c)@>+=
 static const char precision_qualifier[] = "precision highp float;\n"
                                           "precision highp int;\n";
 @
 
-
-The next thing that we must define is how to support libraries in our
-GLSL code. They can make shader definition easier. The user can
+The next thing we must define is how to support libraries in our GLSL
+code. These libraries can simplify shader definitions. The user can
 define additional GLSL functions that will be available in all
-interface shaders storing its source code in the following variable:
-
+interface shaders by storing their source code in the following
+variable:
 
 @<Local Variables (interface.c)@>+=
 static char *shader_library = "";
 @
 
-
-The variable will be changed by the function seen in the Introduction
-to increment GLSL with new functions. Such function is extremely
-simple, it justs assign a string with function source code to the
-variable above:
-
+The variable will be modified by the function introduced in the
+Introduction to extend GLSL with new functions. This function is
+extremely simple: it just assigns a string containing the function’s
+source code to the variable mentioned above:
 
 @<API Functions Definition (interface.c)@>+=
 void _Wset_interface_shader_library(char *source){
@@ -1050,22 +1016,18 @@ void _Wset_interface_shader_library(char *source){
 }
 @
 
-
-But we should not forget that when finalizing our API, we need to undo
-the assignment. Otherwise, when a user finalize and initialize again
-the API, the second initialization would get the same function
-definitions assigned in the first initialization:
-
+However, we should not forget that when finalizing our API, we need to
+undo this assignment. Otherwise, if a user finalizes and then
+initializes the API again, the second initialization would have the
+same function definitions assigned as in the first initialization:
 
 @<Finalizing Interface API@>=
 shader_library = "";
 @
 
-
-The list of default variables and attributes passed to the shader also
-must be part of the source code. We will define them later, but for
-now we show that they will be in this variable:
-
+The list of default variables and attributes passed to the shader must
+also be included in the source code. We will define them later, but
+for now, we show that they will be stored in this variable:
 
 @<Local Variables (interface.c)@>+=
 static const char shader_variables[] = ""
@@ -1073,13 +1035,11 @@ static const char shader_variables[] = ""
 "";
 @
 
-
-Now we will see how to compile a shader given these informations and a
-string with its source code. First we will include the standard
-input/output library to print in the screen error messages if there
+Now we will see how to compile a shader given this information and a
+string containing its source code. First, we include the standard
+input/output library to print error messages on the screen if there
 are errors in the shader source code. The OpenGL headers are already
 included in \monoespaco{interface.h}.
-
 
 @<Local Headers (interface.c)@>+=
 #if defined(__linux__) || defined(BSD)
@@ -1094,13 +1054,11 @@ included in \monoespaco{interface.h}.
 #include <stdio.h>
 @
 
-
-Once we have the necessary headers, we can define the function that
-given a shader source code, compiles it to a complete shader
-program. Compiling a shader means creating on OpenGL the two kind of
-shaders (vertex and fragment), compile both and link them in a
-single program.
-
+Once we have the necessary headers, we can define the function that,
+given a shader source code, compiles it into a complete shader
+program. Compiling a shader involves creating both types of shaders
+(vertex and fragment) in OpenGL, compiling them, and linking them into
+a single program.
 
 @<Auxiliary Local Functions (interface.c)@>=
 @<Functions to Check Compiling Errors@>
@@ -1136,15 +1094,14 @@ static GLuint compile_shader(const char *source_code){
 }
 @
 
-
-What we are not showing above is hoe we verify if the shader was
-compiled and linked successfully. To do this with shader compilation,
-we use the function below. It checks if a compiling error happened and
-if so, it reads in the logs what was wrong and print in the
-screen. Notice that here we are using the temporary allocation and
-deallocation functions to manage space in the memory for the error
-message. The function also returns if an error was found or not.
-
+What we did not show above is how we verify whether the shader was
+compiled and linked successfully. To check for shader compilation
+errors, we use the function below. It checks if a compilation error
+occurred, and if so, it reads the logs to determine what went wrong
+and prints the message to the screen. Note that here we use the
+temporary allocation and deallocation functions to manage memory space
+for the error message. The function also returns whether an error was
+found.
 
 @<Functions to Check Compiling Errors@>=
 static bool check_compiling_error(GLuint shader){
@@ -1165,15 +1122,13 @@ static bool check_compiling_error(GLuint shader){
 }
 @
 
-
-Checking if some error happened during the linking stag is
-similar. However, after the linking we can make even better. We can
-try to validate the shader simulating its usage to detect additional
-errors that could not be detected in syntatic analysis. Howerer, this
-is an expensive operation, we will do this only if the macro
-\monoespaco{W\_DEBUG\_INTERFACE} is defined. In this case, we assume
-that we are in debug mode.
-
+Checking whether an error occurred during the linking stage is
+similar. However, after linking, we can go even further: we can try to
+validate the shader by simulating its usage to detect additional
+errors that could not be caught during syntactic analysis. However,
+since this is an expensive operation, we will perform it only if the
+macro \monoespaco{W\_DEBUG\_INTERFACE} is defined. In that case, we
+assume we are in debug mode.
 
 @<Functions to Check Compiling Errors@>+=
 static bool check_linking_error(GLuint program){
@@ -1207,17 +1162,15 @@ static bool check_linking_error(GLuint program){
 }
 @
 
-
-And this ends the description of how we compile a new shader and print
-messages in case of errors in the source code.
+This concludes the explanation of how we compile a new shader and
+print messages when errors are found in the source code.
 
 Now we can define the default shader source code that will be used if
-the user do not use a custom shader. The shader objective will be
-showing the texture associated with the interface.
+the user does not provide a custom shader. The goal of this shader is
+to display the texture associated with the interface.
 
 The source code for the default shader will be stored in the following
 constant:
-
 
 @<Local Variables (interface.c)@>+=
 static const char default_shader_source[] = ""
@@ -1229,18 +1182,15 @@ static const char default_shader_source[] = ""
 "";
 @
 
+The source code will consist of string literals stored in the constant
+variable defined above. In the case of the vertex shader, it will
+multiply each vertex by the model-view matrix, which contains
+information about the interface’s size, position, and rotation. It
+will also assign a texture coordinate to each vertex.
 
-The source code will be composed by string literals stored in the
-constant variable above. In the case of the vertex shader, it will
-multiply each vertex by the model-view matrix that stores information
-about its size, position and rotation. It will also set which texture
-coordinate is associated with each vertex.
-
-To understand the code, you need to consider that all interfaces will
-have the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1,
-0)$. Each vertex have as argument its texture coordinate. They are
-declared below:
-
+To understand the code, keep in mind that all interfaces will share
+the same vertices: $(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)$. Each
+vertex is associated with a texture coordinate, as declared below:
 
 @<Local Variables (interface.c)@>+=
 static const float interface_vertices[20] = {
@@ -1255,52 +1205,46 @@ static const float interface_vertices[20] = {
 static GLuint interface_vbo;
 @
 
+The order in which we declare these vertices is important. When
+followed in the declared order, they form a square in
+counter-clockwise order. This tells OpenGL that we are viewing the
+front of the interface, not its back. We do this to account for the
+possibility that the user configures OpenGL to not render the back
+faces of geometric figures—an optimization that is very common and
+often necessary. By specifying the correct order, we ensure that the
+interface remains visible even when this option is enabled.
 
-The order in which we declare these vertices is important. If we
-follow these vertices in the declared order, we draw a square in a
-counter-clockwise order. This is how we declare to OpenGL that we are
-seeing the front of this interface, not its back. We do this to be
-prepared for if the user configures OpenGL to do not show the back of
-geometric figures. This is a very common optimization and a necessary
-one in lots of contexts. Specifying this order guarantees that the
-interface will be visible even with this option enabled.
+The rotated texture coordinates are used if the macro
+\monoespaco{W\_FORCE\_LANDSCAPE} is defined and the window height is
+greater than its width. In this case, we swap the interface’s width
+and height and also rotate the texture. This effectively rotates the
+interface.
 
-The rotated textures coordinates will be used if the
-macro \monoespaco{W\_FORCE\_LANDSCAPE} is defined and if the window
-height is greater than window width. In this case we swap the
-interface width and height and also rotate the texture. This rotates
-our interfaces.
-
-These vertices will be loaded in the video card and after this we
-could render them asking to render the corresponding VBO (``vertex
-buffer object''). LOading the vertices in the VBO is done in the
-Initialization:
-
+These vertices will be loaded into the video card, and afterward we
+can render them by drawing the corresponding VBO (Vertex Buffer
+Object). Loading the vertices into the VBO is done during
+initialization:
 
 @<Initializing Interface API@>+=
 glGenBuffers(1, &interface_vbo);
 glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
-// Enviando os vértices para a placa de vídeo:
+// Sending vertices to the video card:
 glBufferData(GL_ARRAY_BUFFER, sizeof(interface_vertices), interface_vertices,
              GL_STATIC_DRAW);
 @
 
-
-In the Finalization we need to destroy the VBO:
-
+During finalization, we need to destroy the VBO:
 
 @<Finalizing Interface API@>+=
 glDeleteBuffers(1, &interface_vbo);
 @
 
-
-Anyway, all interfaces will begin as a rectangle centered in the
-screen which will occupy all the screeen size, as OpenGL defines ``1''
-as the rendering area width and height. To transform this fix square
-in different sizes, positions and rotations, we will use different
+By default, all interfaces start as a rectangle centered on the
+screen, occupying the entire screen area, since OpenGL defines “1” as
+the width and height of the rendering space. To transform this fixed
+square into different sizes, positions, and rotations, we use
 model-view matrices. Each interface will have its own model-view
 matrix.
-
 
 @<Default Vertex Shader@>=
 "void main(){\n"
@@ -1309,11 +1253,8 @@ matrix.
 "}\n"
 @
 
-
-
-In the fragment shader, for each pixel we will draw the color
-associated with the texture in a given position:
-
+In the fragment shader, for each pixel, we will draw the color
+associated with the texture at a given position:
 
 @<Default Fragment Shader@>=
 "void main(){\n"
@@ -1322,14 +1263,13 @@ associated with the texture in a given position:
 "}\n"
 @
 
-
-Now we need to define in the shaders its attributes, uniforms and
-varyings. The attributes are read-only data specified for each vertex.
-The attributes that we will define are the vertex position in format
-$(x, y, z)$ and texture coordinate in format $(x, y)$. The coordinates
-$x$ and $y$ will be between 0 and 1 and $z=0$, as described
-previously. Attributes are declared only in vertex shaders.
-
+Now we need to define the attributes, uniforms, and varyings used in
+the shaders. Attributes are read-only data specified for each
+vertex. The attributes we will define include the vertex position in
+the format $(x, y, z)$ and the texture coordinate in the format $(x,
+y)$. The $x$ and $y$ coordinates will range from 0 to 1, with $z = 0$,
+as previously described. Attributes are declared only in vertex
+shaders.
 
 @<Shader Attributes, Uniforms and Varyings@>=
 "#if defined(VERTEX_SHADER)\n"
@@ -1338,14 +1278,12 @@ previously. Attributes are declared only in vertex shaders.
 "#endif\n"
 @
 
-
-Uniforms are variables that also will be passed to vertices, but they
-will not change between them. Therefore, the fragment shader do not
-need to interpolate its value. We will store as uniforms the
+Uniforms are variables that are also passed to vertices but do not
+change between them. Therefore, the fragment shader does not need to
+interpolate their values. We will store the following as uniforms: the
 foreground color, the background color, the model-view matrix, the
 object size in pixels, the current time in seconds, the integer
-associated with each interface and its texture:
-
+associated with each interface, and its texture:
 
 @<Shader Attributes, Uniforms and Varyings@>+=
 "uniform vec4 foreground_color, background_color;\n"
@@ -1357,29 +1295,24 @@ associated with each interface and its texture:
 "uniform sampler2D texture1;\n"
 @
 
-
-Finally we have varying variables. They can be modified and set on the
-vertex shader and its interpolated value will be given to the fragment
-shader. Here we put the texture coordinate.
-
+Finally, we have varying variables. They can be set and modified in
+the vertex shader, and their interpolated values will be passed to the
+fragment shader. Here, we use them for the texture coordinates.
 
 @<Shader Attributes, Uniforms and Varyings@>+=
 "varying mediump vec2 texture_coordinate;\n"
 @
 
+Note that we did not use all the variables defined in the default
+shader. Unused variables will be discarded during compilation as an
+optimization. However, we declared them anyway to list the supported
+variables that can be used by custom shaders defined by the user.
 
-Notice that we did not use all the variables defined in the default
-shader. The unused variables will be discarded during the compilation
-as an optimization. But we declared them anyway just to list the
-supported variables that can be used by custom shaders defined by the
-user.
-
-By the way, talking about custom shaders, they will be sent by the
-user using the function \monoespaco{\_Wnew\_interface} and will be
-specified as a path to a file where the source code is. For this case,
-we will define a function that creates a new shader program from a
-filename given as argument:
-
+By the way, speaking of custom shaders, they will be provided by the
+user through the function \monoespaco{\_Wnew\_interface} and specified
+as a path to a file containing the source code. For this case, we will
+define a function that creates a new shader program from a filename
+given as an argument:
 
 @<Auxiliary Local Functions (interface.c)@>=
 static GLuint compile_shader_from_file(const char *filename){
@@ -1389,10 +1322,10 @@ static GLuint compile_shader_from_file(const char *filename){
   GLuint shader_program;
   fp = fopen(filename, "r");
   if(fp == NULL)  return 0;
-  // Vai pro fim do arquivo para ler o tamanho e volta pro começo:
+  // Go to end of file to get its size and return to beginning:
   fseek(fp, 0, SEEK_END);
   source_size = ftell(fp);
-  // Aloca e lê buffer
+  // Allocates and reads buffer:
   buffer = (char *) temporary_alloc(sizeof(char) * (source_size + 1));
   if(buffer == NULL) return 0;
   do{
@@ -1406,24 +1339,18 @@ static GLuint compile_shader_from_file(const char *filename){
 }
 @
 
-
-
-The last problem that we will solve in this section is what should we
-render as default texture when the user supplies no texture for a
-given interface. For these cases, We will create a texture composed by
-a single white pixel:
-
+The last problem we will address in this section is what should be
+rendered as the default texture when the user supplies no texture for
+a given interface. In these cases, we will create a texture composed
+of a single white pixel:
 
 @<Local Variables (interface.c)@>+=
 static GLuint default_texture;
 @
 
-
-We will create this texture during the initialization. This is done in
-the following code, where we generate the texture in OpenGL, associate
-it as the current 2D-texture and specify the white pixel explaining
-how it is represented.
-
+We will create this texture during initialization. The following code
+generates the texture in OpenGL, binds it as the current 2D texture,
+and specifies the white pixel, explaining how it is represented.
 
 @<Initializing Interface API@>+=
 {
@@ -1436,42 +1363,36 @@ how it is represented.
 @
 
 
-And in the finalization we discard the created texture:
-
+During finalization we discard the created texture:
 
 @<Finalizing Interface API@>+=
 glDeleteTextures(1, &default_texture);
 @
 
-
 \secao{5. The Model-View Matrix}
 
-As we have seen, all interfaces will be represented by four vertices
-whose edges have the fixed size ``1''. What will make each interface
-have its own size, position and rotation is the model-view matrix that
-we will use for each interface.
+As we have seen, all interfaces are represented by four vertices
+forming a square with fixed edge length of 1. What determines each
+interface's size, position, and rotation is the model-view matrix
+applied to it.
 
-To understand the matrix, first recall that when we use it in our
-default vertex shader, whose code was already shown, we convert each
-vertex to a point in 4 dimensions, instead of 3 or 2. The piece of
-code \monoespaco{vec4{vertex\_position, 1.0)}} basically take the
-coordinate in three dimensions and add a fourth dimension whose value
-always will be 1.
+To understand this matrix, recall that in our default vertex shader
+(shown earlier), each vertex is converted to a four-dimensional point
+instead of a two- or three-dimensional one. The line
+\monoespaco{vec4(vertex\_position, 1.0)} takes the 3D coordinates and
+adds a fourth component with a value of 1.
 
-We will do it because only in 4 dimensions it is possible to represent
-all the geometric operations of rotation, translation and scaling as
-matrix multiplications. Which means that only with 4 dimensions all
-them are linear operations. Video cards are very fast when computing
-matrix multiplication, treating these geometric operations in other
-ways that are not matrix multiplication would create a negative impact
-in the performance.
+This is necessary because only in four dimensions can translation,
+rotation, and scaling all be represented as matrix multiplications. In
+other words, only in 4D are these operations linear. Since GPUs are
+highly optimized for matrix multiplications, representing these
+transformations any other way would harm performance.
 
-Before seeing the final form of the model-view matrix, we will first
-see each of its different parts isolated. First assume that we have a
-four-dimensional vector $(x_0, y_0, z_0, 1)$ multiplying our
-matrix. If we are interested only in translating the vector to other
-position, we could multiply the translation matrix below by our
-vector:
+Before presenting the final form of the model-view matrix, we will
+first look at its individual components. Suppose we have a
+four-dimensional vector $(x0,y0,z0,1)$ and want to apply only a
+translation to it. In this case, we can multiply it by the translation
+matrix shown below:
 
 $$ \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{x \atop y}\atop{0\atop
@@ -1482,10 +1403,10 @@ $$ \left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
     {z_0\atop 1}}\right]
 $$
 
-
-To change the size of some interface, both the width and the height,
-assuming that the interface is centered in the origin $(0, 0, 0, 1)$,
-we can multiply each vector for the following scaling matrix:
+To change the size of an interface---both its width and
+height—assuming the interface is centered at the origin
+$(0,0,0,1)$, we can multiply each vertex vector by the
+following scaling matrix:
 
 $$ \left[{{w \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
@@ -1495,9 +1416,9 @@ $$ \left[{{w \atop 0}\atop {0\atop 0}}{{0 \atop h}\atop {0 \atop
       hy_0}\atop {z_0\atop 1}}\right]
 $$
 
-And finally, to rotate our interfaca $\theta$ radians, we could use
-the following matrix that would produce the right result based on the
-trigonometric formula for rotation:
+And finally, to rotate our interface by $\theta$ radians, we can use
+the following matrix, which produces the correct result based on the
+trigonometric formulas for rotation:
 
 $$ \left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
       0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop 0}}{{0\atop
@@ -1510,42 +1431,42 @@ $$ \left[{{cos(\theta) \atop \sin(\theta)}\atop {0\atop
       cos(\theta)}\atop {z_0\atop 1}}\right]
 $$
 
-To form our model-view matrix, we will multiply all these matrices
-depending of the values that we want for the scale, rotation and
-translation. However, the order in which we multiply these matrices
-change the result. The correct order for each operation is:
+To form our model-view matrix, we multiply all the matrices
+corresponding to the desired scale, rotation, and
+translation. However, the order in which these matrices are multiplied
+affects the final result. The correct sequence of operations is:
 
-1. First we should center the interface square in the OpenGL
-origin. (Matrix A).
+1. First, we center the interface square at the OpenGL origin. (Matrix
+A).
 
-2. Then we increase or decrease the size of each side of our
-interface using its pixel size. (Matrix B).
+2. Then, we scale the interface based on its pixel dimensions. (Matrix
+B)
 
-3. We rotate the interface $\theta$ radians. (Matrix C)
+3. We rotate the interface by $\theta$ radians. (Matrix C)
 
-4. We resize again the interface, this time adjusting to screen
-proportion using OpenGL size. (Matrix D)
+4. We scale the interface again, this time adjusting it to the screen
+proportions using OpenGL coordinates. (Matrix D)
 
-5. Finally, we translate the interface for its correct
-position using OpenGL coordinate. (Matrix E)
+5. Finally, we translate the interface to its correct position using
+OpenGL coordinates. (Matrix E)
 
-To make these operations in the correct order, each vetor $v$ should
-be multiplied in the following order:
+To perform these operations in the correct order, each vector $v$
+should be multiplied as follows:
 
 $$
 E(D(C(B(A v)))) = ((((ED)C)B)A)v
 $$
 
-If we use other order, things can go wrong. For example, instead of
-rotating the interface using its center as the axis, we would use
-its lower left corner or some other position as axis.
+If we use a different order, the transformations may not behave as
+expected. For example, instead of rotating the interface around its
+center, we might end up rotating it around its lower-left corner or
+some other unintended point.
 
-Instead of always having to multiply four matrices, we will compute
-the format of the final matrix obtained when we multiply them. This
-final matrix will be our model-view matrix. For example, assuming that
-$w_w$ is window width and $h_w$ is window height, multiplying matrices
-$E$ and $D$, we get:
-
+To avoid always needing to multiply all four matrices at runtime, we
+will compute the final matrix format resulting from their
+multiplication. This final matrix will be our model-view matrix. For
+instance, assuming that wwww​ is the window width and hwhw​ is the
+window height, by multiplying matrices $E$ and $D$, we obtain:
 
 $$ ED=\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{x \atop y}\atop{0\atop
@@ -1558,12 +1479,14 @@ $$ ED=\left[{{1 \atop 0}\atop {0\atop 0}}{{0 \atop 1}\atop {0 \atop
   {{x \atop y}\atop{0\atop 1}}\right]
 $$
 
-Notice that we are using $2/w_w$ and $2/h_w$ because we assume that
-window width and height in OpenGL have size 2. Therefore, an object
-with width equal $w_w$ should have width 2 to occupy the whole
-screen. The same happens with height.
+Note that we are using $2/w_w$​ and $2/h_w$​ because we assume the
+OpenGL coordinate system has a total width and height of 2. Therefore,
+an object with a width equal to $w_w$​ must be scaled to width 2 in
+OpenGL units to occupy the entire screen. The same reasoning applies
+to the height.
 
-If we multiply it by matrix C, we get:
+If we now multiply this result by matrix $C$, we obtain:
+
 
 $$
 EDC = \left[{{2/w_w \atop 0}\atop {0\atop 0}} {{0 \atop 2/h_w}\atop
@@ -1578,9 +1501,8 @@ EDC = \left[{{2/w_w \atop 0}\atop {0\atop 0}} {{0 \atop 2/h_w}\atop
   1}}\right]
 $$
 
-
-Now if we multiply the result by matrix $B$, considering that $h_p$ is
-the object height in pixels and $w_p$ is the width in pixels, we
+Now, if we multiply the result by matrix $B$, considering that $h_p$​
+is the object’s height in pixels and $w_p$ is its width in pixels, we
 obtain:
 
 $$ EDCB =
@@ -1598,11 +1520,11 @@ $$ EDCB =
   1}}\right]
 $$
 
-And finally, we multiply this by matrix $A$, which center the
-interface in $(0, 0, 0, 1)$. Recall that the interface originally is
-centered in position $(1/2, 1/2, 0, 1)$. Therefore, matrix $A$ is just
-a translation matrix with constant values that moves each vertex 1/2
-to the left and 1/2 down:
+And finally, we multiply this by matrix $A$, which centers the
+interface at $(0,0,0,1)$. Recall that the interface is
+originally centered at position $(1/2,1/2,0,1)$. Therefore,
+matrix $A$ is simply a translation matrix with constant values that
+shift each vertex 1/2 unit to the left and 1/2 unit down:
 
 $$
 EDCBA =\left[{{2w_p/w_w\cdot cos(\theta) \atop 2w_p/h_w\cdot sin(\theta)}
@@ -1624,30 +1546,27 @@ $$
   sin(\theta)-h_p/h_w\cdot cos(\theta)}\atop{0\atop 1}}\right]
 $$
 
-The format above is the final form of our model-view matrix for each
-interface.
+The format shown above is the final form of the model-view matrix for
+each interface.
 
-However, the values $(x, y)$ above are in OpenGL coordinates. But in
-this API we measure differently the coordinates. In our measures, the
-origin of ou coordinate is the lower left corner of the screen, not in
-the center of screen like in OpenGL. And we measure positions in
-pixels, not using the constant size 2 for the screen, like in
-OpenGL. A function that fills the model-view matrix must first convert
-our coordinates and sizes to OpenGL format.
+However, the $(x,y)$ values above are in OpenGL coordinates. In our
+API, coordinates are measured differently: the origin is at the
+lower-left corner of the screen, not at the center as in
+OpenGL. Additionally, positions are measured in pixels rather than
+using the fixed size of 2 for the screen as OpenGL does. Therefore, a
+function that fills the model-view matrix must first convert our
+coordinates and sizes to OpenGL format.
 
-Assuming that we have a pointer \monoespaco{i} to a given interface,
-this can be done with the following code:
-
+Assuming we have a pointer \monoespaco{i} to a given interface, this
+conversion can be done with the following code:
 
 @<Converting Coordinates and Sizes@>=
 x = 2.0 * (i -> _x) / (*window_width) - 1.0;
 y = 2.0 * (i -> _y) / (*window_height) - 1.0;
 @
 
-
-And using the conversion rules above, we can fill the model-view
-matrix for the first time with the function below:
-
+Using the conversion rules above, we can fill the model-view matrix
+for the first time with the function below:
 
 @<Auxiliary Local Functions (interface.c)@>=
 static void initialize_model_view_matrix(struct user_interface *i){
@@ -1686,29 +1605,25 @@ static void initialize_model_view_matrix(struct user_interface *i){
 }
 @
 
-
-Using sine and cosine functions requires the header for mathematical
-operations:
-
+Using the sine and cosine functions requires including the header for
+mathematical operations:
 
 @<Local Headers (interface.c)@>+=
 #include <math.h>
 @
 
-
 \secao{6. Managing Data Structures}
 
-As was explained and defined before, the data structures that our API
-will manage will be a struct for interfaces, another to create linking
-to interfaces, a third one to create markings in the history and
-finally, a linked list to store the previous structures.
+As explained and defined before, the data structures managed by our
+API include: a struct for interfaces, another for linking interfaces,
+a third for creating history markers, and finally, a linked list to
+store these structures.
 
-Our liked list will be accessed using two different pointers. The
-first one will point to the last structure created and inserted in the
-list. The second will point to the last history marking inserted in
-the list. We also will define a mutex to ensure that only one thread
-can update the linked list at a given moment:
-
+Our linked list will be accessed using two different pointers. The
+first points to the most recently created and inserted structure in
+the list. The second points to the most recent history marker inserted
+in the list. We will also define a mutex to ensure that only one
+thread can update the linked list at any given time:
 
 @<Local Variables (interface.c)@>+=
 static void *last_structure = NULL;
@@ -1716,53 +1631,47 @@ static struct marking *last_marking = NULL;
 _STATIC_MUTEX_DECLARATION(linked_list_mutex);
 @
 
-
-The mutex that wil control access to the linked list needs to be
-created during the initialization:
-
+The mutex that will control access to the linked list needs to be
+created during initialization:
 
 @<Initializing Interface API@>+=
 MUTEX_INIT(&linked_list_mutex);
 @
 
-
-We will put the code to finalize this mutex later, when we define the
-code thatfinalize the entire linked list.
+We will include the code to finalize this mutex later, when we define
+the code that finalizes the entire linked list.
 
 \subsecao{6.1. Creating and Destroying Shader Data Structures}
 
-In Section 4 we presented the default shader source code and how to
-compile shaders. But we did not integrate that functions and data
-structures with the shader data structure. We will do it here in this
-Section.
+In Section 4, we presented the default shader source code and how to
+compile shaders. However, we did not integrate those functions and
+data structures with the shader data structure. We will do that here
+in this section.
 
-Our API have no exorted function to create new shaders. Instead of
-this, it will create new shaders when the user creates a new interface
-and associate it with a custom shader passing a filename with shader
-source code. That is, when the user uses the API
-function \monoespaco{\_Wnew\_interface} with the second parameter,
-that specifies a filename with shader source code, different
-than \monoespaco{NULL}.
+Our API does not have an exported function to create new
+shaders. Instead, it creates new shaders when the user creates a new
+interface and associates it with a custom shader by passing a filename
+containing the shader source code. That is, when the user calls the
+API function \monoespaco{\_Wnew\_interface} with the second parameter
+specifying a filename with shader source code different from
+\monoespaco{NULL}.
 
-We also need to create an structure for our default shader, whose
-source code is in Section 4. The default shader structure address will
-be stored in this pointer:
-
+We also need to create a structure for our default shader, whose
+source code is in Section 4. The address of the default shader
+structure will be stored in this pointer:
 
 @<Local Variables (interface.c)@>+=
 struct shader *default_shader;
 @
 
-
 Now we will define the internal function that generates new shader
-structures. This function will get as argument a string with the
-filename that stores the shader source code. The function returns a
-pointer for the new shader structure and also insert such data
-structure in the linked list. Except if we pass \monoespaco{NULL} as
-the filename. In this case, we create a new shader structure using the
-default shader source code defined in Section 4. And we do not insert
-it in the linked list.
-
+structures. This function receives as an argument a string with the
+filename that contains the shader source code. The function returns a
+pointer to the new shader structure and also inserts this data
+structure into the linked list—except when \monoespaco{NULL} is passed
+as the filename. In that case, a new shader structure is created using
+the default shader source code defined in Section 4, and it is not
+inserted into the linked list.
 
 @<Auxiliary Local Functions (interface.c)@>+=
 static struct shader *new_shader(char *shader_source){
@@ -1803,25 +1712,20 @@ static struct shader *new_shader(char *shader_source){
 }
 @
 
+Basically, the code above uses the functions defined in Section 4 to
+compile the shader. After compiling it, the code obtains the addresses
+of the compiled shader variables that can be modified before executing
+the shader. These addresses are stored in the shader data structure.
 
-Basically the code above uses the functions defined in Section 4 to
-compile the shader and after compiling it, gets the address where we
-can find the compiled shader variables that can be changed before
-executing the shader. These addresses are stored in the shader data
-structure.
-
-Now we can initialize the default shader in the Initialization:
-
+Now, we can initialize the default shader during Initialization:
 
 @<Initializing Interface API@>+=
 default_shader = new_shader(NULL);
 @
 
-
-To destroy a shader, we need to inform that the compiler shader
-program will not be executed anymore and should be deleted. Then, we
-disallocate the allocated memory for the struct:
-
+To destroy a shader, we need to notify that the compiled shader
+program will no longer be executed and should be deleted. Then, we
+deallocate the memory allocated for the struct:
 
 @<Auxiliary Local Functions (interface.c)@>+=
 static void destroy_shader(struct shader *shader_struct){
@@ -1831,14 +1735,11 @@ static void destroy_shader(struct shader *shader_struct){
 }
 @
 
-
 The default shader should be destroyed in the API finalization:
-
 
 @<Finalizing Interface API@>+=
 destroy_shader(default_shader);
 @
-
 
 \subsecao{6.2. Creating and Destroying Interfaces}
 
@@ -2666,7 +2567,6 @@ void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
   mouse_last_right_click = right_click;
 }
 @
-
 
 This is a very direct code, but we ommited the part where we transform
 the mouse coordinates in coordinates $(x, y)$ to compare with each

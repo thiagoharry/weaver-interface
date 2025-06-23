@@ -293,10 +293,15 @@ Até agora mostramos as funções e o comportamento para interfaces
 visuais de usuário. Mas há também interfaces sonoras. Uma interface
 sonora é criada pela função abaixo:
 
-@<Function Declaration (interface.h)@>=
+@<Function Declaration (interface.h)@>+=
 struct sound *_Wnew_sound(char *filename);
 @
 
+Para que o som seja tocado, usa-se a função abaixo:
+
+@<Function Declaration (interface.h)@>+=
+struct sound *_Wplay_sound(struct sound *snd);
+@
 
 E isso termina a nossa descrição de todas as funções que
 suportaremos.
@@ -563,8 +568,6 @@ inserir o cabeçalho OpenGL:
 #endif
 @
 
-
-
 As duas primeiras variáveis na estrutura de dados existem porque
 iremos armazenar os shaders, assim como outros tipos de estruturas de
 dados em uma lista encadeada. O tipo serve para identificar o quê
@@ -576,14 +579,13 @@ No caso de uma estrutura de shader, o tipo, primeira variável, terá
 sempre o valor de \monoespaco{TYPE\_SHADER}. Todos os tipos diferentes
 que podem ser armazenados na lista encadeada são:
 
-
 @<Macros Locais (interface.c)@>=
 #define TYPE_INTERFACE 1 // Uma interface, ou seja, objeto a ser renderizado
 #define TYPE_LINK      2 // Ligação para interface anterior
 #define TYPE_MARKING   3 // Marcação no histórico de interfaces criadas
 #define TYPE_SHADER    4 // Shader para renderizar interface
+#define TYPE_SOUND     5 // Um efeito sonoro para interfaces
 @
-
 
 A variável \monoespaco{program} é a representação do programa de
 shader compilado. E tudo o que vem depois são variáveis indicando onde
