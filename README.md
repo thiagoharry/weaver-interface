@@ -220,7 +220,9 @@ be:
 		            void (*temporary_free)(void *),
 		            void (*before_loading_interface)(void),
 		            void (*after_loading_interface)(void),
-		            char *source_filename, struct user_interface *i){
+		            char *source_filename, void *interface){
+    struct user_interface *i;
+    i = (struct user_interface *) interface;
     if(before_loading_interface != NULL)
       before_loading_interface();
     char *buffer = (char *) temporary_alloc(4);
