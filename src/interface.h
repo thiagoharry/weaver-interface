@@ -1,65 +1,65 @@
-/*18:*/
-#line 341 "weaver-interface.cweb"
+/*19:*/
+#line 346 "weaver-interface.cweb"
 
 #ifndef __WEAVER_INTERFACE
 #define __WEAVER_INTERFACE
 #ifdef __cplusplus
 extern"C"{
 #endif
-#line 347 "weaver-interface.cweb"
+#line 352 "weaver-interface.cweb"
 #include <stdbool.h>  
 #if !defined(_WIN32)
 #include <sys/param.h>  
 #endif
-#line 351 "weaver-interface.cweb"
-/*21:*/
-#line 435 "weaver-interface.cweb"
+#line 356 "weaver-interface.cweb"
+/*22:*/
+#line 440 "weaver-interface.cweb"
 
 #if defined(__linux__) || defined(BSD)
 #include <pthread.h> 
 #elif defined(_WIN32)
-#line 439 "weaver-interface.cweb"
+#line 444 "weaver-interface.cweb"
 #include <windows.h> 
 #endif
-#line 441 "weaver-interface.cweb"
-/*:21*//*27:*/
-#line 554 "weaver-interface.cweb"
+#line 446 "weaver-interface.cweb"
+/*:22*//*28:*/
+#line 559 "weaver-interface.cweb"
 
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <EGL/egl.h> 
 #include <GLES3/gl3.h> 
 #endif
-#line 559 "weaver-interface.cweb"
+#line 564 "weaver-interface.cweb"
 #if defined(_WIN32)
 #pragma comment(lib, "Opengl32.lib")
 #include <windows.h> 
 #include <GL/gl.h> 
 #endif
-#line 564 "weaver-interface.cweb"
-/*:27*/
-#line 351 "weaver-interface.cweb"
+#line 569 "weaver-interface.cweb"
+/*:28*/
+#line 356 "weaver-interface.cweb"
 
-/*20:*/
-#line 416 "weaver-interface.cweb"
+/*21:*/
+#line 421 "weaver-interface.cweb"
 
 #if defined(__linux__) || defined(BSD)
 #define _MUTEX_DECLARATION(mutex) pthread_mutex_t mutex
 #define _STATIC_MUTEX_DECLARATION(mutex) static pthread_mutex_t mutex
 #elif defined(_WIN32)
-#line 421 "weaver-interface.cweb"
+#line 426 "weaver-interface.cweb"
 #define _MUTEX_DECLARATION(mutex) CRITICAL_SECTION mutex
 #define _STATIC_MUTEX_DECLARATION(mutex) static CRITICAL_SECTION mutex
 #elif defined(__EMSCRIPTEN__)
-#line 424 "weaver-interface.cweb"
+#line 429 "weaver-interface.cweb"
 #define _MUTEX_DECLARATION(mutex)
 #define _STATIC_MUTEX_DECLARATION(mutex)
 #endif
-#line 427 "weaver-interface.cweb"
-/*:20*/
-#line 352 "weaver-interface.cweb"
+#line 432 "weaver-interface.cweb"
+/*:21*/
+#line 357 "weaver-interface.cweb"
 
-/*29:*/
-#line 603 "weaver-interface.cweb"
+/*30:*/
+#line 605 "weaver-interface.cweb"
 
 struct user_interface{
 int type;
@@ -98,8 +98,8 @@ void*_internal_data;
 void(*_free_internal_data)(void*);
 void(*_reload_texture)(struct user_interface*);
 };
-/*:29*/
-#line 353 "weaver-interface.cweb"
+/*:30*/
+#line 358 "weaver-interface.cweb"
 
 /*1:*/
 #line 101 "weaver-interface.cweb"
@@ -161,13 +161,21 @@ void(*after_loading_interface)(void),
 #line 288 "weaver-interface.cweb"
 
 void _Wfinish_interface(void);
-/*:16*/
-#line 354 "weaver-interface.cweb"
+/*:16*//*17:*/
+#line 296 "weaver-interface.cweb"
+
+struct sound*_Wnew_sound(char*filename);
+/*:17*//*18:*/
+#line 302 "weaver-interface.cweb"
+
+struct sound*_Wplay_sound(struct sound*snd);
+/*:18*/
+#line 359 "weaver-interface.cweb"
 
 #ifdef __cplusplus
 }
 #endif
-#line 358 "weaver-interface.cweb"
+#line 363 "weaver-interface.cweb"
 #endif
-#line 359 "weaver-interface.cweb"
-/*:18*/
+#line 364 "weaver-interface.cweb"
+/*:19*/

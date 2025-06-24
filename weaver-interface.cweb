@@ -293,13 +293,13 @@ Até agora mostramos as funções e o comportamento para interfaces
 visuais de usuário. Mas há também interfaces sonoras. Uma interface
 sonora é criada pela função abaixo:
 
-@<Function Declaration (interface.h)@>+=
+@<Declaração de Função (interface.h)@>+=
 struct sound *_Wnew_sound(char *filename);
 @
 
 Para que o som seja tocado, usa-se a função abaixo:
 
-@<Function Declaration (interface.h)@>+=
+@<Declaração de Função (interface.h)@>+=
 struct sound *_Wplay_sound(struct sound *snd);
 @
 
@@ -810,8 +810,7 @@ conta como se fosse uma nova interfae recém-criada e desta forma a
 interface antiga volta a estar acessível. Criar uma nova ligação
 significa criar e colocar na lista encadeada a seguinte estrutura:
 
-
-@<Estrutura de Dados Locais (interface.c)@>=
+@<Estrutura de Dados Locais (interface.c)@>+=
 struct link {
   int type;
   void *next; // Ponteiro de lista encadeada
@@ -824,6 +823,36 @@ Além das informações necessárias para a lista encadeada como o tipo
 que identifica a estrutura e o ponteiro que apontará para o elemento
 da próxima posiçao, a única informação que precisamos armazenar nesta
 estrutura é um ponteiro para a interface apontada.
+
+\subsecao{2.5. Interfaces de Som}
+
+Interfaces de som são ruídos que devem ser produzidos quando o usuário
+interage com algo. Tipicamente com outras interfaces visuais, ou então
+com teclado e mouse. Elas são estruturas que referenciam um buffer que
+armazena todo o áudio que elas devem tocar. Por causa disso, uma
+interface de som deve ser um som curto, não algo longo como uma
+música.
+
+@<Estrutura de Dados Locais (interface.c)@>+=
+struct sound {
+  int type;
+  void *next; // Ponteiro de lista encadeada
+  ALuint buffer; // Referencia buffer com conteúdo sonoro
+};
+@
+
+Além das variáveis iniciais que todas as outras interfaces tem, a
+estrutura de dados acima contém uma referência para um buffer do tipo
+\monoespaco{ALuint}. Este é o tipo usado pela biblioteca de áudio de
+baixo nível que iremos usar, a OpenAL. Ela tem uma API que busca ser
+semelhante ao OpenGL, e este é o tipo que ela usa para números
+inteiros sem sinal. Devemos também incluir os cabeçalhos desta
+biblioteca abaixo:
+
+@<Cabeçalhos Locais (interface.c)@>+=
+#include <AL/al.h>
+#include <AL/alc.h>
+@
 
 \secao{3. Inicialização e Finalização da API}
 
@@ -1342,7 +1371,6 @@ Na finalização devemos destruir o VBO que criamos:
 glDeleteBuffers(1, &interface_vbo);
 @
 
-
 De qualquer forma, isso significa que a interface originalmente será
 sempre um retângulo que irá cobrir a tela inteira, pois no OpenGL o
 valor de 1 vai ser sempre tanto a altura como largura da tela.  Para
@@ -1359,10 +1387,8 @@ diferente para cada interface.
 "}\n"
 @
 
-
 No shader de fragmento, o que faremos para cada pixel é desenhar o
 pixel da textura associado à esta posição.
-
 
 @<Shader de Fragmento Padrão@>=
 "void main(){\n"
@@ -1370,7 +1396,6 @@ pixel da textura associado à esta posição.
 "  gl_FragData[0] = texture;\n"
 "}\n"
 @
-
 
 Agora temos que definir para os shaders seus atributos, uniformes e
 variantes. Os atributos são variáveis somente-leitura especificados
@@ -1380,7 +1405,6 @@ $(x, y)$. Nos dois casos as coordenadas $x$ e $y$ irão variar entre 0
 e 1 e assumiremos $z=0$ como descrito antes. Atributos só podem ser
 declarados no shader de vértice.
 
-
 @<Atributos, Uniformes e Variantes de Shader@>=
 "#if defined(VERTEX_SHADER)\n"
 "attribute vec3 vertex_position;\n"
@@ -1388,14 +1412,12 @@ declarados no shader de vértice.
 "#endif\n"
 @
 
-
 Uniformes são variáveis que também são passadas para vértices, mas
 eles não irão nunca mudar entre um vértice e outro e nunca precisarão
 também ser interpolados. Iremos manter como uniformes a cor de frente
 e de fundo, ma matriz de modelo e visualização, o tamanho do objeto em
 pixels, o tempo atual em segundos, o inteiro associado a cada
 interface e também sua textura:
-
 
 @<Atributos, Uniformes e Variantes de Shader@>+=
 "uniform vec4 foreground_color, background_color;\n"
@@ -1407,17 +1429,14 @@ interface e também sua textura:
 "uniform sampler2D texture1;\n"
 @
 
-
 Por fim, temos as variantes. Estas variáveis podem ser modificadas e
 preenchidas pelo shader de vértice. Seu valor interpolado será passado
 para o shader de fragmento. É aqui que declaramos a coordenada em
 textura que iremos usar.
 
-
 @<Atributos, Uniformes e Variantes de Shader@>+=
 "varying mediump vec2 texture_coordinate;\n"
 @
-
 
 Note que nós não usamos todas as variáveis definidas no shader
 padrão. Durante a compilação muitas delas serão simplesmente ignoradas
@@ -1430,7 +1449,6 @@ pela função \monoespaco{\_Wnew\_interface} na forma de uma string com
 o nome do arquivo em que ela estará. Para tal caso, vamos também
 fornecer uma função que cria um novo shader à partir do conteúdo de um
 arquivo cujo caminho é passado como argumento:
-
 
 @<Funções Auxiliares Locais (interface.c)@>=
 static GLuint compile_shader_from_file(const char *filename){
@@ -1457,12 +1475,9 @@ static GLuint compile_shader_from_file(const char *filename){
 }
 @
 
-
-
 Uma última preocupação que teremos aqui é o que renderizar como textura
 padrão quando um shader não tem textura alguma. Para isso, vamos criar
 uma textura de apenas 1 pixel branco:
-
 
 @<Variáveis Locais (interface.c)@>+=
 static GLuint default_texture;
@@ -1756,22 +1771,18 @@ segundo apontará para a última marcação no hstórico criada. Também
 iremos usar um mutex para garantir que somente uma thread possa
 modificar a lista encadeada:
 
-
 @<Variáveis Locais (interface.c)@>+=
 static void *last_structure = NULL;
 static struct marking *last_marking = NULL;
 _STATIC_MUTEX_DECLARATION(linked_list_mutex);
 @
 
-
 O mutex que controla acesso à lista encadeada precisa ser criado na
 inicialização:
-
 
 @<Inicialização da API de Interface@>+=
 MUTEX_INIT(&linked_list_mutex);
 @
-
 
 Deixaremos para definir a finalização deste mutex junto com a
 finalização de toda a lista encadeada nas próximas seções.
@@ -1801,7 +1812,6 @@ O shader padrão será armazenado no seguinte ponteiro:
 struct shader *default_shader;
 @
 
-
 Vamos definir agora uma função interna que irá gerar uma nova
 estrutura de shader. Ela recebe como argumento a string com nome de
 arquivo onde está o código-fonte do shader. A função retorna o
@@ -1810,7 +1820,6 @@ encadeada. Exceto se o nome de arquivo passado
 for \monoespaco{NULL}. Neste caso, nós apenas geramos uma estrutura à
 partir do código-fonte do shader padrão definido na Seção 4. Ele não é
 armazenado na lista encadeada.
-
 
 @<Funções Auxiliares Locais (interface.c)@>+=
 static struct shader *new_shader(char *shader_source){
@@ -1851,7 +1860,6 @@ static struct shader *new_shader(char *shader_source){
 }
 @
 
-
 Basicamente o código acima usa a função da Seção 4 para compilar o
 shader, e uma vez que tem o shader compilado, armazena na estrutura de
 shader a posição de cada uma das variáveis do shader compilado que
@@ -1859,7 +1867,6 @@ podem ser modificadas antes de executar o shader.
 
 Lembrando que o shader padrão precisa ser compilado e criado na
 Inicialização. O código para isso é:
-
 
 @<Inicialização da API de Interface@>+=
 default_shader = new_shader(NULL);
@@ -1871,7 +1878,6 @@ usaremos mais o programa de shader compilado e que ele deve ser
 apagado. Em seguida, desalocamos a estrutura de shader que o
 armazenava:
 
-
 @<Funções Auxiliares Locais (interface.c)@>+=
 static void destroy_shader(struct shader *shader_struct){
   glDeleteProgram(shader_struct -> program);
@@ -1880,14 +1886,11 @@ static void destroy_shader(struct shader *shader_struct){
 }
 @
 
-
 O shader padrão deve ser destruído na finalização da API:
-
 
 @<Finalização da API de Interface@>+=
 destroy_shader(default_shader);
 @
-
 
 \subsecao{6.2. Criando e Destruindo Interface}
 
@@ -1987,7 +1990,6 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
 }
 @
 
-
 Apesar de longa, tudo o que a função acima faz é alocar a interface
 com a função de alocação permanente configurada, inicializar os
 valores iniciais, inseri-la na lista encadeada e executar a função
@@ -2002,7 +2004,6 @@ para cada frame de animação se for uma textura animada. A função de
 destruição de interfaces desaloca primeiro essas coisas antes de
 desalocar a estrutura de interface em si. Ela também deve finalizar o
 mutex da interface.
-
 
 @<Funções Auxiliares Locais (interface.c)@>+=
 static void destroy_interface(struct user_interface *interface_struct){
@@ -2023,7 +2024,6 @@ static void destroy_interface(struct user_interface *interface_struct){
     permanent_free(interface_struct);
 }
 @
-
 
 \subsecao{6.3. Criando e Destruindo Ligação para Interface Existente}
 
@@ -2053,10 +2053,8 @@ struct user_interface *_Wlink_interface(struct user_interface *i){
 }
 @
 
-
 Destruir uma interface de ligação significa apenas executar a função
 de desalocação e por isso não criaremos uma função auxiliar para isso.
-
 
 \subsecao{6.4. Criando Marcação no Histórico de Interfaces}
 
@@ -2085,19 +2083,15 @@ void _Wmark_history_interface(void){
 }
 @
 
-
 Como é importante existir uma última marcação no hstórico para termos
 uma contagem de quantas interfaces estão ativas em um dado momento,
 vamos criar a primeira marcação durante a inicialização da API. Esta
 primeira marcação nunca será apagada, exceto na finalização da
 API. Mesmo que o usuário tente removê-la antes por meio de funções.
 
-
 @<Inicialização da API de Interface@>+=
 _Wmark_history_interface();
 @
-
-
 
 @<Finalização da API de Interface@>+=
 // Apaga todas as marcações, menos a primeira:
@@ -2113,7 +2107,6 @@ last_marking = NULL;
 last_structure = NULL;
 MUTEX_DESTROY(&linked_list_mutex);
 @
-
 
 A função \monoespaco{\_Wrestore\_history\_interface} é uma das funções
 de API que ainda não definimos. Ela destrói e remove todas as
@@ -2140,7 +2133,6 @@ interfaces (e ligações) que estiverem depois dela na lista.
 
 A implementação da função é:
 
-
 @<Definição de Funções da API (interface.c)@>+=
 void _Wrestore_history_interface(void){
   struct marking *to_be_removed;
@@ -2158,6 +2150,9 @@ void _Wrestore_history_interface(void){
       destroy_interface(current);
     else if(current -> type == TYPE_SHADER)
       destroy_shader((struct shader *) current);
+    else if(current -> type == TYPE_SOUND){
+      //destroy_sound(snd);
+    }
     else if(permanent_free != NULL)
       permanent_free(current);
     current = next;
@@ -2174,7 +2169,6 @@ void _Wrestore_history_interface(void){
   MUTEX_SIGNAL(&linked_list_mutex);
 }
 @
-
 
 Basicamente a função acima primeiro remove todas as estruturas de
 dados criadas após a última marcação. Só depois de fazer isso que a
@@ -2213,17 +2207,14 @@ $z$, elas poderão ser desenhadas em qualquer ordem.
 
 O ponteiro que aponta para a lista ordenada de interfaces será este:
 
-
 @<Variáveis Locais (interface.c)@>+=
 static struct user_interface **z_list = NULL;
 static unsigned z_list_size = 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 @
 
-
 Na inicialização de nossa interface, devemos sempre inicializar as
 variáveis acima:
-
 
 @<Inicialização da API de Interface@>+=
 MUTEX_INIT(&z_list_mutex);
@@ -2747,7 +2738,6 @@ próprias coordenadas do mouse, sem precisar fazer cálculos adicionais
 de conversão. Se estiver, então obtemos $(x, y)$ fazendo a rotação
 descrita na coordenada do mouse:
 
-
 @<Converter Coordenadas do Mouse para x e y@>=
 if(z_list[i] -> rotation == 0.0){
   x = mouse_x;
@@ -2765,6 +2755,137 @@ else{
 }
 @
 
+\secao{9. Interfaces de Som}
+
+As interfaces de som são semelhantes à interfaces visuais, só que
+muito mais simples. Elas não tem tamanho, posição, textura ou qualquer
+forma visual. São apenas uma longa sequência numérica representando
+uma forma de onda. Mas extrair tal forma de onde de um arquivo requer
+interpretar um formato específico no qual a onde é armazenada. Assim
+como no caso das interfaces visuais, não nos preocuparemos como
+interpretar diferentes formatos. Não mostraremos como ler um formato
+MP3, tal como não mostramos como ler um formato PNG para interfaces
+visuais. Ao invéss disso, delegaremos para o usuário a
+responsabilidade de informar funções adequadas que interpretam tais
+formatos, tal como se faz com as interfaces visuais.
+
+Caso nenhum formato seja passado ou reconhecido, assumiremos um som
+vazio, que é representado pelo inteiro que identifica o buffer tendo o
+valor igual a zero.
+
+A função que interpreta um arquivo e gera um novo som é:
+
+@<Definição de Funções da API (interface.c)@>+=
+struct sound *_Wnew_sound(char *filename){
+  struct sound *new_sound;
+  void (*loading_function)(void *(*permanent_alloc)(size_t),
+                           void (*permanent_free)(void *),
+                           void *(*temporary_alloc)(size_t),
+                           void (*temporary_free)(void *),
+                           void (*before_loading_interface)(void),
+                           void (*after_loading_interface)(void),
+                           char *source_filename, void *target);
+  new_sound = permanent_alloc(sizeof(struct sound));
+  if(new_sound != NULL){
+    new_sound -> type = TYPE_SOUND;
+    new_sound -> next = NULL;
+    new_sound -> buffer = 0;
+    MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
+    if(last_structure != NULL)
+      ((struct user_interface *) last_structure)-> next = (void *) new_sound;
+    last_structure = (void *) new_sound;
+    last_marking -> number_of_interfaces ++;
+    MUTEX_SIGNAL(&linked_list_mutex);
+    if(filename != NULL){ // Obtém e executa função de carregamento
+      char *ext;
+      for(ext = filename; *ext != '\0'; ext ++);
+      for(; *ext != '.' && ext != filename; ext --);
+      if(*ext == '.'){
+        ext ++;
+        loading_function = get_loading_function(ext);
+        if(loading_function != NULL)
+          loading_function(permanent_alloc, permanent_free, temporary_alloc,
+                           temporary_free, before_loading_interface,
+                           after_loading_interface, filename, new_sound);
+      }
+    }
+  }
+  return new_sound;
+}
+@
+
+A parte final do código é quase igual ao das iterfaces visuais:
+também armazenamos as interfaces sonoras na mesma lista encadeada onde
+serão gerenciadas e desalocadas por marcações na história, tendo que
+ativar os mutexes necessários para lidar com a lista. E também
+contamos com uma função fornecida pelo usuário para interpretar um
+formato de arquivo de áudio. A diferença está apenas em termos menos
+variáveis para inicializar antes disso.
+
+oMas para podermos tocar o áudio, precisamos realizar a inicialização
+adequada da biblioteca OpenAL. A biblioteca lida com os seguintes
+conceitos:
+
+1) Dispositivos de som: diferentes peças de hardware disponíveis no
+computador para tocar. Por exemplo, fone de ouvido e auto-falante.
+
+2) Ouvinte: um objeto único, associado a cada dispositivo que
+representa um captador de áudio em um ambiente virtual representado
+por coordenadas em um espaço cartesiano de três dimensões. Também é
+associado à ele uma velocidade e orientação.
+
+3) Fonte: Uma fonte de som é um ponto virtual em um espaço cartesiano
+de três dimensões representando um objeto emissor de som. Associado à
+ele está também um vetor de velocidade. A velocidade e distância da
+fonte e do ouvinte são levadas em conta para determinar a intensidade
+de som e distorções causadas pelo efeito Doppler.
+
+4) Buffer: Local onde fica a representação bruta da onda sonora que
+podemos tocar. Cada buffer precisa estar associado a uma fonte.
+
+No nosso caso, não estamos lidando com um cenário
+tridimensional. Então vamos simplesmente criar um único ouvinte, uma
+única fonte e associar todos os buffers que temos à esta única
+fonte. O ouvinte e a fonte não vão se mover e estarão no mesmo ponto.
+
+Mas vamos primeiro cuidar do primeiro tipo de objeto, cuja
+complexidade não temos como fugir: os dispositivos. Vamos usar um
+ponteiro para sempre apontar para o dispositivo de som padrão, o qual
+iremos usar cada vez que formos tocar um som:
+
+@<Variáveis Locais (interface.c)@>+=
+static ALCdevice *default_device;
+@
+
+Este ponteiro deve ser inicializado na nossa função de
+inicialização. Usamos uma chamada para \monoespaco{alcOpenDevice}
+passando NULL como argumento para começarmos com o dispositivo
+padrão. A função retornará NULL se não existir qualquer dispositivo de
+áudio. Assim saberemos que se a variável \monoespaco{default\_device}
+for um ponteiro nulo, então estamos em um sistema sem som:
+
+@<Inicialização da API de Interface@>+=
+default_device = alcOpenDevice(NULL);
+@
+
+Quando formos finalizar a nossa API de interface, devemos fechar o
+dispositivo que temos ali:
+
+@<Finalização da API de Interface@>+=
+alcCloseDevice(default_device);
+@
+
+Mas como o programador pode trocar o dispositivo padrão? Como ele pode
+saber que outros dispositivos existem? Para ajudar com isso, vamos
+usar uma variável para armazenar o número de dispositivos que temos e
+outra que vai armazenar os nomes deles como strings:
+
+@<Variáveis Locais (interface.c)@>+=
+static int number_of_sound_devices;
+static char **sound_device_name;
+@
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2772,6 +2893,5 @@ else{
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Edição 2, Páginas 97--111.}
-
 
 \fim

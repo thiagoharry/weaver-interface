@@ -6,11 +6,11 @@ doc_en:
 	dvipdf weaver-interface_en.dvi
 test:
 	ctangle weaver-interface.cweb
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -DW_FORCE_LANDSCAPE -DW_DEBUG_INTERFACE -Wall -O2 tests/test.c tests/window.c src/interface.c  -o test_interface -lX11 -lEGL -lGLESv2 -lm
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -DW_FORCE_LANDSCAPE -DW_DEBUG_INTERFACE -Wall -O2 tests/test.c tests/window.c src/interface.c  -o test_interface -lX11 -lEGL -lGLESv2 -lm -lopenal
 	./test_interface
 test_en:
 	ctangle weaver-interface_en.cweb
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -DW_FORCE_LANDSCAPE -DW_DEBUG_INTERFACE -Wall -O2 tests/test.c tests/window.c src/interface.c  -o test_interface -lX11 -lEGL -lGLESv2 -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -DW_FORCE_LANDSCAPE -DW_DEBUG_INTERFACE -Wall -O2 tests/test.c tests/window.c src/interface.c  -o test_interface -lX11 -lEGL -lGLESv2 -lm -lopenal
 	./test_interface
 test_web:
 	ctangle weaver-interface.cweb

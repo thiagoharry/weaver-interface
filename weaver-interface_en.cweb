@@ -743,7 +743,7 @@ interface makes it act as if it were a newly created one, thereby
 making it accessible again. Creating a link means creating and storing
 the following struct in the linked list:
 
-@<Local Data Structures (interface.c)@>=
+@<Local Data Structures (interface.c)@>+=
 struct link{
   int type;
   void *next; // Pointer to linked list
@@ -754,6 +754,35 @@ struct link{
 Besides the information required for the linked list, such as the type
 and the pointer to the next element, the only additional data we need
 to store in a link is a pointer to the previously linked interface.
+
+\subsecao{2.5. Sound Interfaces}
+
+Sound interfaces are noises that should be produced when the user
+interacts with something—typically with other visual interfaces, or
+with the keyboard and mouse. They are structures that reference a
+buffer containing all the audio they must play. Because of this, a
+sound interface should be a short sound, not something long like a
+piece of music.
+
+@<Local Data Structures (interface.c)@>+=
+struct sound {
+  int type;
+  void *next; // Pointer to linked list
+  ALuint buffer; // References an audio buffer
+};
+@
+
+In addition to the initial variables that all other interfaces have,
+the data structure above contains a reference to a buffer of type
+\monoespaco{ALuint}. This is the type used by the low-level audio
+library we will use, OpenAL. Its API aims to be similar to OpenGL, and
+this is the type it uses for unsigned integers. We should also include
+the headers for this library as follows:
+
+@<Local Headers (interface.c)@>=
+#include <AL/al.h>
+#include <AL/alc.h>
+@
 
 \secao{3. Initializing and Finalizing the API}
 
@@ -1743,12 +1772,11 @@ destroy_shader(default_shader);
 
 \subsecao{6.2. Creating and Destroying Interfaces}
 
-As was described in the Introduction, all new interfaces will be
-created using function \monoespaco{\_Wnew\_interface}. This function
-will allocate the new interface, execute the adequate functions to
-initialize it and will include it in the linked list. The function
-definition is:
-
+As described in the Introduction, all new interfaces will be created
+using the function \monoespaco{\_Wnew\_interface}. This function will
+allocate the new interface, execute the appropriate functions to
+initialize it, and include it in the linked list. The function is
+defined as follows:
 
 @<API Functions Definition (interface.c)@>+=
 struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
@@ -1839,21 +1867,19 @@ struct user_interface *_Wnew_interface(char *filename, char *shader_filename,
 }
 @
 
+Despite being a long function, what it does is simply allocate the
+interface using the function set as our permanent allocator,
+initialize the interface’s variables, insert it into the linked list,
+and run the appropriate function to load the texture, depending on the
+filename extension.
 
-Despite being a long function, what it does is just allocate the
-interface with the function set as our permanent allocator, initialize
-the variables in the interface, insert it in the linked list and run
-the correct function to load the texture, depending on the filename
-extension.
-
-Destroy an interface means checking if some of its variables have
-values different than \monoespaco{NULL}. If so, this means that these
-variables were allocated by the loading function andd should also be
-disallocated. Some variables of this kind is the texture variable and
-the list of frame duration for animated textures. The destructor
-function should first disallocate these variables, and then
-disallocate the entire struct:
-
+Destroying an interface means checking whether some of its variables
+are different from \monoespaco{NULL}. If so, it means these variables
+were allocated by the loading function and should also be
+deallocated. Examples of such variables include the texture and the
+list of frame durations for animated textures. The destructor function
+must first deallocate these variables, and only then deallocate the
+entire struct:
 
 @<Auxiliary Local Functions (interface.c)@>+=
 static void destroy_interface(struct user_interface *interface_struct){
@@ -1875,16 +1901,15 @@ static void destroy_interface(struct user_interface *interface_struct){
 }
 @
 
-
 \subsecao{6.3. Creating and Destroying Link to an Existing Interface}
 
-As was explained, instead of creating a new interface, we can create a
-link to an existing interface. This makes that interface acts as a
-newly created interface regarding functions that interact with it. A
-linking will be just a pointer to another interface in the linked
-list, created using \monoespaco{\_Wlink\_interface}. The function that
-creates it is defined below:
-
+As explained, instead of creating a new interface, we can create a
+link to an existing one. This causes the linked interface to behave as
+if it were newly created, at least with respect to functions that
+interact with it. A link is simply a pointer to another interface in
+the linked list and is created using the function
+\monoespaco{\_Wlink\_interface}. The function that creates it is defined
+below:
 
 @<API Functions Definition (interface.c)@>+=
 struct user_interface *_Wlink_interface(struct user_interface *i){
@@ -1904,18 +1929,16 @@ struct user_interface *_Wlink_interface(struct user_interface *i){
 }
 @
 
-
-Destroying a link is done just running the disallocation
-function. Because of this, we will not define an auxiliary function to
+Destroying a link is done simply by calling the deallocation
+function. For this reason, we will not define an auxiliary function to
 perform this action.
 
-\subsecao{6.4. Creating Markings in the Interface History}
+\subsecao{6.4. Creating Markers in the Interface History}
 
-To create a new marking in our interface history, the user should call
-the function \monoespaco{\_Wmark\_history\_interface}. After this
-marking, all interfaces created before it will became inaccessible
-until the marking is removed.
-
+To create a new marker in the interface history, the user should call
+the function \monoespaco{\_Wmark\_history\_interface}. Once this marker
+is set, all interfaces created before it become inaccessible until the
+marker is removed.
 
 @<API Functions Definition (interface.c)@>+=
 void _Wmark_history_interface(void){
@@ -1936,19 +1959,15 @@ void _Wmark_history_interface(void){
 }
 @
 
-
-As it is important to have a last marking in the history to keep track
-of the number of active interfaces, we create the first marking in the
-initialization. And it will be destroyed only in the finalization. If
-the user uses the API function to remove the first marking before the
-finalization, we will ignore the action.
-
+Since it is important to have at least one marker in the history to
+keep track of the number of active interfaces, the first marker is
+created during initialization and will only be removed during
+finalization. If the user attempts to remove this initial marker using
+the API function before finalization, the action will be ignored.
 
 @<Initializing Interface API@>+=
 _Wmark_history_interface();
 @
-
-
 
 @<Finalizing Interface API@>+=
 // Erases all markings, except the first one:
@@ -1965,30 +1984,28 @@ last_structure = NULL;
 MUTEX_DESTROY(&linked_list_mutex);
 @
 
-
 The function \monoespaco{\_Wrestore\_history\_interface} is an API
-function that we will define in the next Section. It destroys and
-removes all structures created after the last marking. Then it removes
-and destroy the last marking. Except that it never will destroy the
-first marking. Because of this, in the code above we destroy manually
-the first marking with \monoespaco{permanenet\_free}.
+function that will be defined in the next section. It destroys and
+removes all structures created after the most recent marker, and then
+it removes and destroys that marker. However, it will never destroy
+the initial marker. For this reason, in previous code, we manually
+destroyed the first marker using \monoespaco{permanent\_free}.
 
-\subsecao{6.5. Removing Markings and Interfaces}
+\subsecao{6.5. Removing Markers and Interfaces}
 
-We will remove and disallocate interfaces using the function to
-restore the history to a previous point. The function will remove all
-interfaces created after the last marking and will remove the last
-marking. This will be made with
-function \monoespaco{\_Wrestore\_history\_interface}.
+We will remove and deallocate interfaces using the function that
+restores the history to a previous point. This function will remove
+all interfaces created after the most recent marker and then remove
+that marker itself. This is handled by the function
+\monoespaco{\_Wrestore\_history\_interface}.
 
-After this function, the last marking will be removed and we will
-remember the previous marking that existed before it. If there is no
-other marking before the last one, we will not remove the marking but
-we will still restore the status to how it was when the first marking
-was created.
+After executing this function, the most recent marker will be removed,
+and we will revert to the marker that existed before it. If there is
+no previous marker, the current marker will not be removed, but the
+system will still be restored to the state it had when the initial
+marker was created.
 
-The function is implemented as below:
-
+The function is implemented as follows:
 
 @<API Functions Definition (interface.c)@>+=
 void _Wrestore_history_interface(void){
@@ -2007,11 +2024,14 @@ void _Wrestore_history_interface(void){
       destroy_interface(current);
     else if(current -> type == TYPE_SHADER)
       destroy_shader((struct shader *) current);
+    else if(current -> type == TYPE_SOUND){
+      //destroy_sound(snd);
+    }
     else if(permanent_free != NULL)
       permanent_free(current);
     current = next;
   }
-  // Removing last marking, except if it is also the first marking:
+  // Removing last marker, except if it is also the first marking:
   if(to_be_removed -> previous_marking != NULL){
     last_marking = to_be_removed -> previous_marking;
     if(permanent_free != NULL)
@@ -2023,39 +2043,37 @@ void _Wrestore_history_interface(void){
 }
 @
 
-
-The function first removes all structures created after the last
-marking. Only after this the last marking is removed, except if it is
-also the first marking. The pointer to the last structure in the
-linked list is updated in the beginning of the function, checking the
-pointer to the element before presented and stored in the last
-marking that was removed.
+The function first removes all structures created after the most
+recent marker. Only after this is the last marker itself
+removed---except when it is also the initial marker. The pointer to the
+last structure in the linked list is updated at the beginning of the
+function by retrieving the pointer to the previous element, which is
+stored in the most recent marker that is being removed.
 
 \secao{7. Rendering Interfaces}
 
-To render interfaces, we should take into account the correct order in
-which each interface is rendered. One of the simplest methods to do it
-is drawing the interfaces in any order and use th $z$ coordinate nd a
-$z$-buffer to check if each interface should be drawn using a depth
-test. However, when dealing with transparent objects, not always this
-produces the correct result. If we first draw a tranparent object and
-after draw an opaque object behind it, parts of the opaque object that
-should be visible because of the transparency would not be visible.
+To render interfaces, we must consider the correct order in which each
+interface is drawn. One simple method is to draw the interfaces in any
+order and use the $z$ coordinate and a $z$-buffer to determine whether
+each interface should be drawn using a depth test. However, when
+dealing with transparent objects, this approach does not always
+produce the correct result. For example, if we first draw a
+transparent object and then draw an opaque object behind it, parts of
+the opaque object that should be visible through the transparency may
+not be visible.
 
-But for our interfaces, as we are always dealing with bidimentional
-objecs that always are parallel to the axis $z$, we instead will store
-an ordered list of interfaces that determines the correct drawing
-order for our interfaces. The list will be ordered by the $z$
-coordinate and will make all interfaces be drawn before any interface
-in front of it. Basically, this is called the ``painter
-algorithm''. As a painter always begin the drawing by more distant
-objects, we also will begin drawing more distant interfaces.
+Since our interfaces are always two-dimensional objects parallel to
+the $z$ axis, we instead maintain an ordered list of interfaces that
+defines the correct drawing order. This list is ordered by the $z$
+coordinate, ensuring that all interfaces are drawn before any
+interface in front of them. This approach is essentially the
+``painter’s algorithm'': just as a painter begins painting distant
+objects first, we begin by drawing the most distant interfaces.
 
-If two interfaces havethe same value in their $z$ coordinate, we can
-draw them in any order.
+If two interfaces have the same $z$ coordinate value, they can be
+drawn in any order.
 
-The pointer that stores our ordered list address is this:
-
+The pointer storing the address of this ordered list is:
 
 @<Local Variables (interface.c)@>+=
 static struct user_interface **z_list = NULL;
@@ -2063,10 +2081,8 @@ static unsigned z_list_size = 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 @
 
-
 During the API initialization we should initialize the above
 variables:
-
 
 @<Initializing Interface API@>+=
 MUTEX_INIT(&z_list_mutex);
@@ -2074,11 +2090,8 @@ z_list_size = 0;
 z_list = NULL;
 @
 
-
-After finalizing our API, if this interface list was allocated, we
-need to disallocate it, set this pointer to null again and finalize
-the mutex:
-
+During the API initialization, we should initialize the variables
+mentioned above:
 
 @<Finalizing Interface API@>+=
 MUTEX_DESTROY(&z_list_mutex);
@@ -2088,12 +2101,10 @@ z_list = NULL;
 z_list_size = 0;
 @
 
-
 As we did in the finalization, when we restore our interface history,
 we change the list of interfaces that we are viewing, restoring
-previous interfaces. In this case we need to reset our list making it
-empty again.
-
+previous interfaces. In this case, we need to reset our list, making
+it empty again.
 
 @<Restoring History@>=
 MUTEX_WAIT(&z_list_mutex);
@@ -2104,15 +2115,13 @@ z_list_size = 0;
 MUTEX_SIGNAL(&z_list_mutex);
 @
 
-
-We must initialize this list in the rendering
-function \monoespaco{\_Wrender\_interface}. Inside this function, we
-should check if the size of this list is equal the number of active
-interfaces in the current moment (the number of active interfaces can
-be checked in the last history marking). If we have a different value,
-this means that new interfaces were created and we should regenerate
-our ordered list. The code that perform this can be seen below:
-
+We must initialize this list in the rendering function
+\monoespaco{\_Wrender\_interface}. Inside this function, we should
+check if the size of this list is equal to the number of active
+interfaces at the current moment (the number of active interfaces can
+be checked in the last history marker). If the values differ, this
+means new interfaces were created, and we should regenerate our
+ordered list. The code that performs this can be seen below:
 
 @<Generating Ordered List of interfaces@>=
 if(z_list_size != last_marking -> number_of_interfaces){
@@ -2136,7 +2145,7 @@ if(z_list_size != last_marking -> number_of_interfaces){
       i --; // Not an interface
     p = ((struct user_interface *) p) -> next;
   }
-  // Ordenando lista (insertion sort):
+  // Ordering list (insertion sort):
   for(i = 1; i < z_list_size; i ++){
     j = i;
     while(j > 0 && z_list[j - 1] -> z > z_list[j] -> z){
@@ -2150,69 +2159,67 @@ if(z_list_size != last_marking -> number_of_interfaces){
 }
 @
 
-
-Notice that the scenario in which the ordered list should be rebuild
-with the code above in uncommon. We run the code above when we are
-rendering for the first time in a main loop or after restoring our
-interface history. The only expected scenario where we run the code
-above with more frequency is if the user is creating new interfaces in
-its program main loop. In such case, every rendering after a new
-interface creation, runs the code above. However, this is a bad
-practice and so we will assume that the code above rarely will be
-executed, besides being placed in the rendering function. In the
-typical case, we already have an ordered list with all the active
-interfaces, and we need only to adjust the interface position in the
+Notice that the scenario in which the ordered list should be rebuilt
+using the code above is uncommon. We run that code when rendering for
+the first time in a main loop or after restoring our interface
+history. The only expected scenario in which the code runs more
+frequently is when the user is creating new interfaces in their
+program’s main loop. In such cases, every rendering after a new
+interface creation will execute the code above. However, this is
+considered bad practice, so we assume that the code above will rarely
+be executed, despite being placed inside the rendering
+function. Typically, we already have an ordered list with all active
+interfaces, and we only need to adjust the interface’s position in the
 list if the interface is moved.
 
-Once we have the ordered list of interfaces, we can just render each
-interface in the order they appear in the list. For each one we load
-the correct shader, pass the attributes, uniforms and varyings to the
-shader program and use the OpenGL function to render the interface
+Once we have the ordered list of interfaces, we can simply render each
+interface in the order they appear in the list. For each one, we load
+the correct shader, pass the attributes, uniforms, and varyings to the
+shader program, and use the OpenGL function to render the interface
 vertices.
 
-We render the interface when the
-function \monoespaco{\_Wrender\_interface} is invoked. The function
-gets as parameter the current time in microseconds. But to know what
-was the elapsed time between two consecutive renderings, we need to
-store the previous time received by the function. We will store this
-previous time in the variable below, that is initialized with zero
-before receiving the first time:
-
+The interface is rendered when the function
+\monoespaco{\_Wrender\_interface} is invoked. This function receives
+the current time in microseconds as a parameter. But to know the
+elapsed time between two consecutive renderings, we need to store the
+previous time received by the function. We will store this previous
+time in the variable below, which is initialized with zero before
+receiving the first time:
 
 @<Local Variables (interface.c)@>=
 static unsigned long long previous_time = 0;
 @
 
-
-But we also need to initialize this variable in the
-initialization. Otherwise, the variable would store incorrect values
-if the API is finalized and initialized again:
-
+But we also need to initialize this variable during the
+initialization. Otherwise, the variable would hold incorrect values if
+the API is finalized and initialized again:
 
 @<Initializing Interface API@>+=
 previous_time = 0;
 @
 
-
-And below we show the function that iterates over the ordered list of
-interfaces and render each one, updating also the time variables. The
-function first updates the time, after load the interface vertices
-indicating how they are represented, and finally iterates over
+Below we show the function that iterates over the ordered list of
+interfaces and renders each one, also updating the time variables. The
+function first updates the time, then loads the interface vertices,
+indicating how they are represented, and finally iterates over the
 interfaces.
 
-For each interface, we load the shader program and pass to it each
-uniform and varying necessary stored in the interface struct. After
-this, we check the interface textures. If we have more than one
-texture, this means that we could have animated textures (for example,
-we could have loaded an anmated GIF). If we indeed have an animated
-texture, we need to check the elapsed time between renderings and the
-time since we are in the current frame animation. If we see that we
-need to change to the next animation frame, we update it. And finally
-we pass to the shader the correct texture. Only after iterate over all
-interfaces, we store the time in our static global variable that
-remember when the last rendering happened.
+For each interface, it loads the shader program and passes to it each
+uniform and varying variable necessary, which are stored in the
+interface struct. After this, it checks the interface textures. If
+there is more than one texture, this means we could have animated
+textures (for example, an animated GIF).
 
-The implementation for the procedure described above is:
+If we indeed have an animated texture, we check the elapsed time
+between renderings and the time spent in the current animation
+frame. If it is time to change to the next animation frame, we update
+it. Finally, we pass the correct texture to the shader.
+
+Only after iterating over all interfaces do we store the current time
+in our static global variable that remembers when the last rendering
+occurred.
+
+The implementation of the procedure described above is:
 
 
 @<API Functions Definition (interface.c)@>+=
@@ -2226,9 +2233,9 @@ void _Wrender_interface(unsigned long long time){
       elapsed_time = 0;
     // Default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // Carregando os vértices do VBO:
+    // Using VBO vertices:
     glBindBuffer(GL_ARRAY_BUFFER, interface_vbo);
-    // Especificando como os dados estão representados no VBO:
+    // Specifying how vertices are stored in VBO:
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                           (void *) 0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
@@ -2277,9 +2284,9 @@ void _Wrender_interface(unsigned long long time){
 	    break;
         }
       }
-      // Escolhendo o shader certo:
+      // Choosing correct shader:
       glUseProgram(z_list[i] -> shader_program -> program);
-      // Passando os Uniformes:
+      // Passing uniforms:
       glUniform4fv(z_list[i] -> shader_program -> uniform_foreground_color, 4,
                    z_list[i] -> foreground_color);
       glUniform4fv(z_list[i] -> shader_program -> uniform_background_color, 4,
@@ -2311,23 +2318,23 @@ void _Wrender_interface(unsigned long long time){
 }
 @
 
-
 \secao{8. Moving, Rotating and Resizing Interfaces}
 
 \subsecao{8.1. Moving Interfaces}
 
-Moving an interface means updating its variables $(x, y, z)$. Other
-than this, we also need to update the model-view matrix to use the new
-values $x$ and $y$ after converting them to OpenGL coordinates. And if
-we are changing coordinate $z$, then we may need to change the
-position of this interface in the ordered list of interfaces that
-determine the order of drawing. All these changes must be done after
-requesting the use of the interface mutex to prevent two simultaneous
-invocations of this function for the same interface.
+Moving an interface means updating its $(x,y,z)$ variables. In
+addition to this, we also need to update the model-view matrix to
+reflect the new $x$ and $y$ values, after converting them to OpenGL
+coordinates. And if we are changing the $z$ coordinate, then we may
+need to update the position of this interface in the ordered list of
+interfaces that determines the drawing order.
 
-The API function that moves interfaces
-is \monoespaco{\_Wmove\_interface} and we define the function as:
+All these changes must be performed after acquiring the interface
+mutex, to prevent two simultaneous invocations of this function on the
+same interface.
 
+The API function that moves interfaces is
+\monoespaco{\_Wmove\_interface}, and we define it as:
 
 @<API Functions Definition (interface.c)@>+=
 void _Wmove_interface(struct user_interface *i,
@@ -2375,13 +2382,11 @@ void _Wmove_interface(struct user_interface *i,
 }
 @
 
-
 \subsecao{8.2. Rotating Interfaces}
 
-Rotating an interface involves reserving its mutex, updating the
-rotation variable and also updating its model-view matrix. The code
-for this can be seen below:
-
+Rotating an interface involves acquiring its mutex, updating the
+rotation variable, and also updating its model-view matrix. The
+corresponding code is shown below:
 
 @<API Functions Definition (interface.c)@>+=
 void _Wrotate_interface(struct user_interface *i, float rotation){
@@ -2413,15 +2418,13 @@ void _Wrotate_interface(struct user_interface *i, float rotation){
 }
 @
 
-
 \subsecao{8.3. Resizing Interfaces}
 
-Resizing interfaces, like rotating them, involves only reserving the
-mutex, updating the associated variables and updating the model-view
+Resizing interfaces, like rotating them, involves simply acquiring the
+mutex, updating the associated variables, and updating the model-view
 matrix.
 
 The code to resize interfaces is:
-
 
 @<API Functions Definition (interface.c)@>+=
 void _Wresize_interface(struct user_interface *i,
@@ -2453,31 +2456,27 @@ void _Wresize_interface(struct user_interface *i,
 }
 @
 
-
 \secao{8. Interacting with Interfaces}
 
-Given the active interfaces, we can interact with them passing the
-mouse cursor over them or clicking with some mouse button on them. To
-manage these interactions we use the
-function \monoespaco{\_Winteract\_interface} that gives us information
-about what the mouse is doing and automatically executes functions
-associated with interactions with interfaces.
+Given the active interfaces, we can interact with them by moving the
+mouse cursor over them or clicking on them with a mouse button. To
+manage these interactions, we use the function
+\monoespaco{\_Winteract\_interface}, which provides information about
+the mouse's behavior and automatically executes the functions
+associated with interface interactions.
 
-To make this possible we need to memorize the mouse button
-states. Because we need to know not only the current mouse button
-status, but also the previous status. To memorize this, we will use
-the following variables, one for each mouse button:
-
+To make this possible, we need to keep track of the mouse button
+states. This means storing not only the current state of each mouse
+button but also its previous state. To do this, we will use the
+following variables---one for each mouse button:
 
 @<Local Variables (interface.c)@>=
 static bool mouse_last_left_click = false, mouse_last_middle_click = false,
   mouse_last_right_click = false;
 @
 
-
 We initialize these variables with false during the API
 initialization:
-
 
 @<Initializing Interface API@>+=
 mouse_last_left_click = false;
@@ -2485,34 +2484,32 @@ mouse_last_middle_click = false;
 mouse_last_right_click = false;
 @
 
+Knowing the previous and current mouse states, we can detect not only
+whether the user is clicking something, but also whether the click has
+just started in the current frame or is merely continuing. Similarly,
+we can tell not just whether the user is not clicking, but also
+whether the button was released at some point between the previous and
+current frames. This information is essential for correctly executing
+the functions that handle interactions with each interface.
 
-Knowing the previous mouse state and the current state, we are able to
-notice not only that the user is clicking in something, but also if
-the clicking is beginning in this frame or it is just continuing. We
-know not only if the user is not clicking, but also know if the button
-was released at some moment between the last frame and the current
-frame. Only with these information we can execute correctly the
-functions that interact with each interface.
+In a given frame, we can interact with only one interface at a time,
+as we have only a single mouse cursor. But if more than one interface
+occupies the same position, how do we determine which one should
+respond to interaction? Fortunately, we have an ordered list of active
+interfaces, sorted by their rendering order. When multiple interfaces
+overlap at the cursor position, the correct one is the front-most
+interface in this list.
 
-In a given frame we can interact only with a single interface, as we
-have only a single mouse cursor. But if more than one interface occupy
-the same position, how could we know which one is the correct
-interface? Well, fortunately we a list of active interfaces where they
-are ordered according with the order in which they are draw. When more
-than one interface occupy the same point where the mouse cursor is,
-the correct interface is the one that is in the front of others. 
+Therefore, we iterate over the interfaces in reverse drawing order and
+check which is the first one under the mouse cursor. This becomes the
+currently active interface. If another interface was previously marked
+as active, we remove its mark and treat it as the previously
+interacted interface. If needed, and if such interfaces exist, we call
+the appropriate functions: one to handle the cursor leaving the
+previous interface, and another to handle the cursor hovering over or
+clicking on the new current interface.
 
-So we iterate over each interface in the reverse order in which they
-are drawn and check the first interface under the mouse cursor. This
-is the current interface. If there is another interface marked as
-current one, we remove the mark and consider this the previous
-interacted interface. If necessary, and if they exist, we execute
-functions associated with the previous interface (the mouse cursor
-abandoned this interface) and with the current one (if the mouse
-hovered over it, or clicked on it).
-
-The code to perform this is:
-
+The code that performs this is:
 
 @<API Functions Definition (interface.c)@>+=
 void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
@@ -2568,21 +2565,20 @@ void _Winteract_interface(int mouse_x, int mouse_y, bool left_click,
 }
 @
 
-This is a very direct code, but we ommited the part where we transform
-the mouse coordinates in coordinates $(x, y)$ to compare with each
-interface. If the interface is not rotated, no transformation is
-necessary and we could use directly the mouse coordinates. But if the
-interface is rotated, the easiest way to check if the mouse is over it
-is ignoring its rotation and rotate the mouse in the opposite angle,
-with axis on the center of the interface. After this transformation,
-we check if the coordinate is over the interface in the exactly same
-manner.
+This code is straightforward, but we omitted the part where we
+transform the mouse coordinates into $(x,y)$ coordinates to compare
+them against each interface. If the interface is not rotated, no
+transformation is needed---we can use the mouse coordinates
+directly. However, if the interface is rotated, the easiest way to
+determine whether the mouse is over it is to ignore the interface’s
+rotation and instead rotate the mouse position by the opposite angle,
+using the center of the interface as the axis. After this
+transformation, we can check whether the mouse is over the interface
+using the usual method.
 
-Our code to generate $(x, y)$ just checks if the interface is
-rotated. If not, no transformation is necessary. If yes, we just make
-some trigonometric calculations to determine the transformed
-coordinate:
-
+Our code to generate $(x,y)$ first checks whether the interface is
+rotated. If not, no transformation is performed. Otherwise, we apply
+trigonometric calculations to compute the transformed coordinate:
 
 @<Converting Mouse Coordinates to x and y@>=
 if(z_list[i] -> rotation == 0.0){
@@ -2599,6 +2595,135 @@ else{
  x +=  z_list[i] -> x;
  y +=  z_list[i] -> y;
 }
+@
+
+\secao{9. Sound Interfaces}
+
+Sound interfaces are similar to visual interfaces, but much
+simpler. They have no size, position, texture, or any visual
+form. They are just a long numeric sequence representing a
+waveform. However, extracting such a waveform from a file requires
+interpreting a specific format in which the wave is stored. As with
+visual interfaces, we will not worry about how to interpret different
+formats. We won’t show how to read an MP3 file, just as we didn’t show
+how to read a PNG file for visual interfaces. Instead, we will
+delegate to the user the responsibility of providing appropriate
+functions that interpret such formats, just as is done with visual
+interfaces.
+
+If no format is passed or recognized, we will assume an empty sound,
+which is represented by the integer identifying the buffer having the
+value zero.
+
+The function that interprets a file and generates a new sound is:
+
+@<API Functions Definition (interface.c)@>+=
+struct sound *_Wnew_sound(char *filename){
+  struct sound *new_sound;
+  void (*loading_function)(void *(*permanent_alloc)(size_t),
+                           void (*permanent_free)(void *),
+                           void *(*temporary_alloc)(size_t),
+                           void (*temporary_free)(void *),
+                           void (*before_loading_interface)(void),
+                           void (*after_loading_interface)(void),
+                           char *source_filename, void *target);
+  new_sound = permanent_alloc(sizeof(struct sound));
+  if(new_sound != NULL){
+    new_sound -> type = TYPE_SOUND;
+    new_sound -> next = NULL;
+    new_sound -> buffer = 0;
+    MUTEX_WAIT(&linked_list_mutex); // Inserindo na lista encadeada
+    if(last_structure != NULL)
+      ((struct user_interface *) last_structure)-> next = (void *) new_sound;
+    last_structure = (void *) new_sound;
+    last_marking -> number_of_interfaces ++;
+    MUTEX_SIGNAL(&linked_list_mutex);
+    if(filename != NULL){ // Obtém e executa função de carregamento
+      char *ext;
+      for(ext = filename; *ext != '\0'; ext ++);
+      for(; *ext != '.' && ext != filename; ext --);
+      if(*ext == '.'){
+        ext ++;
+        loading_function = get_loading_function(ext);
+        if(loading_function != NULL)
+          loading_function(permanent_alloc, permanent_free, temporary_alloc,
+                           temporary_free, before_loading_interface,
+                           after_loading_interface, filename, new_sound);
+      }
+    }
+  }
+  return new_sound;
+}
+@
+
+The final part of the code is almost identical to that of visual
+interfaces: we also store sound interfaces in the same linked list,
+where they will be managed and deallocated through history markers,
+requiring the activation of the necessary mutexes to handle the
+list. We also rely on a user-provided function to interpret a specific
+audio file format. The only difference lies in having fewer variables
+to initialize beforehand.
+
+But to be able to play audio, we need to properly initialize the
+OpenAL library. The library deals with the following concepts:
+
+1) Sound devices: different hardware pieces available on the computer
+for playback. For example, headphones and speakers.
+
+2) Listener: a unique object associated with each device that
+represents an audio receiver in a virtual environment defined by
+coordinates in a three-dimensional Cartesian space. It also has an
+associated velocity and orientation.
+
+3) Source: A sound source is a virtual point in a three-dimensional
+Cartesian space representing a sound-emitting object. It also has an
+associated velocity vector. The velocity and distance between the
+source and the listener are taken into account to determine sound
+intensity and distortions caused by the Doppler effect.
+
+4) Buffer: The location where the raw representation of the sound wave
+we can play is stored. Each buffer must be associated with a source.
+
+In our case, we are not dealing with a three-dimensional scenario. So,
+we will simply create a single listener, a single source, and
+associate all the buffers we have to this single source. The listener
+and the source will not move and will be at the same point.
+
+But first, let's handle the first type of object, whose complexity we
+cannot avoid: the devices. We will use a pointer to always refer to
+the default sound device, which we will use every time we play a
+sound:
+
+@<Local Variables (interface.c)@>+=
+static ALCdevice *default_device;
+@
+
+This pointer must be initialized in our initialization function. We
+use a call to \monoespaco{alcOpenDevice} passing NULL as an argument
+to start with the default device. The function will return NULL if no
+audio device exists. Thus, we will know that if the variable
+\monoespaco{default\_device} is a null pointer, then we are on a
+system without sound:
+
+@<Initializing Interface API@>+=
+default_device = alcOpenDevice(NULL);
+@
+
+When we finalize our interface API, we must close the device we have
+there:
+
+@<Finalizing Interface API@>+=
+alcCloseDevice(default_device);
+@
+
+But how can the programmer change the default device? How can they
+know which other devices exist? To help with this, we will use a
+variable to store the number of devices we have and another to store
+their names as string:
+
+@<Local Variables (interface.c)@>+=
+static int number_of_sound_devices;
+static char **sound_device_name;
 @
 
 
