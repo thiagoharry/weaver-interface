@@ -300,7 +300,27 @@ struct sound *_Wnew_sound(char *filename);
 Para que o som seja tocado, usa-se a função abaixo:
 
 @<Declaração de Função (interface.h)@>+=
-struct sound *_Wplay_sound(struct sound *snd);
+bool _Wplay_sound(struct sound *snd);
+@
+
+Para escolher em qual dispositivo de áudio queremos tocar, podemos
+querer ter mais informações sobre que dispositivos de áudio diferentes
+existem e qual é o atual. Obtemos a quantidade de dispositivos, o nome
+de cada um armazenado em uma lista de strings e a posição do
+dispositivo atual na lista de strings por meio da função abaixo:
+
+@<Declaração de Função (interface.h)@>+=
+char **_Wget_sound_device_information(int *number_of_devices,
+                                      int *current_device);
+@
+
+A função abaixo muda o dispositivo atual para aquele na posição $n$ da
+lista de nomes de dispositivos retornada pela função acima, onde $n$ é
+o argumento passado para a função. Ela retorna verdadeiro se a mudança
+foi bem-sucedida, e falso caso contrário.
+
+@<Declaração de Função (interface.h)@>+=
+bool _Wselect_sound_device(int chosen_device);
 @
 
 E isso termina a nossa descrição de todas as funções que
@@ -837,6 +857,7 @@ música.
 struct sound {
   int type;
   void *next; // Ponteiro de lista encadeada
+  bool _loaded_sound; // O som já foi carregado?
   ALuint buffer; // Referencia buffer com conteúdo sonoro
 };
 @
@@ -2822,7 +2843,7 @@ contamos com uma função fornecida pelo usuário para interpretar um
 formato de arquivo de áudio. A diferença está apenas em termos menos
 variáveis para inicializar antes disso.
 
-oMas para podermos tocar o áudio, precisamos realizar a inicialização
+Mas para podermos tocar o áudio, precisamos realizar a inicialização
 adequada da biblioteca OpenAL. A biblioteca lida com os seguintes
 conceitos:
 
@@ -2844,17 +2865,19 @@ de som e distorções causadas pelo efeito Doppler.
 podemos tocar. Cada buffer precisa estar associado a uma fonte.
 
 No nosso caso, não estamos lidando com um cenário
-tridimensional. Então vamos simplesmente criar um único ouvinte, uma
-única fonte e associar todos os buffers que temos à esta única
-fonte. O ouvinte e a fonte não vão se mover e estarão no mesmo ponto.
+tridimensional. Então não assumiremos qualquer movimentação de fontes
+de som ou do ouvinte, e assumiremos que ambos estão no mesmo ponto do
+espaço.
 
 Mas vamos primeiro cuidar do primeiro tipo de objeto, cuja
 complexidade não temos como fugir: os dispositivos. Vamos usar um
-ponteiro para sempre apontar para o dispositivo de som padrão, o qual
-iremos usar cada vez que formos tocar um som:
+ponteiro para sempre apontar para o dispositivo de som atual, o qual
+iremos usar cada vez que formos tocar um som. E também um ponteiro
+para o contexto de áudio associado a ele:
 
 @<Variáveis Locais (interface.c)@>+=
-static ALCdevice *default_device;
+static ALCdevice *current_device;
+static ALCcontext *context;
 @
 
 Este ponteiro deve ser inicializado na nossa função de
@@ -2862,17 +2885,26 @@ inicialização. Usamos uma chamada para \monoespaco{alcOpenDevice}
 passando NULL como argumento para começarmos com o dispositivo
 padrão. A função retornará NULL se não existir qualquer dispositivo de
 áudio. Assim saberemos que se a variável \monoespaco{default\_device}
-for um ponteiro nulo, então estamos em um sistema sem som:
+for um ponteiro nulo, então estamos em um sistema sem som. Se não
+estivermos, inicializaremos o contexto de áudio também e o ativaremos:
 
 @<Inicialização da API de Interface@>+=
-default_device = alcOpenDevice(NULL);
+current_device = alcOpenDevice(NULL);
+if(current_device != NULL){
+  context = alcCreateContext(current_device, NULL);
+  alcMakeContextCurrent(context);
+}
 @
 
 Quando formos finalizar a nossa API de interface, devemos fechar o
-dispositivo que temos ali:
+dispositivo que temos ali e encerrar seu contexto:
 
 @<Finalização da API de Interface@>+=
-alcCloseDevice(default_device);
+if(current_device != NULL){
+  alcMakeContextCurrent(NULL);
+  alcDestroyContext(context);
+  alcCloseDevice(current_device);
+}
 @
 
 Mas como o programador pode trocar o dispositivo padrão? Como ele pode
@@ -2885,7 +2917,224 @@ static int number_of_sound_devices;
 static char **sound_device_name;
 @
 
+Estas variáveis são verificadas e preenchidas durante a
+inicialização. O segredo para preenchermos seu valor é invocarmos a
+função \monoespaco{alcGetString}, passando como argumento
+\monoespaco{ALC\_DEFAULT\_DEVICE\_SPECIFIER}, obtendo assim uma string
+com a lista detodos os dispositivos. Esta string segue ua convenção
+diferente da usual em sua representação: ela usa dois caracteres nulos
+seguidos para sinalizar o seu fim. E um só caractere nulo para servir
+de separados entre os diferentes nomes de dispositivos.
 
+Dessa forma, podemos contar o número de interfaces contando a
+quantidade de caracteres nulos na string, e parando ao encontrar dois
+seguidos. Se houver 1 ou 0 dispositivos, leremos 2 caracteres. Se
+houver 2, leremos 3. Cada novo dispositivo acrescventa um caractere
+nulo a mais como separador. Então, o código abaixo calcula o número de
+dispositivos seguindo essa lógica:
+
+@<Inicialização da API de Interface@>+=
+{
+  char *c, *devices;
+  int count = 0;
+  c = devices = (char *) alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+  while(c == devices || *c != '\0' || *(c-1) != '\0'){
+    if(*c == '\0')
+      count ++;
+    c ++;
+  }
+  count ++;
+  if(*devices == '\0')
+    number_of_sound_devices = 0;
+  else
+    number_of_sound_devices = count - 1;
+  @<Inicialização: Lê o Nome dos Dispositivos de Áudio@>
+}
+@
+
+Se existe ao menos um dispositivo de áudio, alocamos o vetor que
+conterá a lista de dispositivos e preenchemos cada um de seus valores
+com o endereço onde está o dispositivo relevante:
+
+@<Inicialização: Lê o Nome dos Dispositivos de Áudio@>=
+if(number_of_sound_devices > 0){
+  int i = 0;
+  sound_device_name = (char **) permanent_alloc(number_of_sound_devices *
+                                                sizeof(char *));
+  if(sound_device_name == NULL)
+    number_of_sound_devices = 0;
+  else{
+    for(c = devices; c == devices || *c != '\0' || *(c-1) != '\0'; c ++)
+      if(c == devices || *(c-1) == '\0'){
+        sound_device_name[i] = c;
+	i ++;
+      }
+  }
+}
+@
+
+Na finalização será necessário desalocar a lista de nomes de dispositivos:
+
+@<Finalização da API de Interface@>+=
+if(permanent_free != NULL)
+  permanent_free(sound_device_name);
+@
+
+Temos um dispositivo padrão já escolhido e uma lista de dispositivos
+existentes. Mas qual é o dispositivo padrao escolhido diante da lista
+existente? Idealmente queremos colocar o número correspondente à
+posição do dispositivo padrão na lista de nomes de interface na
+variável abaixo:
+
+@<Variáveis Locais (interface.c)@>+=
+static int current_device_id;
+@
+
+A documentação diz que a única forma de descobrir é lendo a string com
+o nome do dispositivo padrão e comparando com a lista de strings que
+temos. Que é o que fazemos abaixo:
+
+@<Inicialização da API de Interface@>+=
+if(number_of_sound_devices > 0){
+  int i;
+  char *query;
+  query = (char *) alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+  for(i = 0; i < number_of_sound_devices; i ++)
+    if(!strcmp(query, sound_device_name[i])){
+      current_device_id = i;
+      break;
+    }
+}
+@
+
+Com isso já somos capazes de implementar a função de API que fornece tais
+informações para o usuário:
+
+@<Definição de Funções da API (interface.c)@>+=
+char **_Wget_sound_device_information(int *number_of_devices,
+                                      int *current_device){
+  *number_of_devices = number_of_sound_devices;
+  *current_device = current_device_id;
+  return sound_device_name;  
+}
+@
+
+É interessante notar que nem todas as implementações de OpenAL
+suportam uma enumeração dos dispositivos existentes. Este recurso de
+enumeração que usamos é uma extensão. Entretanto, mesmo que uma
+implementação não suporte a enumeração, ela ainda irá funcionar no
+código acima. Ela apenas irá retornar sempre um único dispositivo, o
+padrão, quando pedirmos por uma lista de dispositivos.
+
+Associado a cada dispositivo, devemos também manter um ouvinte e
+fontes de som. Se não criarmos um ouvinte, um ouvinte padrão será
+usado. Não temos motivos para mudar as configurações do ouvinte
+padrão, então isso é o que faremos. Com relação às fontes,
+declararemos um número delas definido pela macro
+\monoespaco{W\_SOUND\_INTERFACE\_SOURCES}. Se a macro não estiver
+definida, o valor padrão será 5. Isso corresponde ao número simultâneo
+de sons de interface que poderão tocar em um dado momento:
+
+@<Variáveis Locais (interface.c)@>+=
+#if !defined(W_SOUND_INTERFACE_SOURCES)
+#define W_SOUND_INTERFACE_SOURCES 5
+#endif
+static ALuint source[W_SOUND_INTERFACE_SOURCES];
+@
+
+E inicializamos as fontes na inicialização com valores
+padrão. Queremos que elas ocupem a mesma posição que o ouvinte (a
+origem), que não se movam, e toquem o som uma só vez quando for
+pedido:
+
+@<Inicialização da API de Interface@>+=
+{
+  int i;
+  alGenSources(5, source);
+  for(i = 0; i < W_SOUND_INTERFACE_SOURCES; i ++){
+    alSourcef(source[i], AL_PITCH, 1);
+    alSourcef(source[i], AL_GAIN, 1);
+    alSource3f(source[i], AL_POSITION, 0, 0, 0);
+    alSource3f(source[i], AL_VELOCITY, 0, 0, 0);
+    alSourcei(source[i], AL_LOOPING, AL_FALSE);
+  }
+}
+@
+
+Na finalização, devemos destruir as fontes:
+
+@<Finalização da API de Interface@>+=
+alDeleteSources(5, source);
+@
+
+Com isso já temos as estruturas necessárias para modificar o
+dispositivo de áudio padrão. O contexto de áudio está sempre associado
+à um dispositivo, e as fontes de áudio são associadas ao contexto
+atual. Isso significa que quando modificamos o dispositivo padrão,
+precisamos recriar todos estes objetos.
+
+Sabendo disso, podemos implementar corretamente a função que modifica
+o dispositivo atual:
+
+@<Definição de Funções da API (interface.c)@>+=
+bool _Wselect_sound_device(int chosen_device){
+  int i;
+  if(chosen_device < 0 || chosen_device >= number_of_sound_devices)
+    return false;
+  // Remove o contexto atual:
+  alDeleteSources(5, source);
+  if(context != NULL){
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(context);
+    alcCloseDevice(current_device);
+  }
+  alcCloseDevice(current_device);
+  // Muda o dispositivo:
+  current_device = alcOpenDevice(sound_device_name[chosen_device]);
+  current_device_id = chosen_device;
+  // Cria novo contexto:
+  if(current_device != NULL){
+    context = alcCreateContext(current_device, NULL);
+    alcMakeContextCurrent(context);
+  }
+  alGenSources(5, source);
+  for(i = 0; i < W_SOUND_INTERFACE_SOURCES; i ++){
+    alSourcef(source[i], AL_PITCH, 1);
+    alSourcef(source[i], AL_GAIN, 1);
+    alSource3f(source[i], AL_POSITION, 0, 0, 0);
+    alSource3f(source[i], AL_VELOCITY, 0, 0, 0);
+    alSourcei(source[i], AL_LOOPING, AL_FALSE);
+  }
+  return true;
+}
+@
+
+E finalmente, apresentaremos a função que irá tocar um som. Lembre-se
+que uma estrutura de som corretamente inicializada possui referência
+para um buffer OpenAL já inicializado. Tudo o que temos que fazer é
+obter a primeira fonte que estiver disponível e tocar. Se não houver
+fontes disponíveis (todas elas estão já tocando algum som, ou talvez o
+usuário mudou o seu número para zero), ou então se o som ainda não foi
+carregado, sinalizaremos que o som não foi tocado retornando falso. Do
+contrário, se formos bem-sucedidos, retornaremos verdadeiro.
+
+@<Definição de Funções da API (interface.c)@>+=
+bool _Wplay_sound(struct sound *snd){
+  int i;
+  if(!(snd -> _loaded_sound))
+    return false;
+  for(i = 0; i < W_SOUND_INTERFACE_SOURCES; i ++){
+    alSourcei(source[i], AL_BUFFER, snd -> buffer);
+    if(alGetError() == AL_NO_ERROR)
+      break;
+  }
+  if(i < W_SOUND_INTERFACE_SOURCES){
+    alSourcePlay(source[i]);
+    return true;
+  }
+  return false;
+}
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

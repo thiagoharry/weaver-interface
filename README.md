@@ -73,16 +73,29 @@ This creates a white rotating square in the center of the screen:
 
 ## Dependencies
 
-The code is portable, but it requires that you use other libraries to
-create a window, keep its size updated, detect mouse movements,
-measure elapsed time in microsseconds and initialize an OpenGL
-Context. You can use any desired library to do these things.
+The code is portable, but it requires you to use additional libraries
+to create a window, keep its size updated, detect mouse movements,
+measure elapsed time in microseconds, and initialize an OpenGL
+context. You can use any library you prefer to handle these tasks. It
+also requires the OpenAL library for audio support, but you are not
+required to initialize the OpenAL context and devices in advance.
 
 ## Reference
 
 ### Data Structures
 
 #### User Interfaces
+
+An audio interface is a struct defined as:
+
+```
+  struct sound {
+    (...)
+    ALuint buffer;
+  }
+```
+
+It stores an OpenAL buffer with audio.
 
 An user interface is a struct defined as:
 
@@ -310,7 +323,7 @@ could begin changing the following model taken from the default shader:
  #endif
 ```
 
-Notice that both the vertex shader and the fragment shader should be
+Note that both the vertex shader and the fragment shader should be
 stored in the same file. The API is responsible to pass correct values
 for the shader and to set correctly the macros `VEREX_SHADER` and
 `FRAGMENT_SHADER` that you should check to discover if the code is run
@@ -443,6 +456,78 @@ after the last marking and all links to interfaces.
 If you never created a history marking, running this function erases
 all user interfaces.
 
+
+#### Audio
+
+```
+  struct sound *_Wnew_sound(char *filename);
+```
+
+An audio interface is created with the above function. It gets as
+parameter an audio file. This module do not know how to interpret any
+audio format. To properly interpret audio files with a given extension
+(WAV, MP3), you should initialize the API with `_Winit_interface`
+function passing as parameter an extraction function and an associated
+extension. 
+
+For example, an extraction function for MP3 files would have the
+following format:
+
+```
+  void mp3_extractor_sample(void *(*permanent_alloc)(size_t),
+		            void (*permanent_free)(void *),
+		            void *(*temporary_alloc)(size_t),
+		            void (*temporary_free)(void *),
+		            void (*before_loading_interface)(void),
+		            void (*after_loading_interface)(void),
+		            char *source_filename, void *interface){
+    struct sound *i;
+    ALsizei sample_rate;
+    char buffer_mp3[1024];
+    i = (struct sound *) interface;
+    if(before_loading_interface != NULL)
+      before_loading_interface();
+    EXTRACT_MP3_AUDIO(filename, buffer_mp3, &sample_rate);
+    alBufferData(i -> buffer, FORMAT, buffer_mp3, 1024, sample_rate);
+    i -> _loaded_sound = true; // Always set this after loading audio
+    if(temporary_free != NULL)
+      temporary_free(buffer);
+    if(after_loading_interface != NULL)
+      after_loading_interface();
+  }
+```
+
+Audio interfaces can be destroyed only using
+`_Wrestore_history_interface`. However, this function erases all
+interfaces from the current scope. Scopes can be managed with
+`_Wmark_history_interface`, `_Wrestore_history_interface` and
+`_Wlink_interface`.
+
+
+```
+  bool _Wplay_sound(struct sound *snd);
+```
+
+This function plays a sound extracted with previous function. Returns
+if the sound was successfully played. It fails if the sound was not
+properly loaded or if all internal audio sources were in use.
+
+```
+  char **_Wget_sound_device_information(int *number_of_devices,
+                                        int *current_device);
+```
+
+Retrieves information about audio devices from OpenAL. The number of
+devices, which device is in use, and a list of null-terminated strings
+with all device names.
+
+```
+  bool _Wselect_sound_device(int n);
+```
+
+The function changes the current audio device to the one at position
+`n` in the list of device names. You can check the list of devices
+names with `_Wget_sound_device_information`.
 
 ### Macro Configuration
 

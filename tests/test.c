@@ -14,6 +14,8 @@
 #include "../src/interface.h"
 #include "window.h"
 
+#include <AL/al.h>
+#include <AL/alc.h>
 
 static int window_width, window_height;
 static struct _Wkeyboard keyboard;
@@ -163,10 +165,11 @@ void test_custom_functions(void){
   assert("Using loading initialization function", counter_before == 1);
   assert("Using loading finalization function", counter_after == 1);
   // Permanent allocation: list of loading functions + history marking + interface
-  assert("Using custom permanent allocation", counter_permanent_alloc == 4);
+  // + list of audio devices
+  assert("Using custom permanent allocation", counter_permanent_alloc == 5);
   assert("Using custom temporary allocation function",
 	 counter_temporary_alloc == 1);
-  assert("Using custom permanent free function", counter_permanent_free == 4);
+  assert("Using custom permanent free function", counter_permanent_free == 5);
   assert("Using custom temporary free function", counter_temporary_free == 1);
   counter_permanent_free = 0;
   counter_temporary_free = 0;
@@ -180,6 +183,32 @@ void test_custom_functions(void){
   _Wfinish_interface();
   assert("If NULL, do not use free functions", counter_permanent_free == 0 &&
 	 counter_temporary_free == 0);
+}
+
+void test_audio_devices(void){
+  char **devices;
+  int i, n, cur;
+  _Winit_interface(&window_width, &window_height,
+		   malloc, free, malloc, free, NULL, NULL, NULL);
+  printf("Enumerating audio devices:\n");
+  devices = _Wget_sound_device_information(&n, &cur);
+  for(i = 0; i < n; i ++){
+    if(i == cur)
+      printf("[X] ");
+    else
+      printf("[ ] ");
+    printf("%s\n", devices[i]);
+  }
+  _Wfinish_interface(); 
+}
+
+void test_no_error_openal(void){
+  ALCenum error;
+  _Winit_interface(&window_width, &window_height,
+		   malloc, free, malloc, free, NULL, NULL, NULL);
+  error = alGetError();
+  assert("No errors in OpenAL", error == AL_NO_ERROR);
+  _Wfinish_interface(); 
 }
 
 void test_structure_history(void){
@@ -317,9 +346,11 @@ void rendering_test(void){
 int main(int argc, char **argv){
   _Wcreate_window(&keyboard, &mouse);
   _Wget_window_size(&window_width, &window_height);
+  test_audio_devices();
   test_custom_functions();
   test_structure_history();
   rendering_test();
+  test_no_error_openal();
   imprime_resultado();
   _Wdestroy_window();
   return 0;

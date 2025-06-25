@@ -287,7 +287,28 @@ To play the sound loaded by the previous function, we use the function
 below:
 
 @<Function Declaration (interface.h)@>+=
-struct sound *_Wplay_sound(struct sound *snd);
+bool _Wplay_sound(struct sound *snd);
+@
+
+To choose which audio device we want to use for playback, it may be
+useful to gather more information about the available audio devices
+and which one is currently in use. The function below provides this
+information by returning the number of available devices, the name of
+each device as a list of strings, and the index of the current default
+device in that list:
+
+@<Function Declaration (interface.h)@>+=
+char **_Wget_sound_device_information(int *number_of_devices,
+                                      int *current_device);
+@
+
+The function below changes the current audio device to the one at
+position $n$ in the list of device names returned by the function
+above, where $n$ is the argument passed to the function. It retursn
+true if the operation was successful and false otherwise.
+
+@<Declaração de Função (interface.h)@>+=
+bool _Wselect_sound_device(int chosen_device);
 @
 
 This concludes the description of our API functions.
@@ -768,6 +789,7 @@ piece of music.
 struct sound {
   int type;
   void *next; // Pointer to linked list
+  bool _loaded_sound; // The sound was already loaded?
   ALuint buffer; // References an audio buffer
 };
 @
@@ -2685,17 +2707,17 @@ intensity and distortions caused by the Doppler effect.
 we can play is stored. Each buffer must be associated with a source.
 
 In our case, we are not dealing with a three-dimensional scenario. So,
-we will simply create a single listener, a single source, and
-associate all the buffers we have to this single source. The listener
-and the source will not move and will be at the same point.
+we will assume that sources and listener are not moving and all them
+occupy the same space.
 
 But first, let's handle the first type of object, whose complexity we
 cannot avoid: the devices. We will use a pointer to always refer to
-the default sound device, which we will use every time we play a
-sound:
+the current sound device, which we will use every time we play a
+sound. And also a pointer to its corresponding audio context:
 
 @<Local Variables (interface.c)@>+=
-static ALCdevice *default_device;
+static ALCdevice *current_device;
+static ALCcontext *context;
 @
 
 This pointer must be initialized in our initialization function. We
@@ -2703,17 +2725,25 @@ use a call to \monoespaco{alcOpenDevice} passing NULL as an argument
 to start with the default device. The function will return NULL if no
 audio device exists. Thus, we will know that if the variable
 \monoespaco{default\_device} is a null pointer, then we are on a
-system without sound:
+system without sound. If we are not, then we can also initializer our
+audio context:
 
 @<Initializing Interface API@>+=
-default_device = alcOpenDevice(NULL);
+current_device = alcOpenDevice(NULL);
+if(current_device != NULL){
+  context = alcCreateContext(current_device, NULL);
+  alcMakeContextCurrent(context);
+} 
 @
 
 When we finalize our interface API, we must close the device we have
-there:
+there and end its context:
 
 @<Finalizing Interface API@>+=
-alcCloseDevice(default_device);
+if(current_device != NULL){
+  alcDestroyContext(context);
+  alcCloseDevice(current_device);
+}
 @
 
 But how can the programmer change the default device? How can they
@@ -2724,6 +2754,226 @@ their names as string:
 @<Local Variables (interface.c)@>+=
 static int number_of_sound_devices;
 static char **sound_device_name;
+@
+
+These variables are checked and filled during initialization. The key
+to assigning their values is to call the \monoespaco{alcGetString}
+function, passing \monoespaco{ALC\_DEFAULT\_DEVICE\_SPECIFIER} as an
+argument, thus obtaining a string with the list of all devices. This
+string follows a different convention from the usual in its
+representation: it uses two consecutive null characters to signal its
+end, and a single null character to serve as a separator between
+different device names.
+
+This way, we can count the number of interfaces by counting the number
+of null characters in the string, stopping when we find two in a
+row. If there are 1 or 0 devices, we will read 2 null characters. If there
+are 2, we will read 3. Each new device adds one more null character as
+a separator. So, the code below calculates the number of devices
+following this logic:
+
+@<Initializing Interface API@>+=
+{
+  char *c, *devices;
+  int count = 0;
+  c = devices = (char *) alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+  while(c == devices || *c != '\0' || *(c-1) != '\0'){
+    if(*c == '\0')
+      count ++;
+    c ++;
+  }
+  count ++;
+  if(*devices == '\0')
+    number_of_sound_devices = 0;
+  else
+    number_of_sound_devices = count - 1;
+  @<Initialization: Read Audio Device Names@>
+}
+@
+
+If there is at least one audio device, we allocate the array that will
+hold the list of devices and fill each of its elements with the
+address where the corresponding device name is stored:
+
+@<Initialization: Read Audio Device Names@>=
+if(number_of_sound_devices > 0){
+  int i = 0;
+  sound_device_name = (char **) permanent_alloc(number_of_sound_devices *
+                                                sizeof(char *));
+  if(sound_device_name == NULL)
+    number_of_sound_devices = 0;
+  else{
+    for(c = devices; c == devices || *c != '\0' || *(c-1) != '\0'; c ++)
+      if(c == devices || *(c-1) == '\0'){
+        sound_device_name[i] = c;
+	i ++;
+      }
+  }
+}
+@
+
+During finalization, it will be necessary to deallocate the list of
+device names:
+
+@<Finalizing Interface API@>+=
+if(permanent_free != NULL)
+  permanent_free(sound_device_name);
+@
+
+We have a default device already selected and a list of existing
+devices. But which device in the existing list corresponds to the
+chosen default device? Ideally, we want to store in the variable below
+the number corresponding to the position of the default device in the
+list of interface names:
+
+@<Local Variables (interface.c)@>+=
+static int current_device_id;
+@
+
+The documentation says that the only way to find out is by reading the
+string with the default device name and comparing it to the list of
+strings we have. That is what we do below:
+
+@<Initializing Interface API@>+=
+if(number_of_sound_devices > 0){
+  int i;
+  char *query;
+  query = (char *) alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+  for(i = 0; i < number_of_sound_devices; i ++)
+    if(!strcmp(query, sound_device_name[i])){
+      current_device_id = i;
+      break;
+    }
+}
+@
+
+With this, we are already able to implement the API function that
+provides this information to the user:
+
+@<API Functions Definition (interface.c)@>+=
+char **_Wget_sound_device_information(int *number_of_devices,
+                                      int *current_device){
+  *number_of_devices = number_of_sound_devices;
+  *current_device = current_device_id;
+  return sound_device_name;  
+}
+@
+
+It's worth noting that not all OpenAL implementations support
+enumerating the available devices. This enumeration feature we are
+using is an extension. However, even if an implementation does not
+support enumeration, it will still work with the code above. It will
+simply return a single device---the default one---when we request the
+list of devices.
+
+For each device, we must also maintain a listener and sound
+sources. If we do not create a listener explicitly, a default listener
+will be used. Since we have no reason to modify the default listener’s
+configuration, this is what we’ll rely on. Regarding sound sources, we
+will declare a number of them defined by the macro
+\monoespaco{Wz_SOUND\_INTERFACE\_SOURCES}. If this macro is not defined,
+the default value will be 5. This corresponds to the number of
+interface sounds that can play simultaneously at any given time:
+
+@<Local Variables (interface.c)@>+=
+#if !defined(W_SOUND_INTERFACE_SOURCES)
+#define W_SOUND_INTERFACE_SOURCES 5
+#endif
+static ALuint source[W_SOUND_INTERFACE_SOURCES];
+@
+
+We initialize the sources during the initialization process with
+default values. We want them to occupy the same position as the
+listener (the origin), remain stationary, and play the sound only once
+when requested:
+
+@<Initializing Interface API@>+=
+{
+  int i;
+  alGenSources(5, source);
+  for(i = 0; i < W_SOUND_INTERFACE_SOURCES; i ++){
+    alSourcef(source[i], AL_PITCH, 1);
+    alSourcef(source[i], AL_GAIN, 1);
+    alSource3f(source[i], AL_POSITION, 0, 0, 0);
+    alSource3f(source[i], AL_VELOCITY, 0, 0, 0);
+    alSourcei(source[i], AL_LOOPING, AL_FALSE);
+  }
+}
+@
+
+During finalization, we must destroy the sources:
+
+@<Finalizing Interface API@>+=
+alDeleteSources(5, source);
+@
+
+With this, we already have the necessary structures to change the
+default audio device. The audio context is always associated with a
+device, and the audio sources are linked to the current context. This
+means that when we change the default device, we need to recreate all
+these objects.
+
+With this in mind, we can correctly implement the function that
+changes the current device:
+
+@<API Functions Definition (interface.c)@>+=
+bool _Wselect_sound_device(int chosen_device){
+  int i;
+  if(chosen_device < 0 || chosen_device >= number_of_sound_devices)
+    return false;
+  // Remove current context:
+  alDeleteSources(5, source);
+  if(context != NULL){
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(context);
+    alcCloseDevice(current_device);
+  }
+  alcCloseDevice(current_device);
+  // Change device:
+  current_device = alcOpenDevice(sound_device_name[chosen_device]);
+  current_device_id = chosen_device;
+  // Creating new context:
+  if(current_device != NULL){
+    context = alcCreateContext(current_device, NULL);
+    alcMakeContextCurrent(context);
+  }
+  alGenSources(5, source);
+  for(i = 0; i < W_SOUND_INTERFACE_SOURCES; i ++){
+    alSourcef(source[i], AL_PITCH, 1);
+    alSourcef(source[i], AL_GAIN, 1);
+    alSource3f(source[i], AL_POSITION, 0, 0, 0);
+    alSource3f(source[i], AL_VELOCITY, 0, 0, 0);
+    alSourcei(source[i], AL_LOOPING, AL_FALSE);
+  }
+  return true;
+}
+@
+
+And finally, we present the function that will play a sound. Remember
+that a properly initialized sound structure holds a reference to an
+already initialized OpenAL buffer. All we need to do is get the first
+available source and play it. If no sources are available (either all
+of them are already playing sounds, or the user changed their number
+to zero), or if the sound has not yet been loaded, we signal that the
+sound was not played by returning false. Otherwise, if we succeed, we
+return true.
+
+@<API Functions Definition (interface.c)@>+=
+bool _Wplay_sound(struct sound *snd){
+  int i;
+  if(!(snd -> _loaded_sound))
+    return false;
+  for(i = 0; i < W_SOUND_INTERFACE_SOURCES; i ++){
+    alSourcei(source[i], AL_BUFFER, snd -> buffer);
+    if(alGetError() == AL_NO_ERROR)
+      break;
+  }
+  if(i < W_SOUND_INTERFACE_SOURCES){
+    alSourcePlay(source[i]);
+    return true;
+  }
+  return false;
+}
 @
 
 
