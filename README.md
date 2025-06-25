@@ -531,7 +531,7 @@ names with `_Wget_sound_device_information`.
 
 ### Macro Configuration
 
-Defining the following macro will change this API default behaviour:
+Defining the following macros will change this API default behaviour:
 
 * `W_FORCE_LANDSCAPE`: If our drawing area height is greater than the
   width, we rotate 90 degrees our axis. The axis x became vertical and
@@ -539,3 +539,8 @@ Defining the following macro will change this API default behaviour:
   interfaces and rotate them 90 degrees. This is useful for mobile
   devices, when you want to have more horizontal space and expect the
   user to rotate its device if necessary.
+
+* `W_SOUND_INTERFACE_SOURCES`: The number of internal audio
+  sources. Represents the number of simultaneous sound effects that
+  you can play using this module. The default, if this macro is not
+  defined, is 5.
