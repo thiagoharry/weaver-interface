@@ -853,7 +853,7 @@ armazena todo o áudio que elas devem tocar. Por causa disso, uma
 interface de som deve ser um som curto, não algo longo como uma
 música.
 
-@<Estrutura de Dados Locais (interface.c)@>+=
+@<Estrutura de Dados (interface.h)@>+=
 struct sound {
   int type;
   void *next; // Ponteiro de lista encadeada
@@ -870,7 +870,7 @@ semelhante ao OpenGL, e este é o tipo que ela usa para números
 inteiros sem sinal. Devemos também incluir os cabeçalhos desta
 biblioteca abaixo:
 
-@<Cabeçalhos Locais (interface.c)@>+=
+@<Inclui Cabeçalhos Gerais (interface.h)@>+=
 #include <AL/al.h>
 #include <AL/alc.h>
 @

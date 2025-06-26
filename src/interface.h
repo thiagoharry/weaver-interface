@@ -36,7 +36,12 @@ extern"C"{
 #include <GL/gl.h> 
 #endif
 #line 589 "weaver-interface.cweb"
-/*:30*/
+/*:30*//*36:*/
+#line 873 "weaver-interface.cweb"
+
+#include <AL/al.h> 
+#include <AL/alc.h> 
+/*:36*/
 #line 376 "weaver-interface.cweb"
 
 /*23:*/
@@ -98,7 +103,16 @@ void*_internal_data;
 void(*_free_internal_data)(void*);
 void(*_reload_texture)(struct user_interface*);
 };
-/*:32*/
+/*:32*//*35:*/
+#line 856 "weaver-interface.cweb"
+
+struct sound{
+int type;
+void*next;
+bool _loaded_sound;
+ALuint buffer;
+};
+/*:35*/
 #line 378 "weaver-interface.cweb"
 
 /*1:*/

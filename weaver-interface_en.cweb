@@ -785,7 +785,7 @@ buffer containing all the audio they must play. Because of this, a
 sound interface should be a short sound, not something long like a
 piece of music.
 
-@<Local Data Structures (interface.c)@>+=
+@<Data Structures (interface.h)@>+=
 struct sound {
   int type;
   void *next; // Pointer to linked list
@@ -801,7 +801,7 @@ library we will use, OpenAL. Its API aims to be similar to OpenGL, and
 this is the type it uses for unsigned integers. We should also include
 the headers for this library as follows:
 
-@<Local Headers (interface.c)@>=
+@<Include General Headers (interface.h)@>+=
 #include <AL/al.h>
 #include <AL/alc.h>
 @

@@ -2,12 +2,7 @@
 #line 408 "weaver-interface.cweb"
 
 #include "interface.h"
-/*36:*/
-#line 873 "weaver-interface.cweb"
-
-#include <AL/al.h> 
-#include <AL/alc.h> 
-/*:36*//*39:*/
+/*39:*/
 #line 953 "weaver-interface.cweb"
 
 #include <string.h> 
@@ -138,16 +133,7 @@ int type;
 void*next;
 struct user_interface*linked_interface;
 };
-/*:34*//*35:*/
-#line 856 "weaver-interface.cweb"
-
-struct sound{
-int type;
-void*next;
-bool _loaded_sound;
-ALuint buffer;
-};
-/*:35*//*37:*/
+/*:34*//*37:*/
 #line 896 "weaver-interface.cweb"
 
 struct file_function{
