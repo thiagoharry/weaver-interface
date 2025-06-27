@@ -25,7 +25,7 @@ to study how this library works, you can read the full source code
 with additional text explanations in
 [weaver-interface_en.pdf](https://github.com/thiagoharry/weaver-interface/blob/master/weaver-interface.pdf)
 (engish version) or in
-[weaver-window.pdf](https://github.com/thiagoharry/weaver-interface/blob/master/weaver-interface.pdf)
+[weaver-interface.pdf](https://github.com/thiagoharry/weaver-interface/blob/master/weaver-interface.pdf)
 (portuguese version).
 
 This code is licensed under GNU Affero Gneral Public Licence v. 3. See
