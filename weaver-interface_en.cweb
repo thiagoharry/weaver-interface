@@ -2165,6 +2165,8 @@ if(z_list_size != last_marking -> number_of_interfaces){
       z_list[i] = ((struct link *) p) -> linked_interface;
     else if(((struct user_interface *) p) -> type == TYPE_SHADER)
       i --; // Not an interface
+    else if(((struct user_interface *) p) -> type == TYPE_SOUND)
+      i --; // Sound interfaces are not rendered
     p = ((struct user_interface *) p) -> next;
   }
   // Ordering list (insertion sort):

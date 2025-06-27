@@ -272,35 +272,35 @@ static struct user_interface**z_list= NULL;
 static unsigned z_list_size= 0;
 _STATIC_MUTEX_DECLARATION(z_list_mutex);
 /*:84*//*89:*/
-#line 2348 "weaver-interface.cweb"
+#line 2350 "weaver-interface.cweb"
 
 static unsigned long long previous_time= 0;
 /*:89*//*95:*/
-#line 2640 "weaver-interface.cweb"
+#line 2642 "weaver-interface.cweb"
 
 static bool mouse_last_left_click= false,mouse_last_middle_click= false,
 mouse_last_right_click= false;
 /*:95*//*100:*/
-#line 2878 "weaver-interface.cweb"
+#line 2880 "weaver-interface.cweb"
 
 static ALCdevice*current_device;
 static ALCcontext*context;
 /*:100*//*103:*/
-#line 2915 "weaver-interface.cweb"
+#line 2917 "weaver-interface.cweb"
 
 static int number_of_sound_devices;
 static char**sound_device_name;
 /*:103*//*107:*/
-#line 2989 "weaver-interface.cweb"
+#line 2991 "weaver-interface.cweb"
 
 static int current_device_id;
 /*:107*//*110:*/
-#line 3038 "weaver-interface.cweb"
+#line 3040 "weaver-interface.cweb"
 
 #if !defined(W_SOUND_INTERFACE_SOURCES)
 #define W_SOUND_INTERFACE_SOURCES 5
 #endif
-#line 3042 "weaver-interface.cweb"
+#line 3044 "weaver-interface.cweb"
  static ALuint source[W_SOUND_INTERFACE_SOURCES];
 /*:110*/
 #line 413 "weaver-interface.cweb"
@@ -629,17 +629,17 @@ MUTEX_INIT(&z_list_mutex);
 z_list_size= 0;
 z_list= NULL;
 /*:85*//*90:*/
-#line 2358 "weaver-interface.cweb"
+#line 2360 "weaver-interface.cweb"
 
 previous_time= 0;
 /*:90*//*96:*/
-#line 2650 "weaver-interface.cweb"
+#line 2652 "weaver-interface.cweb"
 
 mouse_last_left_click= false;
 mouse_last_middle_click= false;
 mouse_last_right_click= false;
 /*:96*//*101:*/
-#line 2891 "weaver-interface.cweb"
+#line 2893 "weaver-interface.cweb"
 
 current_device= alcOpenDevice(NULL);
 if(current_device!=NULL){
@@ -647,7 +647,7 @@ context= alcCreateContext(current_device,NULL);
 alcMakeContextCurrent(context);
 }
 /*:101*//*104:*/
-#line 2936 "weaver-interface.cweb"
+#line 2938 "weaver-interface.cweb"
 
 {
 char*c,*devices;
@@ -664,7 +664,7 @@ number_of_sound_devices= 0;
 else
 number_of_sound_devices= count-1;
 /*105:*/
-#line 2959 "weaver-interface.cweb"
+#line 2961 "weaver-interface.cweb"
 
 if(number_of_sound_devices> 0){
 int i= 0;
@@ -681,11 +681,11 @@ i++;
 }
 }
 /*:105*/
-#line 2951 "weaver-interface.cweb"
+#line 2953 "weaver-interface.cweb"
 
 }
 /*:104*//*108:*/
-#line 2997 "weaver-interface.cweb"
+#line 2999 "weaver-interface.cweb"
 
 if(number_of_sound_devices> 0){
 int i;
@@ -698,7 +698,7 @@ break;
 }
 }
 /*:108*//*111:*/
-#line 3050 "weaver-interface.cweb"
+#line 3052 "weaver-interface.cweb"
 
 {
 int i;
@@ -759,7 +759,7 @@ permanent_free(z_list);
 z_list= NULL;
 z_list_size= 0;
 /*:86*//*102:*/
-#line 2902 "weaver-interface.cweb"
+#line 2904 "weaver-interface.cweb"
 
 if(current_device!=NULL){
 alcMakeContextCurrent(NULL);
@@ -767,12 +767,12 @@ alcDestroyContext(context);
 alcCloseDevice(current_device);
 }
 /*:102*//*106:*/
-#line 2978 "weaver-interface.cweb"
+#line 2980 "weaver-interface.cweb"
 
 if(permanent_free!=NULL)
 permanent_free(sound_device_name);
 /*:106*//*112:*/
-#line 3066 "weaver-interface.cweb"
+#line 3068 "weaver-interface.cweb"
 
 alDeleteSources(5,source);
 /*:112*/
@@ -970,7 +970,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 MUTEX_SIGNAL(&linked_list_mutex);
 }
 /*:83*//*91:*/
-#line 2384 "weaver-interface.cweb"
+#line 2386 "weaver-interface.cweb"
 
 void _Wrender_interface(unsigned long long time){
 /*88:*/
@@ -995,6 +995,8 @@ else if(((struct user_interface*)p)->type==TYPE_LINK)
 z_list[i]= ((struct link*)p)->linked_interface;
 else if(((struct user_interface*)p)->type==TYPE_SHADER)
 i--;
+else if(((struct user_interface*)p)->type==TYPE_SOUND)
+i--;
 p= ((struct user_interface*)p)->next;
 }
 
@@ -1010,7 +1012,7 @@ j= j-1;
 MUTEX_SIGNAL(&z_list_mutex);
 }
 /*:88*/
-#line 2386 "weaver-interface.cweb"
+#line 2388 "weaver-interface.cweb"
 
 {
 unsigned i,elapsed_time;
@@ -1103,7 +1105,7 @@ glBindTexture(GL_TEXTURE_2D,0);
 previous_time= time;
 }
 /*:91*//*92:*/
-#line 2497 "weaver-interface.cweb"
+#line 2499 "weaver-interface.cweb"
 
 void _Wmove_interface(struct user_interface*i,
 float new_x,float new_y,float new_z){
@@ -1119,14 +1121,14 @@ i->_x= *window_width-new_y;
 i->_y= new_x;
 }
 #endif
-#line 2512 "weaver-interface.cweb"
+#line 2514 "weaver-interface.cweb"
 /*67:*/
 #line 1724 "weaver-interface.cweb"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:67*/
-#line 2512 "weaver-interface.cweb"
+#line 2514 "weaver-interface.cweb"
 
 i->_transform_matrix[12]= x+
 (i->height/(*window_width))*sin_theta-
@@ -1157,7 +1159,7 @@ MUTEX_SIGNAL(&z_list_mutex);
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:92*//*93:*/
-#line 2551 "weaver-interface.cweb"
+#line 2553 "weaver-interface.cweb"
 
 void _Wrotate_interface(struct user_interface*i,float rotation){
 GLfloat x,y;
@@ -1169,14 +1171,14 @@ i->rotation= i->_rotation= rotation;
 if(*window_height> *window_width)
 i->_rotation+= M_PI_2;
 #endif
-#line 2562 "weaver-interface.cweb"
+#line 2564 "weaver-interface.cweb"
 /*67:*/
 #line 1724 "weaver-interface.cweb"
 
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:67*/
-#line 2562 "weaver-interface.cweb"
+#line 2564 "weaver-interface.cweb"
 
 i->_transform_matrix[0]= (2*i->width/(*window_width))*
 cos_theta;
@@ -1195,7 +1197,7 @@ i->_transform_matrix[13]= y-
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:93*//*94:*/
-#line 2594 "weaver-interface.cweb"
+#line 2596 "weaver-interface.cweb"
 
 void _Wresize_interface(struct user_interface*i,
 float new_width,float new_height){
@@ -1213,7 +1215,7 @@ i->_reload_texture(i);
 x= 2.0*(i->_x)/(*window_width)-1.0;
 y= 2.0*(i->_y)/(*window_height)-1.0;
 /*:67*/
-#line 2605 "weaver-interface.cweb"
+#line 2607 "weaver-interface.cweb"
 
 i->_transform_matrix[0]= (2*i->width/(*window_width))*
 cos_theta;
@@ -1232,7 +1234,7 @@ i->_transform_matrix[13]= y-
 MUTEX_SIGNAL(&(i->mutex));
 }
 /*:94*//*97:*/
-#line 2684 "weaver-interface.cweb"
+#line 2686 "weaver-interface.cweb"
 
 void _Winteract_interface(int mouse_x,int mouse_y,bool left_click,
 bool middle_click,bool right_click){
@@ -1242,7 +1244,7 @@ MUTEX_WAIT(&z_list_mutex);
 for(i= z_list_size-1;i>=0;i--){
 float x,y;
 /*98:*/
-#line 2762 "weaver-interface.cweb"
+#line 2764 "weaver-interface.cweb"
 
 if(z_list[i]->rotation==0.0){
 x= mouse_x;
@@ -1259,7 +1261,7 @@ x+= z_list[i]->x;
 y+= z_list[i]->y;
 }
 /*:98*/
-#line 2692 "weaver-interface.cweb"
+#line 2694 "weaver-interface.cweb"
 
 z_list[i]->mouse_x= x-z_list[i]->x+(z_list[i]->width/2);
 z_list[i]->mouse_y= y-z_list[i]->y+(z_list[i]->height/2);
@@ -1305,7 +1307,7 @@ mouse_last_middle_click= middle_click;
 mouse_last_right_click= right_click;
 }
 /*:97*//*99:*/
-#line 2799 "weaver-interface.cweb"
+#line 2801 "weaver-interface.cweb"
 
 struct sound*_Wnew_sound(char*filename){
 struct sound*new_sound;
@@ -1344,7 +1346,7 @@ after_loading_interface,filename,new_sound);
 return new_sound;
 }
 /*:99*//*109:*/
-#line 3013 "weaver-interface.cweb"
+#line 3015 "weaver-interface.cweb"
 
 char**_Wget_sound_device_information(int*number_of_devices,
 int*current_dev){
@@ -1353,7 +1355,7 @@ int*current_dev){
 return sound_device_name;
 }
 /*:109*//*113:*/
-#line 3079 "weaver-interface.cweb"
+#line 3081 "weaver-interface.cweb"
 
 bool _Wselect_sound_device(int chosen_device){
 int i;
@@ -1386,7 +1388,7 @@ alSourcei(source[i],AL_LOOPING,AL_FALSE);
 return true;
 }
 /*:113*//*114:*/
-#line 3121 "weaver-interface.cweb"
+#line 3123 "weaver-interface.cweb"
 
 bool _Wplay_sound(struct sound*snd){
 int i;
