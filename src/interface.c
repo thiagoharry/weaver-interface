@@ -281,26 +281,26 @@ static unsigned long long previous_time= 0;
 static bool mouse_last_left_click= false,mouse_last_middle_click= false,
 mouse_last_right_click= false;
 /*:95*//*100:*/
-#line 2880 "weaver-interface.cweb"
+#line 2879 "weaver-interface.cweb"
 
 static ALCdevice*current_device;
 static ALCcontext*context;
 /*:100*//*103:*/
-#line 2917 "weaver-interface.cweb"
+#line 2916 "weaver-interface.cweb"
 
 static int number_of_sound_devices;
 static char**sound_device_name;
 /*:103*//*107:*/
-#line 2991 "weaver-interface.cweb"
+#line 2990 "weaver-interface.cweb"
 
 static int current_device_id;
 /*:107*//*110:*/
-#line 3040 "weaver-interface.cweb"
+#line 3039 "weaver-interface.cweb"
 
 #if !defined(W_SOUND_INTERFACE_SOURCES)
 #define W_SOUND_INTERFACE_SOURCES 5
 #endif
-#line 3044 "weaver-interface.cweb"
+#line 3043 "weaver-interface.cweb"
  static ALuint source[W_SOUND_INTERFACE_SOURCES];
 /*:110*/
 #line 413 "weaver-interface.cweb"
@@ -639,7 +639,7 @@ mouse_last_left_click= false;
 mouse_last_middle_click= false;
 mouse_last_right_click= false;
 /*:96*//*101:*/
-#line 2893 "weaver-interface.cweb"
+#line 2892 "weaver-interface.cweb"
 
 current_device= alcOpenDevice(NULL);
 if(current_device!=NULL){
@@ -647,7 +647,7 @@ context= alcCreateContext(current_device,NULL);
 alcMakeContextCurrent(context);
 }
 /*:101*//*104:*/
-#line 2938 "weaver-interface.cweb"
+#line 2937 "weaver-interface.cweb"
 
 {
 char*c,*devices;
@@ -664,7 +664,7 @@ number_of_sound_devices= 0;
 else
 number_of_sound_devices= count-1;
 /*105:*/
-#line 2961 "weaver-interface.cweb"
+#line 2960 "weaver-interface.cweb"
 
 if(number_of_sound_devices> 0){
 int i= 0;
@@ -681,11 +681,11 @@ i++;
 }
 }
 /*:105*/
-#line 2953 "weaver-interface.cweb"
+#line 2952 "weaver-interface.cweb"
 
 }
 /*:104*//*108:*/
-#line 2999 "weaver-interface.cweb"
+#line 2998 "weaver-interface.cweb"
 
 if(number_of_sound_devices> 0){
 int i;
@@ -698,7 +698,7 @@ break;
 }
 }
 /*:108*//*111:*/
-#line 3052 "weaver-interface.cweb"
+#line 3051 "weaver-interface.cweb"
 
 {
 int i;
@@ -759,7 +759,7 @@ permanent_free(z_list);
 z_list= NULL;
 z_list_size= 0;
 /*:86*//*102:*/
-#line 2904 "weaver-interface.cweb"
+#line 2903 "weaver-interface.cweb"
 
 if(current_device!=NULL){
 alcMakeContextCurrent(NULL);
@@ -767,12 +767,12 @@ alcDestroyContext(context);
 alcCloseDevice(current_device);
 }
 /*:102*//*106:*/
-#line 2980 "weaver-interface.cweb"
+#line 2979 "weaver-interface.cweb"
 
 if(permanent_free!=NULL)
 permanent_free(sound_device_name);
 /*:106*//*112:*/
-#line 3068 "weaver-interface.cweb"
+#line 3067 "weaver-interface.cweb"
 
 alDeleteSources(5,source);
 /*:112*/
@@ -1327,7 +1327,6 @@ MUTEX_WAIT(&linked_list_mutex);
 if(last_structure!=NULL)
 ((struct user_interface*)last_structure)->next= (void*)new_sound;
 last_structure= (void*)new_sound;
-last_marking->number_of_interfaces++;
 MUTEX_SIGNAL(&linked_list_mutex);
 if(filename!=NULL){
 char*ext;
@@ -1346,7 +1345,7 @@ after_loading_interface,filename,new_sound);
 return new_sound;
 }
 /*:99*//*109:*/
-#line 3015 "weaver-interface.cweb"
+#line 3014 "weaver-interface.cweb"
 
 char**_Wget_sound_device_information(int*number_of_devices,
 int*current_dev){
@@ -1355,7 +1354,7 @@ int*current_dev){
 return sound_device_name;
 }
 /*:109*//*113:*/
-#line 3081 "weaver-interface.cweb"
+#line 3080 "weaver-interface.cweb"
 
 bool _Wselect_sound_device(int chosen_device){
 int i;
@@ -1388,7 +1387,7 @@ alSourcei(source[i],AL_LOOPING,AL_FALSE);
 return true;
 }
 /*:113*//*114:*/
-#line 3123 "weaver-interface.cweb"
+#line 3122 "weaver-interface.cweb"
 
 bool _Wplay_sound(struct sound*snd){
 int i;

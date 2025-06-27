@@ -2817,7 +2817,6 @@ struct sound *_Wnew_sound(char *filename){
     if(last_structure != NULL)
       ((struct user_interface *) last_structure)-> next = (void *) new_sound;
     last_structure = (void *) new_sound;
-    last_marking -> number_of_interfaces ++;
     MUTEX_SIGNAL(&linked_list_mutex);
     if(filename != NULL){ // Obtém e executa função de carregamento
       char *ext;
