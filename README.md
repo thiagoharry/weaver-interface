@@ -19,13 +19,13 @@ additional headers need to be included. For example, on Windows, the
 default OpenGL header not necessarily include every OpenGL macro or
 function. In these cases, some minor adjustment could be necessary.
 
-This is written in Literary Programming. And the code is tested on
+This is written in Literate Programming. And the code is tested on
 Linux, Open BSD, Windows 10 and Web Assembly. Therefore, if you plan
 to study how this library works, you can read the full source code
 with additional text explanations in
 [weaver-interface_en.pdf](https://github.com/thiagoharry/weaver-interface/blob/master/weaver-interface.pdf)
 (engish version) or in
-[weaver-window.pdf](https://github.com/thiagoharry/weaver-interface/blob/master/weaver-interface.pdf)
+[weaver-interface.pdf](https://github.com/thiagoharry/weaver-interface/blob/master/weaver-interface.pdf)
 (portuguese version).
 
 This code is licensed under GNU Affero Gneral Public Licence v. 3. See
