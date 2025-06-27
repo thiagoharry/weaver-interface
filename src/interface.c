@@ -791,8 +791,8 @@ after_loading_interface= NULL;
 /*:42*//*47:*/
 #line 1153 "weaver-interface.cweb"
 
-void _Wset_interface_shader_library(char*source){
-shader_library= source;
+void _Wset_interface_shader_library(char*src){
+shader_library= src;
 }
 /*:47*//*77:*/
 #line 1925 "weaver-interface.cweb"
@@ -1347,9 +1347,9 @@ return new_sound;
 #line 3013 "weaver-interface.cweb"
 
 char**_Wget_sound_device_information(int*number_of_devices,
-int*current_device){
+int*current_dev){
 *number_of_devices= number_of_sound_devices;
-*current_device= current_device_id;
+*current_dev= current_device_id;
 return sound_device_name;
 }
 /*:109*//*113:*/
