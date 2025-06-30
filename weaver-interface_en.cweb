@@ -2047,7 +2047,7 @@ void _Wrestore_history_interface(void){
     else if(current -> type == TYPE_SHADER)
       destroy_shader((struct shader *) current);
     else if(current -> type == TYPE_SOUND){
-      //destroy_sound(snd);
+      destroy_sound((struct sound *) current);
     }
     else if(permanent_free != NULL)
       permanent_free(current);
@@ -2950,7 +2950,7 @@ bool _Wselect_sound_device(int chosen_device){
 }
 @
 
-And finally, we present the function that will play a sound. Remember
+Next we present the function that will play a sound. Remember
 that a properly initialized sound structure holds a reference to an
 already initialized OpenAL buffer. All we need to do is get the first
 available source and play it. If no sources are available (either all
@@ -2974,6 +2974,16 @@ bool _Wplay_sound(struct sound *snd){
     return true;
   }
   return false;
+}
+@
+
+And finally, a function to deallocate a sound structure:
+
+@<Auxiliary Local Functions (interface.c)@>+=
+static void destroy_sound(struct sound *snd){
+  alDeleteBuffers(1, &(snd -> buffer));
+  if(permanent_free != NULL)
+    permanent_free(snd);
 }
 @
 

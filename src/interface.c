@@ -548,7 +548,15 @@ interface_struct->_free_internal_data(interface_struct->_internal_data);
 if(permanent_free!=NULL)
 permanent_free(interface_struct);
 }
-/*:78*/
+/*:78*//*115:*/
+#line 3143 "weaver-interface.cweb"
+
+static void destroy_sound(struct sound*snd){
+alDeleteBuffers(1,&(snd->buffer));
+if(permanent_free!=NULL)
+permanent_free(snd);
+}
+/*:115*/
 #line 414 "weaver-interface.cweb"
 
 /*40:*/
@@ -941,7 +949,7 @@ destroy_interface(current);
 else if(current->type==TYPE_SHADER)
 destroy_shader((struct shader*)current);
 else if(current->type==TYPE_SOUND){
-
+destroy_sound((struct sound*)current);
 }
 else if(permanent_free!=NULL)
 permanent_free(current);

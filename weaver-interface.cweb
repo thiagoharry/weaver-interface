@@ -2172,7 +2172,7 @@ void _Wrestore_history_interface(void){
     else if(current -> type == TYPE_SHADER)
       destroy_shader((struct shader *) current);
     else if(current -> type == TYPE_SOUND){
-      //destroy_sound(snd);
+      destroy_sound((struct sound *) current);
     }
     else if(permanent_free != NULL)
       permanent_free(current);
@@ -3110,7 +3110,7 @@ bool _Wselect_sound_device(int chosen_device){
 }
 @
 
-E finalmente, apresentaremos a função que irá tocar um som. Lembre-se
+Abaixo apresentaremos a função que irá tocar um som. Lembre-se
 que uma estrutura de som corretamente inicializada possui referência
 para um buffer OpenAL já inicializado. Tudo o que temos que fazer é
 obter a primeira fonte que estiver disponível e tocar. Se não houver
@@ -3136,6 +3136,18 @@ bool _Wplay_sound(struct sound *snd){
   return false;
 }
 @
+
+E finalmente, uma função que servirá para desalocar e finalizar uma
+estrutura de som:
+
+@<Funções Auxiliares Locais (interface.c)@>+=
+static void destroy_sound(struct sound *snd){
+  alDeleteBuffers(1, &(snd -> buffer));
+  if(permanent_free != NULL)
+    permanent_free(snd);
+}
+@
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
